@@ -1,0 +1,9 @@
+[*.{cs,vb}]
+end_of_line=crlf
+indent_style=tab
+[*.cs]
+csharp_style_namespace_declarations=file_scoped:silent
+csharp_style_expression_bodied_operators=when_on_single_line:silent
+csharp_style_expression_bodied_constructors=when_on_single_line:silent
+csharp_style_expression_bodied_methods=when_on_single_line:silent
+csharp_new_line_before_open_brace=all
