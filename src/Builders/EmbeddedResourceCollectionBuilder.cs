@@ -1,4 +1,6 @@
-﻿namespace Chatter.Rest.Hal.Builders;
+﻿using Chatter.Rest.Hal.Builders.Stages;
+
+namespace Chatter.Rest.Hal.Builders;
 
 public class EmbeddedResourceCollectionBuilder : HalBuilder<EmbeddedResourceCollection>
 {
@@ -8,7 +10,7 @@ public class EmbeddedResourceCollectionBuilder : HalBuilder<EmbeddedResourceColl
 
 	public static EmbeddedResourceCollectionBuilder New(IBuildHalPart<Resource> parent) => new(parent);
 
-	public IAddResourceToEmbeddedResourceStage AddEmbedded(string name)
+	public IAddResourceStage AddEmbedded(string name)
 	{
 		var embedded = EmbeddedResourceBuilder.WithName(this, name);
 		_embeddedBuilders.Add(embedded);

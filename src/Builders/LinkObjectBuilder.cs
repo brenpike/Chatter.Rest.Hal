@@ -68,7 +68,7 @@ public class LinkObjectBuilder : HalBuilder<LinkObject>, ILinkObjectPropertiesSe
 	}
 
 	/// <inheritdoc/>
-	public IAddResourceToEmbeddedResourceStage AddEmbedded(string name)
+	public IAddResourceStage AddEmbedded(string name)
 	{
 		var embedded = FindParent<Resource>() as IAddEmbeddedResourceToResourceStage;
 		return embedded!.AddEmbedded(name);
@@ -103,13 +103,13 @@ public class LinkObjectBuilder : HalBuilder<LinkObject>, ILinkObjectPropertiesSe
 
 	public IBuildResource AddResource()
 	{
-		var resource = FindParent<ResourceCollection>() as IAddResourcesToCollectionStage;
+		var resource = FindParent<ResourceCollection>() as IAddResourceStage;
 		return resource!.AddResource();
 	}
 
 	public IBuildResource AddResource(object? state)
 	{
-		var resource = FindParent<ResourceCollection>() as IAddResourcesToCollectionStage;
+		var resource = FindParent<ResourceCollection>() as IAddResourceStage;
 		return resource!.AddResource(state);
 	}
 

@@ -1,4 +1,4 @@
-﻿namespace Chatter.Rest.Hal.Builders;
+﻿namespace Chatter.Rest.Hal.Builders.Stages;
 
 public interface ICuriesLinkCreationStage
 {

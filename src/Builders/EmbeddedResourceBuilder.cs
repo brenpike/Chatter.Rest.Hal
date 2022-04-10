@@ -1,6 +1,8 @@
-﻿namespace Chatter.Rest.Hal.Builders;
+﻿using Chatter.Rest.Hal.Builders.Stages;
 
-public class EmbeddedResourceBuilder : HalBuilder<EmbeddedResource>, IAddResourceToEmbeddedResourceStage
+namespace Chatter.Rest.Hal.Builders;
+
+public class EmbeddedResourceBuilder : HalBuilder<EmbeddedResource>, IAddResourceStage
 {
 	private readonly string _name;
 	private readonly ResourceCollectionBuilder _resourceCollectionBuilder;
