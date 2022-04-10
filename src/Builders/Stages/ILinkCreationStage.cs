@@ -1,6 +1,8 @@
-﻿namespace Chatter.Rest.Hal.Builders.Stages;
+﻿using Chatter.Rest.Hal.Builders.Stages.Embedded;
+using Chatter.Rest.Hal.Builders.Stages.Resource;
 
-public interface ILinkCreationStage
+namespace Chatter.Rest.Hal.Builders.Stages;
+
+public interface ILinkCreationStage : IResourceLinkCreationStage, IEmbeddedLinkCreationStage
 {
-	ILinkObjectPropertiesSelectionStage AddLinkObject(string href);
 }

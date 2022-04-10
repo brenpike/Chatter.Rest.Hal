@@ -1,4 +1,6 @@
 ﻿using Chatter.Rest.Hal.Builders.Stages;
+using Chatter.Rest.Hal.Builders.Stages.Embedded;
+using Chatter.Rest.Hal.Builders.Stages.Resource;
 
 namespace Chatter.Rest.Hal.Builders;
 
@@ -15,9 +17,12 @@ public class ResourceBuilder : HalBuilder<Resource>, IBuildResource
 		_embeddedCollectionBuilder = EmbeddedResourceCollectionBuilder.New(this);
 	}
 
-	public static ResourceBuilder New() => new(null, null);
-	public static ResourceBuilder New(object state) => new(null, state);
-	internal static ResourceBuilder New(IBuildHalPart<ResourceCollection> parent, object? state) => new(parent, state);
+	public static IResource New() => new ResourceBuilder(null, null);
+	public static IResource New(object state) => new ResourceBuilder(null, state);
+	internal static IEmbeddedResource Embedded() => new ResourceBuilder(null, null);
+	internal static IEmbeddedResource Embedded(object state) => new ResourceBuilder(null, state);
+	internal static IResource New(IBuildHalPart<ResourceCollection> parent, object? state) => new ResourceBuilder(parent, state);
+	internal static IEmbeddedResource Embedded(IBuildHalPart<ResourceCollection> parent, object? state) => new ResourceBuilder(parent, state);
 
 	public ILinkCreationStage AddLink(string rel) => _linkCollectionBuilder.AddLink(rel);
 	public ILinkCreationStage AddSelf() => _linkCollectionBuilder.AddSelf();
@@ -32,4 +37,11 @@ public class ResourceBuilder : HalBuilder<Resource>, IBuildResource
 			EmbeddedResources = _embeddedCollectionBuilder.BuildPart()
 		};
 	}
+
+	IEmbeddedLinkCreationStage IAddLinkToEmbeddedStage.AddLink(string rel) => AddLink(rel);
+	IEmbeddedLinkCreationStage IAddSelfLinkToEmbeddedStage.AddSelf() => AddSelf();
+	IEmbeddedCuriesLinkCreationStage IAddCuriesLinkToEmbeddedStage.AddCuries() => AddCuries();
+	IResourceCuriesLinkCreationStage IAddCuriesLinkToResourceStage.AddCuries() => AddCuries();
+	IResourceLinkCreationStage IAddLinkToResourceStage.AddLink(string rel) => AddLink(rel);
+	IResourceLinkCreationStage IAddSelfLinkToResourceStage.AddSelf() => AddSelf();
 }

@@ -1,7 +1,9 @@
-﻿namespace Chatter.Rest.Hal.Builders.Stages;
+﻿using Chatter.Rest.Hal.Builders.Stages.Embedded;
+
+namespace Chatter.Rest.Hal.Builders.Stages;
 
 public interface IAddResourceStage
 {
-	IBuildResource AddResource();
-	IBuildResource AddResource(object? state);
+	IEmbeddedResource AddResource();
+	IEmbeddedResource AddResource(object? state);
 }

@@ -1,5 +1,8 @@
-﻿namespace Chatter.Rest.Hal.Builders.Stages;
+﻿using Chatter.Rest.Hal.Builders.Stages.Embedded;
+using Chatter.Rest.Hal.Builders.Stages.Resource;
 
-public interface IBuildResource : IAddLinkStage, IAddSelfLinkStage, IAddCuriesLinkStage, IAddEmbeddedResourceToResourceStage
+namespace Chatter.Rest.Hal.Builders.Stages;
+
+public interface IBuildResource : IEmbeddedResource, IResource, IAddEmbeddedResourceToResourceStage
 {
 }

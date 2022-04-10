@@ -1,4 +1,6 @@
 ﻿using Chatter.Rest.Hal.Builders.Stages;
+using Chatter.Rest.Hal.Builders.Stages.Embedded;
+using Chatter.Rest.Hal.Builders.Stages.Resource;
 
 namespace Chatter.Rest.Hal.Builders;
 
@@ -30,4 +32,9 @@ public class LinkBuilder : HalBuilder<Link>, ILinkCreationStage, ICuriesLinkCrea
 			LinkObjects = _linkObjects.BuildPart()
 		};
 	}
+
+	IResourceLinkObjectPropertiesSelectionStage IResourceCuriesLinkCreationStage.AddLinkObject(string href, string name) => AddLinkObject(href, name);
+	IEmbeddedLinkObjectPropertiesSelectionStage IEmbeddedCuriesLinkCreationStage.AddLinkObject(string href, string name) => AddLinkObject(href, name);
+	IResourceLinkObjectPropertiesSelectionStage IResourceLinkCreationStage.AddLinkObject(string href) => AddLinkObject(href);
+	IEmbeddedLinkObjectPropertiesSelectionStage IEmbeddedLinkCreationStage.AddLinkObject(string href) => AddLinkObject(href);
 }
