@@ -5,7 +5,7 @@ using System.Collections.ObjectModel;
 namespace Chatter.Rest.Hal;
 
 [JsonConverter(typeof(LinkObjectCollectionConverter))]
-public sealed record LinkObjectCollection : ICollection<LinkObject>
+public sealed record LinkObjectCollection : ICollection<LinkObject>,  IHalPart
 {
 	private readonly Collection<LinkObject> _linkObjects = new();
 

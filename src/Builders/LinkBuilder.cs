@@ -1,32 +1,31 @@
-﻿using System.Collections.ObjectModel;
+﻿namespace Chatter.Rest.Hal.Builders;
 
-namespace Chatter.Rest.Hal.Builders;
-
-public class LinkBuilder : IBuildLink
+public class LinkBuilder : HalBuilder<Link>, ILinkCreationStage, ICuriesLinkCreationStage
 {
 	public const string SelfLink = "self";
 	public const string CuriesLink = "curies";
 
 	private readonly string _rel;
-	private readonly LinkObjectCollection _linkObjects = new();
+	private readonly LinkObjectCollectionBuilder _linkObjects;
 
-	private LinkBuilder(string rel) => _rel = rel;
-
-	public static IBuildLink WithRel(string rel) => new LinkBuilder(rel);
-	public static IBuildLink Self() => new LinkBuilder(SelfLink);
-	public static IBuildLink Curies() => new LinkBuilder(CuriesLink);
-
-	public IBuildLink AddLinkObject(IBuildLinkObject linkObjectBuilder)
+	private LinkBuilder(IBuildHalPart<LinkCollection> parent, string rel) : base(parent)
 	{
-		_linkObjects.Add(linkObjectBuilder.Build());
-		return this;
+		_rel = rel;
+		_linkObjects = LinkObjectCollectionBuilder.New(this);
 	}
 
-	Link IBuildLink.Build()
+	public static LinkBuilder WithRel(IBuildHalPart<LinkCollection> parent, string rel) => new(parent, rel);
+	public static LinkBuilder Self(IBuildHalPart<LinkCollection> parent) => new(parent, SelfLink);
+	public static LinkBuilder Curies(IBuildHalPart<LinkCollection> parent) => new(parent, CuriesLink);
+
+	public ILinkObjectPropertiesSelectionStage AddLinkObject(string href) => _linkObjects.AddLinkObject(href);
+	public ILinkObjectPropertiesSelectionStage AddLinkObject(string href, string name) => _linkObjects.AddLinkObject(href, name);
+
+	public override Link BuildPart()
 	{
 		return new Link(_rel)
 		{
-			LinkObjects = _linkObjects
+			LinkObjects = _linkObjects.BuildPart()
 		};
 	}
 }

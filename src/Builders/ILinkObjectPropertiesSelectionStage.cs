@@ -1,11 +1,13 @@
-﻿namespace Chatter.Rest.Hal.Builders;
+﻿using Chatter.Rest.Hal.Builders.Stages;
 
-public interface IBuildLinkObject
+namespace Chatter.Rest.Hal.Builders;
+
+public interface ILinkObjectPropertiesSelectionStage : IBuildLinkObjectCollection, IBuildLinkCollection, IAddEmbeddedResourceToResourceStage, IAddResourceToEmbeddedResourceStage, IBuildHal
 {
 	/// <summary>
-	/// Sets the templated value <see cref="IBuildLinkObject"/> to true
+	/// Sets the templated value <see cref="ILinkObjectPropertiesSelectionStage"/> to true
 	/// </summary>
-	/// <returns>A <see cref="IBuildLinkObject"/> to continue building a <see cref="LinkObject"/></returns>
+	/// <returns>A <see cref="ILinkObjectPropertiesSelectionStage"/> to continue building a <see cref="LinkObject"/></returns>
 	/// <remarks>
 	/// https://datatracker.ietf.org/doc/html/draft-kelly-json-hal#section-5.2
 	/// 
@@ -16,13 +18,13 @@ public interface IBuildLinkObject
 	/// 
 	/// Its value SHOULD be considered false if it is undefined or any other
 	/// value than true.
-	public IBuildLinkObject Templated();
+	ILinkObjectPropertiesSelectionStage Templated();
 
 	/// <summary>
-	/// Sets the media type hint of the <see cref="IBuildLinkObject"/>
+	/// Sets the media type hint of the <see cref="ILinkObjectPropertiesSelectionStage"/>
 	/// </summary>
 	/// <param name="type">The OPTIONAL media type hint of the <see cref="LinkObject"/></param>
-	/// <returns>A <see cref="IBuildLinkObject"/> to continue building a <see cref="LinkObject"/></returns>
+	/// <returns>A <see cref="ILinkObjectPropertiesSelectionStage"/> to continue building a <see cref="LinkObject"/></returns>
 	/// <remarks>
 	/// https://datatracker.ietf.org/doc/html/draft-kelly-json-hal#section-5.2
 	/// 
@@ -30,13 +32,13 @@ public interface IBuildLinkObject
 	/// 
 	/// Its value is a string used as a hint to indicate the media type
 	/// expected when dereferencing the target resource.
-	public IBuildLinkObject WithType(string type);
+	ILinkObjectPropertiesSelectionStage WithType(string type);
 
 	/// <summary>
-	/// Sets the depreciation URL of the <see cref="IBuildLinkObject"/>
+	/// Sets the depreciation URL of the <see cref="ILinkObjectPropertiesSelectionStage"/>
 	/// </summary>
 	/// <param name="deprecation">The OPTIONAL depreciation URL of the <see cref="LinkObject"/></param>
-	/// <returns>A <see cref="IBuildLinkObject"/> to continue building a <see cref="LinkObject"/></returns>
+	/// <returns>A <see cref="ILinkObjectPropertiesSelectionStage"/> to continue building a <see cref="LinkObject"/></returns>
 	/// <remarks>
 	/// https://datatracker.ietf.org/doc/html/draft-kelly-json-hal#section-5.4
 	/// 
@@ -51,13 +53,13 @@ public interface IBuildLinkObject
 	/// property.The notification SHOULD include the deprecation property's
 	/// value so that a client manitainer can easily find information about
 	/// the deprecation.
-	public IBuildLinkObject WithDeprecationUrl(string deprecation);
+	ILinkObjectPropertiesSelectionStage WithDeprecationUrl(string deprecation);
 
 	/// <summary>
-	/// Sets the name of the <see cref="IBuildLinkObject"/>
+	/// Sets the name of the <see cref="ILinkObjectPropertiesSelectionStage"/>
 	/// </summary>
 	/// <param name="name">The OPTIONAL (secondary) name of the <see cref="LinkObject"/></param>
-	/// <returns>A <see cref="IBuildLinkObject"/> to continue building a <see cref="LinkObject"/></returns>
+	/// <returns>A <see cref="ILinkObjectPropertiesSelectionStage"/> to continue building a <see cref="LinkObject"/></returns>
 	/// <remarks>
 	/// https://datatracker.ietf.org/doc/html/draft-kelly-json-hal#section-5.5
 	/// 
@@ -65,13 +67,13 @@ public interface IBuildLinkObject
 	///
 	/// Its value MAY be used as a secondary key for selecting Link Objects
 	/// which share the same relation type.</remarks>
-	public IBuildLinkObject WithName(string name);
+	ILinkObjectPropertiesSelectionStage WithName(string name);
 
 	/// <summary>
-	/// Sets the profile URI of the <see cref="IBuildLinkObject"/>
+	/// Sets the profile URI of the <see cref="ILinkObjectPropertiesSelectionStage"/>
 	/// </summary>
 	/// <param name="profile">The OPTIONAL profile URI of the <see cref="LinkObject"/></param>
-	/// <returns>A <see cref="IBuildLinkObject"/> to continue building a <see cref="LinkObject"/></returns>
+	/// <returns>A <see cref="ILinkObjectPropertiesSelectionStage"/> to continue building a <see cref="LinkObject"/></returns>
 	/// <remarks>
 	/// https://datatracker.ietf.org/doc/html/draft-kelly-json-hal#section-5.6
 	/// 
@@ -79,13 +81,13 @@ public interface IBuildLinkObject
 	/// 
 	/// Its value is a string which is a URI that hints about the profile(as
 	/// defined by [I-D.wilde-profile-link]) of the target resource.
-	public IBuildLinkObject WithProfileUri(string profile);
+	ILinkObjectPropertiesSelectionStage WithProfileUri(string profile);
 
 	/// <summary>
-	/// Sets the title of the <see cref="IBuildLinkObject"/>
+	/// Sets the title of the <see cref="ILinkObjectPropertiesSelectionStage"/>
 	/// </summary>
 	/// <param name="title">The OPTIONAL title of the <see cref="LinkObject"/></param>
-	/// <returns>A <see cref="IBuildLinkObject"/> to continue building a <see cref="LinkObject"/></returns>
+	/// <returns>A <see cref="ILinkObjectPropertiesSelectionStage"/> to continue building a <see cref="LinkObject"/></returns>
 	/// <remarks>
 	/// https://datatracker.ietf.org/doc/html/draft-kelly-json-hal#section-5.7
 	/// 
@@ -93,13 +95,13 @@ public interface IBuildLinkObject
 	/// 
 	/// Its value is a string and is intended for labelling the link with a
 	/// human-readable identifier(as defined by [RFC5988]).
-	public IBuildLinkObject WithTitle(string title);
+	ILinkObjectPropertiesSelectionStage WithTitle(string title);
 
 	/// <summary>
-	/// Sets the hreflang of the <see cref="IBuildLinkObject"/>
+	/// Sets the hreflang of the <see cref="ILinkObjectPropertiesSelectionStage"/>
 	/// </summary>
 	/// <param name="hreflang">The OPTIONAL hreflang of the <see cref="LinkObject"/></param>
-	/// <returns>A <see cref="IBuildLinkObject"/> to continue building a <see cref="LinkObject"/></returns>
+	/// <returns>A <see cref="ILinkObjectPropertiesSelectionStage"/> to continue building a <see cref="LinkObject"/></returns>
 	/// <remarks>
 	/// https://datatracker.ietf.org/doc/html/draft-kelly-json-hal#section-5.8
 	/// 
@@ -107,7 +109,5 @@ public interface IBuildLinkObject
 	/// 
 	/// Its value is a string and is intended for indicating the language of
 	/// the target resource(as defined by [RFC5988]).
-	public IBuildLinkObject WithHreflang(string hreflang);
-
-	public LinkObject Build();
+	ILinkObjectPropertiesSelectionStage WithHreflang(string hreflang);
 }

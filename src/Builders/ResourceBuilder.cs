@@ -1,36 +1,35 @@
-﻿using System.Collections.ObjectModel;
+﻿using Chatter.Rest.Hal.Builders.Stages;
 
 namespace Chatter.Rest.Hal.Builders;
 
-public class ResourceBuilder : IBuildResource
+public class ResourceBuilder : HalBuilder<Resource>, IAddLinkToResourceStage, IAddSelfLinkToResourceStage, IAddCuriesLinkToResourceStage, IAddEmbeddedResourceToResourceStage, IBuildResource
 {
 	private readonly object? _state;
-	private readonly LinkCollection _links = new();
-	private readonly EmbeddedResourceCollection _embedded = new();
+	private readonly LinkCollectionBuilder _linkCollectionBuilder;
+	private readonly EmbeddedResourceCollectionBuilder _embeddedCollectionBuilder;
 
-	private ResourceBuilder(object? state) => _state = state;
-
-	public static IBuildResource New() => new ResourceBuilder(null);
-	public static IBuildResource New(object state) => new ResourceBuilder(state);
-
-	public IBuildResource AddLink(IBuildLink linkBuilder)
+	private ResourceBuilder(IBuildHalPart<ResourceCollection>? parent, object? state) : base(parent)
 	{
-		_links.Add(linkBuilder.Build());
-		return this;
+		_state = state;
+		_linkCollectionBuilder = LinkCollectionBuilder.New(this);
+		_embeddedCollectionBuilder = EmbeddedResourceCollectionBuilder.New(this);
 	}
 
-	public IBuildResource AddEmbedded(IBuildEmbeddedResource embeddedBuilder)
-	{
-		_embedded.Add(embeddedBuilder.Build());
-		return this;
-	}
+	public static ResourceBuilder New() => new(null, null);
+	public static ResourceBuilder New(object state) => new(null, state);
+	internal static ResourceBuilder New(IBuildHalPart<ResourceCollection> parent, object? state) => new(parent, state);
 
-	Resource IBuildResource.Build()
+	public ILinkCreationStage AddLink(string rel) => _linkCollectionBuilder.AddLink(rel);
+	public ILinkCreationStage AddSelf() => _linkCollectionBuilder.AddSelf();
+	public ICuriesLinkCreationStage AddCuries() => _linkCollectionBuilder.AddCuries();
+	public IAddResourceToEmbeddedResourceStage AddEmbedded(string name) => _embeddedCollectionBuilder.AddEmbedded(name);
+
+	public override Resource BuildPart()
 	{
 		return new Resource(_state)
 		{
-			Links = _links,
-			EmbeddedResources = _embedded
+			Links = _linkCollectionBuilder.BuildPart(),
+			EmbeddedResources = _embeddedCollectionBuilder.BuildPart()
 		};
 	}
 }

@@ -1,9 +1,8 @@
 ﻿namespace Chatter.Rest.Hal.Builders;
 
-public interface IBuildResource
+public interface IBuildLinkCollection
 {
 	ILinkCreationStage AddLink(string rel);
 	ILinkCreationStage AddSelf();
 	ICuriesLinkCreationStage AddCuries();
-	IAddResourceToEmbeddedResourceStage AddEmbedded(string name);
 }

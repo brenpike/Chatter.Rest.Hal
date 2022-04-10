@@ -3,7 +3,7 @@
 namespace Chatter.Rest.Hal;
 
 [JsonConverter(typeof(LinkConverter))]
-public sealed record Link
+public sealed record Link : IHalPart
 {
 	public Link(string rel)
 	{

@@ -3,7 +3,7 @@
 namespace Chatter.Rest.Hal;
 
 [JsonConverter(typeof(ResourceConverter))]
-public sealed record Resource
+public sealed record Resource : IHalPart
 {
     public Resource() { }
     public Resource(object? state) => StateImpl = state;

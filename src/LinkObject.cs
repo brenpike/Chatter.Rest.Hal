@@ -6,7 +6,7 @@ namespace Chatter.Rest.Hal;
 /// A Link Object represents a hyperlink from the containing resource to a URI.
 /// </summary>
 [JsonConverter(typeof(LinkObjectConverter))]
-public sealed record LinkObject
+public sealed record LinkObject : IHalPart
 {
 	public LinkObject(string href)
 	{
