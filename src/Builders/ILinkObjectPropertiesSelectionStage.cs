@@ -2,7 +2,7 @@
 
 namespace Chatter.Rest.Hal.Builders;
 
-public interface ILinkObjectPropertiesSelectionStage : IBuildLinkObjectCollection, IBuildLinkCollection, IAddEmbeddedResourceToResourceStage, IAddResourceToEmbeddedResourceStage, IBuildHal
+public interface ILinkObjectPropertiesSelectionStage : ILinkCreationStage, ICuriesLinkCreationStage, IAddEmbeddedResourceToResourceStage, IAddResourceToEmbeddedResourceStage, IAddLinkStage, IAddSelfLinkStage, IAddCuriesLinkStage, IBuildHal
 {
 	/// <summary>
 	/// Sets the templated value <see cref="ILinkObjectPropertiesSelectionStage"/> to true

@@ -1,6 +1,6 @@
 ﻿namespace Chatter.Rest.Hal.Builders.Stages;
 
-public interface IAddSelfLinkToResourceStage
+public interface IAddSelfLinkStage
 {
 	ILinkCreationStage AddSelf();
 }

@@ -1,6 +1,8 @@
-﻿namespace Chatter.Rest.Hal.Builders;
+﻿using Chatter.Rest.Hal.Builders.Stages;
 
-public class LinkCollectionBuilder : HalBuilder<LinkCollection>, IBuildLinkCollection
+namespace Chatter.Rest.Hal.Builders;
+
+public class LinkCollectionBuilder : HalBuilder<LinkCollection>, IAddLinkStage, IAddSelfLinkStage, IAddCuriesLinkStage
 {
 	private LinkCollectionBuilder(IBuildHalPart<Resource> parent) : base(parent) { }
 	public static LinkCollectionBuilder New(IBuildHalPart<Resource> parent) => new(parent);
