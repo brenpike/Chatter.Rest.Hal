@@ -1,4 +1,5 @@
 ﻿using Chatter.Rest.Hal.Builders.Stages;
+using Chatter.Rest.Hal.Builders.Stages.Embedded;
 
 namespace Chatter.Rest.Hal.Builders;
 
@@ -16,8 +17,8 @@ public class EmbeddedResourceBuilder : HalBuilder<EmbeddedResource>, IAddResourc
 	public static EmbeddedResourceBuilder WithName(IBuildHalPart<EmbeddedResourceCollection> ercb, string name)
 		=> new(ercb, name);
 
-	public IBuildResource AddResource() => _resourceCollectionBuilder.AddResource();
-	public IBuildResource AddResource(object? state) => _resourceCollectionBuilder.AddResource(state);
+	public IEmbeddedResource AddResource() => _resourceCollectionBuilder.AddResource();
+	public IEmbeddedResource AddResource(object? state) => _resourceCollectionBuilder.AddResource(state);
 
 	public override EmbeddedResource BuildPart()
 	{

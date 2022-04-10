@@ -1,10 +1,11 @@
 ﻿using Chatter.Rest.Hal.Builders.Stages;
+using Chatter.Rest.Hal.Builders.Stages.Embedded;
 
 namespace Chatter.Rest.Hal.Builders;
 
 public class ResourceCollectionBuilder : HalBuilder<ResourceCollection>, IAddResourceStage
 {
-	private readonly IList<ResourceBuilder> _resourceBuilders = new List<ResourceBuilder>();
+	private readonly IList<IEmbeddedResource> _resourceBuilders = new List<IEmbeddedResource>();
 
 	private ResourceCollectionBuilder(IBuildHalPart<EmbeddedResource> parent) : base(parent)
 	{
@@ -12,16 +13,16 @@ public class ResourceCollectionBuilder : HalBuilder<ResourceCollection>, IAddRes
 
 	public static ResourceCollectionBuilder New(IBuildHalPart<EmbeddedResource> parent) => new(parent);
 
-	public IBuildResource AddResource()
+	public IEmbeddedResource AddResource()
 	{
-		var rb = ResourceBuilder.New(this);
+		var rb = ResourceBuilder.Embedded(this);
 		_resourceBuilders.Add(rb);
 		return rb;
 	}
 
-	public IBuildResource AddResource(object? state)
+	public IEmbeddedResource AddResource(object? state)
 	{
-		var rb = ResourceBuilder.New(this, state);
+		var rb = ResourceBuilder.Embedded(this, state);
 		_resourceBuilders.Add(rb);
 		return rb;
 	}
