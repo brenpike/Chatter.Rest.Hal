@@ -1,8 +1,8 @@
 ﻿namespace Chatter.Rest.Hal.Builders;
 
-public class LinkObjectBuilder : IBuildLinkObject
+public class LinkObjectBuilder : HalBuilder<LinkObject>, ILinkObjectPropertiesSelectionStage
 {
-	private string _href;
+	private readonly string _href;
 	private bool? _templated;
 	private string? _type;
 	private string? _deprecation;
@@ -11,61 +11,107 @@ public class LinkObjectBuilder : IBuildLinkObject
 	private string? _title;
 	private string? _hreflang;
 
-	private LinkObjectBuilder(string href) => _href = href;
+	private LinkObjectBuilder(IBuildHalPart<LinkObjectCollection> parent, string href) : base(parent) => _href = href;
 
 	/// <inheritdoc/>
-	public static IBuildLinkObject WithHref(string href) => new LinkObjectBuilder(href);
+	internal static LinkObjectBuilder WithHref(IBuildHalPart<LinkObjectCollection> parent, string href) => new(parent, href);
 
 	/// <inheritdoc/>
-	public IBuildLinkObject Templated()
+	public ILinkObjectPropertiesSelectionStage Templated()
 	{
 		_templated = true;
 		return this;
 	}
 
 	/// <inheritdoc/>
-	public IBuildLinkObject WithType(string type)
+	public ILinkObjectPropertiesSelectionStage WithType(string type)
 	{
 		_type = type;
 		return this;
 	}
 
 	/// <inheritdoc/>
-	public IBuildLinkObject WithDeprecationUrl(string deprecation)
+	public ILinkObjectPropertiesSelectionStage WithDeprecationUrl(string deprecation)
 	{
 		_deprecation = deprecation;
 		return this;
 	}
 
 	/// <inheritdoc/>
-	public IBuildLinkObject WithName(string name)
+	public ILinkObjectPropertiesSelectionStage WithName(string name)
 	{
 		_name = name;
 		return this;
 	}
 
 	/// <inheritdoc/>
-	public IBuildLinkObject WithProfileUri(string profile)
+	public ILinkObjectPropertiesSelectionStage WithProfileUri(string profile)
 	{
 		_profile = profile;
 		return this;
 	}
 
 	/// <inheritdoc/>
-	public IBuildLinkObject WithTitle(string title)
+	public ILinkObjectPropertiesSelectionStage WithTitle(string title)
 	{
 		_title = title;
 		return this;
 	}
 
 	/// <inheritdoc/>
-	public IBuildLinkObject WithHreflang(string hreflang)
+	public ILinkObjectPropertiesSelectionStage WithHreflang(string hreflang)
 	{
 		_hreflang = hreflang;
 		return this;
 	}
 
-	LinkObject IBuildLinkObject.Build()
+	/// <inheritdoc/>
+	public IAddResourceToEmbeddedResourceStage AddEmbedded(string name)
+	{
+		var embedded = FindParent<Resource>() as IBuildResource;
+		return embedded!.AddEmbedded(name);
+	}
+
+	/// <inheritdoc/>
+	public ILinkCreationStage AddLink(string rel)
+	{
+		var linkCollectionBuilder = FindParent<LinkCollection>() as IBuildLinkCollection;
+		return linkCollectionBuilder!.AddLink(rel);
+	}
+
+	/// <inheritdoc/>
+	public ILinkCreationStage AddSelf()
+	{
+		var linkCollectionBuilder = FindParent<LinkCollection>() as IBuildLinkCollection;
+		return linkCollectionBuilder!.AddSelf();
+	}
+
+	/// <inheritdoc/>
+	public ICuriesLinkCreationStage AddCuries()
+	{
+		var linkCollectionBuilder = FindParent<LinkCollection>() as IBuildLinkCollection;
+		return linkCollectionBuilder!.AddCuries();
+	}
+
+	public ILinkObjectPropertiesSelectionStage AddLinkObject(string href) 
+		=> WithHref((IBuildHalPart<LinkObjectCollection>)Parent!, href);
+
+	public ILinkObjectPropertiesSelectionStage AddLinkObject(string href, string name) 
+		=> WithHref((IBuildHalPart<LinkObjectCollection>)Parent!, href).WithName(name);
+
+	public IBuildResource AddResource()
+	{
+		var resource = FindParent<ResourceCollection>() as IAddResourcesToCollectionStage;
+		return resource!.AddResource();
+	}
+
+	public IBuildResource AddResource(object? state)
+	{
+		var resource = FindParent<ResourceCollection>() as IAddResourcesToCollectionStage;
+		return resource!.AddResource(state);
+	}
+
+	public override LinkObject BuildPart()
 	{
 		return new LinkObject(_href)
 		{

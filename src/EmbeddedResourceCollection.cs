@@ -5,7 +5,7 @@ using System.Collections.ObjectModel;
 namespace Chatter.Rest.Hal;
 
 [JsonConverter(typeof(EmbeddedResourceCollectionConverter))]
-public sealed record EmbeddedResourceCollection : ICollection<EmbeddedResource>
+public sealed record EmbeddedResourceCollection : ICollection<EmbeddedResource>, IHalPart
 {
 	private readonly Collection<EmbeddedResource> _embedded = new();
 

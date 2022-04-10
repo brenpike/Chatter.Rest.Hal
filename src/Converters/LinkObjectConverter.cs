@@ -30,56 +30,56 @@ public class LinkObjectConverter : JsonConverter<LinkObject>
         };
     }
 
-    public override void Write(Utf8JsonWriter writer, LinkObject li, JsonSerializerOptions options)
+    public override void Write(Utf8JsonWriter writer, LinkObject linkObject, JsonSerializerOptions options)
     {
         writer.WriteStartObject();
 
-        if (!string.IsNullOrWhiteSpace(li.Href))
+        if (!string.IsNullOrWhiteSpace(linkObject.Href))
         {
-            writer.WritePropertyName(nameof(li.Href).ToLower()); //TODO: make this respect json options for casing, etc.
-            writer.WriteStringValue(li.Href);
+            writer.WritePropertyName(nameof(linkObject.Href).ToLower()); //TODO: make this respect json options for casing, etc.
+            writer.WriteStringValue(linkObject.Href);
         }
 
-        if (li.Templated.HasValue)
+        if (linkObject.Templated.HasValue)
         {
-            writer.WritePropertyName(nameof(li.Templated).ToLower());
-            writer.WriteBooleanValue(li.Templated.Value);
+            writer.WritePropertyName(nameof(linkObject.Templated).ToLower());
+            writer.WriteBooleanValue(linkObject.Templated.Value);
         }
 
-        if (!string.IsNullOrWhiteSpace(li.Type))
+        if (!string.IsNullOrWhiteSpace(linkObject.Type))
         {
-            writer.WritePropertyName(nameof(li.Type).ToLower());
-            writer.WriteStringValue(li.Type);
+            writer.WritePropertyName(nameof(linkObject.Type).ToLower());
+            writer.WriteStringValue(linkObject.Type);
         }
 
-        if (!string.IsNullOrWhiteSpace(li.Deprecation))
+        if (!string.IsNullOrWhiteSpace(linkObject.Deprecation))
         {
-            writer.WritePropertyName(nameof(li.Deprecation).ToLower());
-            writer.WriteStringValue(li.Deprecation);
+            writer.WritePropertyName(nameof(linkObject.Deprecation).ToLower());
+            writer.WriteStringValue(linkObject.Deprecation);
         }
 
-        if (!string.IsNullOrWhiteSpace(li.Name))
+        if (!string.IsNullOrWhiteSpace(linkObject.Name))
         {
-            writer.WritePropertyName(nameof(li.Name).ToLower());
-            writer.WriteStringValue(li.Name);
+            writer.WritePropertyName(nameof(linkObject.Name).ToLower());
+            writer.WriteStringValue(linkObject.Name);
         }
 
-        if (!string.IsNullOrWhiteSpace(li.Title))
+        if (!string.IsNullOrWhiteSpace(linkObject.Title))
         {
-            writer.WritePropertyName(nameof(li.Title).ToLower());
-            writer.WriteStringValue(li.Title);
+            writer.WritePropertyName(nameof(linkObject.Title).ToLower());
+            writer.WriteStringValue(linkObject.Title);
         }
 
-        if (!string.IsNullOrWhiteSpace(li.Profile))
+        if (!string.IsNullOrWhiteSpace(linkObject.Profile))
         {
-            writer.WritePropertyName(nameof(li.Profile).ToLower());
-            writer.WriteStringValue(li.Profile);
+            writer.WritePropertyName(nameof(linkObject.Profile).ToLower());
+            writer.WriteStringValue(linkObject.Profile);
         }
 
-        if (!string.IsNullOrWhiteSpace(li.Hreflang))
+        if (!string.IsNullOrWhiteSpace(linkObject.Hreflang))
         {
-            writer.WritePropertyName(nameof(li.Hreflang).ToLower());
-            writer.WriteStringValue(li.Hreflang);
+            writer.WritePropertyName(nameof(linkObject.Hreflang).ToLower());
+            writer.WriteStringValue(linkObject.Hreflang);
         }
 
         writer.WriteEndObject();

@@ -1,25 +1,27 @@
 ﻿namespace Chatter.Rest.Hal.Builders;
 
-public class EmbeddedResourceBuilder : IBuildEmbeddedResource
+public class EmbeddedResourceBuilder : HalBuilder<EmbeddedResource>, IAddResourceToEmbeddedResourceStage
 {
 	private readonly string _name;
-	private readonly ResourceCollection _resources = new();
+	private readonly ResourceCollectionBuilder _resourceCollectionBuilder;
 
-	private EmbeddedResourceBuilder(string name) => _name = name;
-
-	public static IBuildEmbeddedResource WithName(string name) => new EmbeddedResourceBuilder(name);
-
-	public IBuildEmbeddedResource AddResource(IBuildResource resourceBuilder)
+	private EmbeddedResourceBuilder(IBuildHalPart<EmbeddedResourceCollection> ercb, string name) : base(ercb)
 	{
-		_resources.Add(resourceBuilder.Build());
-		return this;
+		_name = name;
+		_resourceCollectionBuilder = ResourceCollectionBuilder.New(this);
 	}
 
-	EmbeddedResource IBuildEmbeddedResource.Build()
+	public static EmbeddedResourceBuilder WithName(IBuildHalPart<EmbeddedResourceCollection> ercb, string name)
+		=> new(ercb, name);
+
+	public IBuildResource AddResource() => _resourceCollectionBuilder.AddResource();
+	public IBuildResource AddResource(object? state) => _resourceCollectionBuilder.AddResource(state);
+
+	public override EmbeddedResource BuildPart()
 	{
 		return new EmbeddedResource(_name)
 		{
-			Resources = _resources
+			Resources = _resourceCollectionBuilder.BuildPart()
 		};
 	}
 }

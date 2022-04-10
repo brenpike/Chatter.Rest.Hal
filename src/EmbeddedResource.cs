@@ -3,7 +3,7 @@
 namespace Chatter.Rest.Hal;
 
 [JsonConverter(typeof(EmbeddedResourceConverter))]
-public sealed record EmbeddedResource
+public sealed record EmbeddedResource : IHalPart
 {
 	public EmbeddedResource(string name)
 	{
