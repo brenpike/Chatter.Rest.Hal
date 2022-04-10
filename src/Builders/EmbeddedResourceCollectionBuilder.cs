@@ -1,6 +1,6 @@
 ﻿namespace Chatter.Rest.Hal.Builders;
 
-public class EmbeddedResourceCollectionBuilder : HalBuilder<EmbeddedResourceCollection>, IBuildEmbeddedResourceCollection
+public class EmbeddedResourceCollectionBuilder : HalBuilder<EmbeddedResourceCollection>
 {
 	private readonly IList<EmbeddedResourceBuilder> _embeddedBuilders = new List<EmbeddedResourceBuilder>();
 	

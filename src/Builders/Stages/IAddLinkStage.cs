@@ -1,6 +1,6 @@
 ﻿namespace Chatter.Rest.Hal.Builders.Stages;
 
-public interface IAddLinkToResourceStage
+public interface IAddLinkStage
 {
 	ILinkCreationStage AddLink(string rel);
 }

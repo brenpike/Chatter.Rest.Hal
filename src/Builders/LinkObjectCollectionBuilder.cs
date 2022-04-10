@@ -1,6 +1,6 @@
 ﻿namespace Chatter.Rest.Hal.Builders;
 
-public class LinkObjectCollectionBuilder : HalBuilder<LinkObjectCollection>, IBuildLinkObjectCollection
+public class LinkObjectCollectionBuilder : HalBuilder<LinkObjectCollection>, ILinkCreationStage, ICuriesLinkCreationStage
 {
 	private readonly IList<LinkObjectBuilder> _linkObjectBuilders = new List<LinkObjectBuilder>();
 

@@ -1,4 +1,6 @@
-﻿namespace Chatter.Rest.Hal.Builders;
+﻿using Chatter.Rest.Hal.Builders.Stages;
+
+namespace Chatter.Rest.Hal.Builders;
 
 public class LinkObjectBuilder : HalBuilder<LinkObject>, ILinkObjectPropertiesSelectionStage
 {
@@ -68,28 +70,28 @@ public class LinkObjectBuilder : HalBuilder<LinkObject>, ILinkObjectPropertiesSe
 	/// <inheritdoc/>
 	public IAddResourceToEmbeddedResourceStage AddEmbedded(string name)
 	{
-		var embedded = FindParent<Resource>() as IBuildResource;
+		var embedded = FindParent<Resource>() as IAddEmbeddedResourceToResourceStage;
 		return embedded!.AddEmbedded(name);
 	}
 
 	/// <inheritdoc/>
 	public ILinkCreationStage AddLink(string rel)
 	{
-		var linkCollectionBuilder = FindParent<LinkCollection>() as IBuildLinkCollection;
+		var linkCollectionBuilder = FindParent<LinkCollection>() as IAddLinkStage;
 		return linkCollectionBuilder!.AddLink(rel);
 	}
 
 	/// <inheritdoc/>
 	public ILinkCreationStage AddSelf()
 	{
-		var linkCollectionBuilder = FindParent<LinkCollection>() as IBuildLinkCollection;
+		var linkCollectionBuilder = FindParent<LinkCollection>() as IAddSelfLinkStage;
 		return linkCollectionBuilder!.AddSelf();
 	}
 
 	/// <inheritdoc/>
 	public ICuriesLinkCreationStage AddCuries()
 	{
-		var linkCollectionBuilder = FindParent<LinkCollection>() as IBuildLinkCollection;
+		var linkCollectionBuilder = FindParent<LinkCollection>() as IAddCuriesLinkStage;
 		return linkCollectionBuilder!.AddCuries();
 	}
 

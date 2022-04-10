@@ -1,6 +1,6 @@
 ﻿namespace Chatter.Rest.Hal.Builders.Stages;
 
-public interface IAddCuriesLinkToResourceStage
+public interface IAddCuriesLinkStage
 {
 	ICuriesLinkCreationStage AddCuries();
 }
