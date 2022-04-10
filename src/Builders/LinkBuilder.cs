@@ -1,4 +1,6 @@
-﻿namespace Chatter.Rest.Hal.Builders;
+﻿using Chatter.Rest.Hal.Builders.Stages;
+
+namespace Chatter.Rest.Hal.Builders;
 
 public class LinkBuilder : HalBuilder<Link>, ILinkCreationStage, ICuriesLinkCreationStage
 {

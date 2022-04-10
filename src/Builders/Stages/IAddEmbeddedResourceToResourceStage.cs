@@ -2,5 +2,5 @@
 
 public interface IAddEmbeddedResourceToResourceStage
 {
-	IAddResourceToEmbeddedResourceStage AddEmbedded(string name);
+	IAddResourceStage AddEmbedded(string name);
 }

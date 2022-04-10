@@ -1,6 +1,8 @@
-﻿namespace Chatter.Rest.Hal.Builders;
+﻿using Chatter.Rest.Hal.Builders.Stages;
 
-public class ResourceCollectionBuilder : HalBuilder<ResourceCollection>, IAddResourcesToCollectionStage
+namespace Chatter.Rest.Hal.Builders;
+
+public class ResourceCollectionBuilder : HalBuilder<ResourceCollection>, IAddResourceStage
 {
 	private readonly IList<ResourceBuilder> _resourceBuilders = new List<ResourceBuilder>();
 

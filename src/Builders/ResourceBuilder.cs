@@ -2,7 +2,7 @@
 
 namespace Chatter.Rest.Hal.Builders;
 
-public class ResourceBuilder : HalBuilder<Resource>, IAddLinkStage, IAddSelfLinkStage, IAddCuriesLinkStage, IAddEmbeddedResourceToResourceStage, IBuildResource
+public class ResourceBuilder : HalBuilder<Resource>, IBuildResource
 {
 	private readonly object? _state;
 	private readonly LinkCollectionBuilder _linkCollectionBuilder;
@@ -22,7 +22,7 @@ public class ResourceBuilder : HalBuilder<Resource>, IAddLinkStage, IAddSelfLink
 	public ILinkCreationStage AddLink(string rel) => _linkCollectionBuilder.AddLink(rel);
 	public ILinkCreationStage AddSelf() => _linkCollectionBuilder.AddSelf();
 	public ICuriesLinkCreationStage AddCuries() => _linkCollectionBuilder.AddCuries();
-	public IAddResourceToEmbeddedResourceStage AddEmbedded(string name) => _embeddedCollectionBuilder.AddEmbedded(name);
+	public IAddResourceStage AddEmbedded(string name) => _embeddedCollectionBuilder.AddEmbedded(name);
 
 	public override Resource BuildPart()
 	{
