@@ -1,0 +1,95 @@
+name: CI/CD
+
+on:
+  workflow_dispatch:
+   inputs:
+      reason:
+        description: 'The reason for running the workflow'
+        required: true
+        default: 'Manual build from GitHub UI'
+  push:
+    branches: [ main ]
+    paths:
+    - 'Chatter.Rest.Hal/**'
+    
+env:
+  dotnet-version:  '6.0.x'
+      
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v2
+    - name: Setup .NET Core
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: ${{ env.dotnet-version }}
+    - name: Install dependencies
+      run: dotnet restore
+    - name: Build
+      run: dotnet build --configuration Release --no-restore
+    - name: Test
+      run: dotnet test --no-restore --verbosity normal
+    - name: Publish
+      run: dotnet publish Chatter.Rest.Hal/src/Chatter.Rest.Hal.csproj -c Release -o publish/source
+    - name: Create nupkg
+      run: dotnet pack Chatter.Rest.Hal/src/Chatter.Rest.Hal.csproj -c Release -o publish/nuget
+    - name: Upload Source
+      uses: actions/upload-artifact@v2.3.1
+      with:
+        name: source
+        path: /home/runner/work/Chatter.Rest.Hal/Chatter.Rest.Hal/publish/source/**
+        retention-days: 5
+        if-no-files-found: error
+    - name: Upload NuGet
+      uses: actions/upload-artifact@v2.3.1
+      with:
+        name: nuget
+        path: /home/runner/work/Chatter.Rest.Hal/Chatter.Rest.Hal/publish/nuget/**
+        retention-days: 5
+        if-no-files-found: error
+        
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    environment:
+      name: Production
+    
+    env:
+      NUGET_AUTH_TOKEN: ${{ secrets.NUGET_API_KEY_INTEGRATIONEVENTRELAY }}
+      NUGET_URL: https://api.nuget.org/v3/index.json
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: ${{ env.dotnet-version }}
+          source-url: ${{ env.NUGET_URL }}
+          
+      - name: Download Source
+        uses: actions/download-artifact@v2.1.0
+        with:
+          name: source
+          path: ./dist/source
+      
+      - name: Download NuGet
+        uses: actions/download-artifact@v2.1.0
+        id: download-nuget
+        with:
+          name: nuget
+          path: ./dist/nuget
+      
+      - name: Display structure of downloaded files
+        run: ls -R
+        working-directory: ./dist
+        
+      - name: Push Nuget packages
+        shell: bash
+        run: |
+          dotnet nuget push "./dist/nuget/*.nupkg" -k '${{ env.NUGET_AUTH_TOKEN }}' -s '${{ env.NUGET_URL }}'
