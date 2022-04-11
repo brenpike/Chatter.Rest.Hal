@@ -4,27 +4,32 @@ using Chatter.Rest.Hal.Builders.Stages.Resource;
 
 namespace Chatter.Rest.Hal.Builders;
 
-public class LinkObjectCollectionBuilder : HalBuilder<LinkObjectCollection>, ILinkCreationStage, ICuriesLinkCreationStage
+public sealed class LinkObjectCollectionBuilder : HalBuilder<LinkObjectCollection>, ILinkCreationStage, ICuriesLinkCreationStage
 {
 	private readonly IList<LinkObjectBuilder> _linkObjectBuilders = new List<LinkObjectBuilder>();
 
 	private LinkObjectCollectionBuilder(IBuildHalPart<Link>? parent) : base(parent) { }
 
-	public static LinkObjectCollectionBuilder New(IBuildHalPart<Link> parent) => new(parent);
+	internal static LinkObjectCollectionBuilder New(IBuildHalPart<Link> parent) => new(parent);
 
-	public ILinkObjectPropertiesSelectionStage AddLinkObject(string href)
+	internal ILinkObjectPropertiesSelectionStage AddLinkObject(string href)
 	{
 		var lob = LinkObjectBuilder.WithHref(this, href);
 		_linkObjectBuilders.Add(lob);
 		return lob;
 	}
 
-	public ILinkObjectPropertiesSelectionStage AddLinkObject(string href, string name)
+	internal ILinkObjectPropertiesSelectionStage AddLinkObject(string href, string name)
 	{
-		var lob = (LinkObjectBuilder)LinkObjectBuilder.WithHref(this, href).WithName(name).Templated();
+		var lob = LinkObjectBuilder.WithCuriesProperties(this, href, name);
 		_linkObjectBuilders.Add(lob);
 		return lob;
 	}
+
+	IResourceLinkObjectPropertiesSelectionStage IResourceLinkCreationStage.AddLinkObject(string href) => AddLinkObject(href);
+	IEmbeddedLinkObjectPropertiesSelectionStage IEmbeddedLinkCreationStage.AddLinkObject(string href) => AddLinkObject(href);
+	IResourceLinkObjectPropertiesSelectionStage IResourceCuriesLinkCreationStage.AddLinkObject(string href, string name) => AddLinkObject(href, name);
+	IEmbeddedLinkObjectPropertiesSelectionStage IEmbeddedCuriesLinkCreationStage.AddLinkObject(string href, string name) => AddLinkObject(href, name);
 
 	public override LinkObjectCollection BuildPart()
 	{
@@ -35,9 +40,4 @@ public class LinkObjectCollectionBuilder : HalBuilder<LinkObjectCollection>, ILi
 		}
 		return linkObjectCollection;
 	}
-
-	IResourceLinkObjectPropertiesSelectionStage IResourceLinkCreationStage.AddLinkObject(string href) => AddLinkObject(href);
-	IEmbeddedLinkObjectPropertiesSelectionStage IEmbeddedLinkCreationStage.AddLinkObject(string href) => AddLinkObject(href);
-	IResourceLinkObjectPropertiesSelectionStage IResourceCuriesLinkCreationStage.AddLinkObject(string href, string name) => AddLinkObject(href, name);
-	IEmbeddedLinkObjectPropertiesSelectionStage IEmbeddedCuriesLinkCreationStage.AddLinkObject(string href, string name) => AddLinkObject(href, name);
 }

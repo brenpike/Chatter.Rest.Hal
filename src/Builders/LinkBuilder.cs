@@ -4,7 +4,7 @@ using Chatter.Rest.Hal.Builders.Stages.Resource;
 
 namespace Chatter.Rest.Hal.Builders;
 
-public class LinkBuilder : HalBuilder<Link>, ILinkCreationStage, ICuriesLinkCreationStage
+public sealed class LinkBuilder : HalBuilder<Link>, ILinkCreationStage, ICuriesLinkCreationStage
 {
 	public const string SelfLink = "self";
 	public const string CuriesLink = "curies";
@@ -22,8 +22,13 @@ public class LinkBuilder : HalBuilder<Link>, ILinkCreationStage, ICuriesLinkCrea
 	public static LinkBuilder Self(IBuildHalPart<LinkCollection> parent) => new(parent, SelfLink);
 	public static LinkBuilder Curies(IBuildHalPart<LinkCollection> parent) => new(parent, CuriesLink);
 
-	public ILinkObjectPropertiesSelectionStage AddLinkObject(string href) => _linkObjects.AddLinkObject(href);
-	public ILinkObjectPropertiesSelectionStage AddLinkObject(string href, string name) => _linkObjects.AddLinkObject(href, name);
+	private ILinkObjectPropertiesSelectionStage AddLinkObject(string href) => _linkObjects.AddLinkObject(href);
+	private ILinkObjectPropertiesSelectionStage AddLinkObject(string href, string name) => _linkObjects.AddLinkObject(href, name);
+
+	IResourceLinkObjectPropertiesSelectionStage IResourceCuriesLinkCreationStage.AddLinkObject(string href, string name) => AddLinkObject(href, name);
+	IEmbeddedLinkObjectPropertiesSelectionStage IEmbeddedCuriesLinkCreationStage.AddLinkObject(string href, string name) => AddLinkObject(href, name);
+	IResourceLinkObjectPropertiesSelectionStage IResourceLinkCreationStage.AddLinkObject(string href) => AddLinkObject(href);
+	IEmbeddedLinkObjectPropertiesSelectionStage IEmbeddedLinkCreationStage.AddLinkObject(string href) => AddLinkObject(href);
 
 	public override Link BuildPart()
 	{
@@ -32,9 +37,4 @@ public class LinkBuilder : HalBuilder<Link>, ILinkCreationStage, ICuriesLinkCrea
 			LinkObjects = _linkObjects.BuildPart()
 		};
 	}
-
-	IResourceLinkObjectPropertiesSelectionStage IResourceCuriesLinkCreationStage.AddLinkObject(string href, string name) => AddLinkObject(href, name);
-	IEmbeddedLinkObjectPropertiesSelectionStage IEmbeddedCuriesLinkCreationStage.AddLinkObject(string href, string name) => AddLinkObject(href, name);
-	IResourceLinkObjectPropertiesSelectionStage IResourceLinkCreationStage.AddLinkObject(string href) => AddLinkObject(href);
-	IEmbeddedLinkObjectPropertiesSelectionStage IEmbeddedLinkCreationStage.AddLinkObject(string href) => AddLinkObject(href);
 }

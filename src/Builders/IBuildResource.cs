@@ -1,6 +1,6 @@
 ﻿namespace Chatter.Rest.Hal.Builders;
 
-public interface IBuildHal
+public interface IBuildResource
 {
 	Resource? Build();
 }

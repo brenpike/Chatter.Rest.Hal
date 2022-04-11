@@ -8,7 +8,7 @@ public class EmbeddedResourceCollectionBuilder : HalBuilder<EmbeddedResourceColl
 	
 	private EmbeddedResourceCollectionBuilder(IBuildHalPart<Resource> parent) : base(parent) { }
 
-	public static EmbeddedResourceCollectionBuilder New(IBuildHalPart<Resource> parent) => new(parent);
+	internal static EmbeddedResourceCollectionBuilder New(IBuildHalPart<Resource> parent) => new(parent);
 
 	public IAddResourceStage AddEmbedded(string name)
 	{
