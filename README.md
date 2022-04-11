@@ -49,7 +49,7 @@ var resource = ResourceBuilder.WithState(new { currentlyProcessing = 14, shipped
 	.AddLink("next").AddLinkObject("/orders?page=2")
 	.AddLink("ea:find").AddLinkObject("/orders{?id}").Templated()
 	.AddLink("ea:admin").AddLinkObject("/admins/2").WithTitle("Fred")
-						.AddLinkObject("/admins/5").WithTitle("Kate")
+			    .AddLinkObject("/admins/5").WithTitle("Kate")
 	.AddEmbedded("ea:order")
 		.AddResource(new { total = 30.00F, currency = "USD", status = "shipped" })
 			.AddSelf().AddLinkObject("/orders/123")
