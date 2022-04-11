@@ -1,6 +1,4 @@
-﻿using System.Text.Json.Nodes;
-
-namespace Chatter.Rest.Hal.Converters;
+﻿namespace Chatter.Rest.Hal.Converters;
 
 public class ResourceCollectionConverter : JsonConverter<ResourceCollection>
 {

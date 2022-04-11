@@ -1,6 +1,6 @@
 ﻿namespace Chatter.Rest.Hal.Builders;
 
-public abstract class HalBuilder<THalPart> : IBuildHal, IBuildHalPart<THalPart> where THalPart : class, IHalPart
+public abstract class HalBuilder<THalPart> : IBuildResource, IBuildHalPart<THalPart> where THalPart : class, IHalPart
 {
 	public HalBuilder(IBuildHalPart<IHalPart>? parent) => Parent = parent;
 

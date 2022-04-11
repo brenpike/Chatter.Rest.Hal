@@ -1,6 +1,4 @@
-﻿using Chatter.Rest.Hal.Converters;
-
-namespace Chatter.Rest.Hal;
+﻿namespace Chatter.Rest.Hal;
 
 [JsonConverter(typeof(LinkConverter))]
 public sealed record Link : IHalPart

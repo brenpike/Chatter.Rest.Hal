@@ -1,5 +1,4 @@
-﻿using Chatter.Rest.Hal.Converters;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.ObjectModel;
 
 namespace Chatter.Rest.Hal;

@@ -1,6 +1,4 @@
-﻿using Chatter.Rest.Hal.Converters;
-
-namespace Chatter.Rest.Hal;
+﻿namespace Chatter.Rest.Hal;
 
 /// <summary>
 /// A Link Object represents a hyperlink from the containing resource to a URI.

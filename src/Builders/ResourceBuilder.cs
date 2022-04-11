@@ -4,7 +4,7 @@ using Chatter.Rest.Hal.Builders.Stages.Resource;
 
 namespace Chatter.Rest.Hal.Builders;
 
-public class ResourceBuilder : HalBuilder<Resource>, IBuildResource
+public sealed class ResourceBuilder : HalBuilder<Resource>, IEmbeddedResourceCreationStage, IResourceCreationStage, IAddEmbeddedResourceToResourceStage
 {
 	private readonly object? _state;
 	private readonly LinkCollectionBuilder _linkCollectionBuilder;
@@ -17,17 +17,25 @@ public class ResourceBuilder : HalBuilder<Resource>, IBuildResource
 		_embeddedCollectionBuilder = EmbeddedResourceCollectionBuilder.New(this);
 	}
 
-	public static IResource New() => new ResourceBuilder(null, null);
-	public static IResource New(object state) => new ResourceBuilder(null, state);
-	internal static IEmbeddedResource Embedded() => new ResourceBuilder(null, null);
-	internal static IEmbeddedResource Embedded(object state) => new ResourceBuilder(null, state);
-	internal static IResource New(IBuildHalPart<ResourceCollection> parent, object? state) => new ResourceBuilder(parent, state);
-	internal static IEmbeddedResource Embedded(IBuildHalPart<ResourceCollection> parent, object? state) => new ResourceBuilder(parent, state);
+	public static IResourceCreationStage New() => new ResourceBuilder(null, null);
+	public static IResourceCreationStage WithState(object state) => new ResourceBuilder(null, state);
+	internal static IEmbeddedResourceCreationStage Embedded() => new ResourceBuilder(null, null);
+	internal static IEmbeddedResourceCreationStage Embedded(object state) => new ResourceBuilder(null, state);
+	internal static IResourceCreationStage Resource(IBuildHalPart<ResourceCollection> parent, object? state) => new ResourceBuilder(parent, state);
+	internal static IEmbeddedResourceCreationStage Embedded(IBuildHalPart<ResourceCollection> parent, object? state) => new ResourceBuilder(parent, state);
 
-	public ILinkCreationStage AddLink(string rel) => _linkCollectionBuilder.AddLink(rel);
-	public ILinkCreationStage AddSelf() => _linkCollectionBuilder.AddSelf();
-	public ICuriesLinkCreationStage AddCuries() => _linkCollectionBuilder.AddCuries();
+	private ILinkCreationStage AddLink(string rel) => _linkCollectionBuilder.AddLink(rel);
+	private ILinkCreationStage AddSelf() => _linkCollectionBuilder.AddSelf();
+	private ICuriesLinkCreationStage AddCuries() => _linkCollectionBuilder.AddCuries();
+
 	public IAddResourceStage AddEmbedded(string name) => _embeddedCollectionBuilder.AddEmbedded(name);
+
+	IEmbeddedLinkCreationStage IAddLinkToEmbeddedStage.AddLink(string rel) => AddLink(rel);
+	IEmbeddedLinkCreationStage IAddSelfLinkToEmbeddedStage.AddSelf() => AddSelf();
+	IEmbeddedCuriesLinkCreationStage IAddCuriesLinkToEmbeddedStage.AddCuries() => AddCuries();
+	IResourceCuriesLinkCreationStage IAddCuriesLinkToResourceStage.AddCuries() => AddCuries();
+	IResourceLinkCreationStage IAddLinkToResourceStage.AddLink(string rel) => AddLink(rel);
+	IResourceLinkCreationStage IAddSelfLinkToResourceStage.AddSelf() => AddSelf();
 
 	public override Resource BuildPart()
 	{
@@ -37,11 +45,4 @@ public class ResourceBuilder : HalBuilder<Resource>, IBuildResource
 			EmbeddedResources = _embeddedCollectionBuilder.BuildPart()
 		};
 	}
-
-	IEmbeddedLinkCreationStage IAddLinkToEmbeddedStage.AddLink(string rel) => AddLink(rel);
-	IEmbeddedLinkCreationStage IAddSelfLinkToEmbeddedStage.AddSelf() => AddSelf();
-	IEmbeddedCuriesLinkCreationStage IAddCuriesLinkToEmbeddedStage.AddCuries() => AddCuries();
-	IResourceCuriesLinkCreationStage IAddCuriesLinkToResourceStage.AddCuries() => AddCuries();
-	IResourceLinkCreationStage IAddLinkToResourceStage.AddLink(string rel) => AddLink(rel);
-	IResourceLinkCreationStage IAddSelfLinkToResourceStage.AddSelf() => AddSelf();
 }

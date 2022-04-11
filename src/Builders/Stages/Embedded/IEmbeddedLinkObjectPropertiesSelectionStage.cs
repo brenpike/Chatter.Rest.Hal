@@ -1,7 +1,21 @@
 ﻿namespace Chatter.Rest.Hal.Builders.Stages.Embedded;
 
-public interface IEmbeddedLinkObjectPropertiesSelectionStage : IEmbeddedLinkCreationStage, IEmbeddedCuriesLinkCreationStage, IAddLinkToEmbeddedStage, IAddSelfLinkToEmbeddedStage, IAddCuriesLinkToEmbeddedStage, IAddResourceStage, IAddEmbeddedResourceToResourceStage, IBuildHal
+public interface IEmbeddedLinkObjectPropertiesSelectionStage : IEmbeddedLinkCreationStage, IEmbeddedCuriesLinkCreationStage, IAddLinkToEmbeddedStage, IAddSelfLinkToEmbeddedStage, IAddCuriesLinkToEmbeddedStage, IAddResourceStage, IAddEmbeddedResourceToResourceStage, IBuildResource
 {
+	/// <summary>
+	/// Sets the templated value <see cref="IEmbeddedLinkObjectPropertiesSelectionStage"/> to true
+	/// </summary>
+	/// <returns>A <see cref="IEmbeddedLinkObjectPropertiesSelectionStage"/> to continue building a <see cref="LinkObject"/></returns>
+	/// <remarks>
+	/// https://datatracker.ietf.org/doc/html/draft-kelly-json-hal#section-5.2
+	/// 
+	/// 5.2.The "templated" property is OPTIONAL.
+	/// 
+	/// Its value is boolean and SHOULD be true when the Link Object's "href"
+	/// property is a URI Template.
+	/// 
+	/// Its value SHOULD be considered false if it is undefined or any other
+	/// value than true.
 	IEmbeddedLinkObjectPropertiesSelectionStage Templated();
 
 	/// <summary>

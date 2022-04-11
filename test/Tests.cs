@@ -51,24 +51,24 @@ public class Tests
 	//}
 
 	[Fact]
-	public void test1()
+	public void Resource_Must_Be_Same_After_Serialization_And_Deserialization()
 	{
-		var resource = ResourceBuilder.New(new { currentlyProcessing = 14, shippedToday = 20 })
-	.AddSelf().AddLinkObject("/orders")
-	.AddCuries().AddLinkObject("http://example.com/docs/rels/{rel}", "ea")
-	.AddLink("next").AddLinkObject("/orders?page=2")
-	.AddLink("ea:find").AddLinkObject("/orders{?id}").Templated()
-	.AddLink("ea:admin").AddLinkObject("/admins/2").WithTitle("Fred")
-						.AddLinkObject("/admins/5").WithTitle("Kate")
-	.AddEmbedded("ea:order")
-		.AddResource(new { total = 30.00F, currency = "USD", status = "shipped" })
-			.AddSelf().AddLinkObject("/orders/123")
-			.AddLink("ea:basket").AddLinkObject("/baskets/98712")
-			.AddLink("ea:customer").AddLinkObject("/customers/7809")
-		.AddResource(new { total = 20.00F, currency = "USD", status = "processing" })
-			.AddSelf().AddLinkObject("/orders/124")
-			.AddLink("ea:basket").AddLinkObject("/baskets/97213")
-			.AddLink("ea:customer").AddLinkObject("/customers/12369").Build();
+		var resource = ResourceBuilder.WithState(new { currentlyProcessing = 14, shippedToday = 20 })
+			.AddSelf().AddLinkObject("/orders")
+			.AddCuries().AddLinkObject("http://example.com/docs/rels/{rel}", "ea")
+			.AddLink("next").AddLinkObject("/orders?page=2")
+			.AddLink("ea:find").AddLinkObject("/orders{?id}").Templated()
+			.AddLink("ea:admin").AddLinkObject("/admins/2").WithTitle("Fred")
+								.AddLinkObject("/admins/5").WithTitle("Kate")
+			.AddEmbedded("ea:order")
+				.AddResource(new { total = 30.00F, currency = "USD", status = "shipped" })
+					.AddSelf().AddLinkObject("/orders/123")
+					.AddLink("ea:basket").AddLinkObject("/baskets/98712")
+					.AddLink("ea:customer").AddLinkObject("/customers/7809")
+				.AddResource(new { total = 20.00F, currency = "USD", status = "processing" })
+					.AddSelf().AddLinkObject("/orders/124")
+					.AddLink("ea:basket").AddLinkObject("/baskets/97213")
+					.AddLink("ea:customer").AddLinkObject("/customers/12369").Build();
 
 		var serial = JsonSerializer.Serialize(resource);
 		var deserial = JsonSerializer.Deserialize<Resource>(serial);
@@ -106,6 +106,7 @@ public class Tests
 		var deserial = JsonSerializer.Deserialize<LinkObject>(serial);
 		var serialAgain = JsonSerializer.Serialize(deserial);
 		Assert.Equal(serial, serialAgain);
+		Assert.Equal(lo, deserial);
 	}
 
 	//[Fact]
@@ -168,7 +169,7 @@ public class Tests
 	public void Must_Serialize_Resource_State_If_Exists()
 	{
 		var obj = new { Id = 123, Name = "Bob" };
-		var res = ResourceBuilder.New(obj).Build();
+		var res = ResourceBuilder.WithState(obj).Build();
 
 		var serial = JsonSerializer.Serialize(res);
 		var deserial = JsonSerializer.Deserialize<Resource>(serial);
@@ -189,7 +190,7 @@ public class Tests
 	}
 
 	[Fact]
-	public void LinkCollection()
+	public void Must_Deserialize_LinkCollection_From_JsonObject_Of_Links()
 	{
 		var linkCollection = new LinkCollection()
 		{
@@ -207,7 +208,7 @@ public class Tests
 	}
 
 	[Fact]
-	public void Must_Deserialize_LinkCollection_From_Collection_Of_Links()
+	public void Must_Deserialize_LinkCollection_From_JsonArray_Of_Links()
 	{
 		var linkCollection = new LinkCollection()
 		{
