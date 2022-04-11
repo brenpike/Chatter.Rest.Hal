@@ -1,3 +1,5 @@
+![ci](https://github.com/brenpike/Chatter.Rest.Hal/actions/workflows/cicd.yml/badge.svg)
+
 ```json
 {
     "_links": {
