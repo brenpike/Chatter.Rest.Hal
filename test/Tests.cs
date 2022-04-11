@@ -68,7 +68,8 @@ public class Tests
 				.AddResource(new { total = 20.00F, currency = "USD", status = "processing" })
 					.AddSelf().AddLinkObject("/orders/124")
 					.AddLink("ea:basket").AddLinkObject("/baskets/97213")
-					.AddLink("ea:customer").AddLinkObject("/customers/12369").Build();
+					.AddLink("ea:customer").AddLinkObject("/customers/12369")
+			.Build();
 
 		var serial = JsonSerializer.Serialize(resource);
 		var deserial = JsonSerializer.Deserialize<Resource>(serial);
