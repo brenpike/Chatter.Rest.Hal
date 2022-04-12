@@ -159,8 +159,17 @@ public sealed class LinkObjectBuilder : HalBuilder<LinkObject>, ILinkObjectPrope
 	///<inheritdoc/>
 	IAddResourceStage IAddEmbeddedResourceToResourceStage.AddEmbedded(string name)
 	{
-		var embedded = FindParent<Resource>() as IAddEmbeddedResourceToResourceStage;
-		return embedded!.AddEmbedded(name);
+		if (FindParent<EmbeddedResourceCollection>() is IAddEmbeddedResourceToResourceStage embedded)
+		{
+			return embedded.AddEmbedded(name);
+		}
+
+		if (FindParent<Resource>() is IAddEmbeddedResourceToResourceStage resource)
+		{
+			return resource.AddEmbedded(name);
+		}
+
+		throw new InvalidOperationException();
 	}
 
 	///<inheritdoc/>

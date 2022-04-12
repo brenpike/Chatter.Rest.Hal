@@ -50,6 +50,46 @@ public class Tests
 	//    }
 	//}
 
+	private record Object1(string P1, int P2, List<Object2> P3);
+	private record Object2(string P1, int P2, bool P3, List<Object3> P4);
+	private record Object3(string P1, int P2, bool P3);
+
+	[Fact]
+	public void Must_Add_Complex_Object_As_Resource_State()
+	{
+		var ob3one = new Object3("str1", 6, false);
+		var ob2one = new Object2("str2", 2, true, new List<Object3>() { ob3one });
+		var ob1one = new Object1("str3", 3, new List<Object2> { ob2one });
+
+		var resource = ResourceBuilder.WithState(ob1one).Build();
+
+		var serial = JsonSerializer.Serialize(resource);
+		var deserial = JsonSerializer.Deserialize<Resource>(serial);
+
+		Assert.Equal(resource!.State<Object1>()!.ToString(), deserial!.State<Object1>()!.ToString());
+	}
+
+	[Fact]
+	public void Must_Add_Multiple_Resources_To_EmbeddedResourceCollection()
+	{
+		var resource = ResourceBuilder.WithState(new { currentlyProcessing = 14, shippedToday = 20 })
+			.AddEmbedded("ea:order")
+				.AddResource(new { total = 30.00F, currency = "USD", status = "shipped" })
+					.AddSelf().AddLinkObject("/orders/123")
+				.AddResource(new { total = 20.00F, currency = "USD", status = "processing" })
+					.AddSelf().AddLinkObject("/orders/124")
+			.AddEmbedded("gf:adsad")
+				.AddResource(new { total = 11.00F, currency = "CAD" })
+					.AddSelf().AddLinkObject("/adsad/134")
+			.Build();
+
+		var serial = JsonSerializer.Serialize(resource);
+		var deserial = JsonSerializer.Deserialize<Resource>(serial);
+		var serialAgain = JsonSerializer.Serialize(deserial);
+
+		Assert.Equal(serial, serialAgain);
+	}
+
 	[Fact]
 	public void Resource_Must_Be_Same_After_Serialization_And_Deserialization()
 	{
@@ -110,61 +150,59 @@ public class Tests
 		Assert.Equal(lo, deserial);
 	}
 
-	//[Fact]
-	//public void Must_Deserialize_LinkObjectCollection_With_More_Than_One_LinkObject()
-	//{
-	//	var loc = new LinkObjectCollection();
-	//	loc.Add(LinkObjectBuilder.WithHref("/foo/2").Build());
-	//	loc.Add(LinkObjectBuilder.WithHref("/bar/4").Build());
+	[Fact]
+	public void Must_Deserialize_LinkObjectCollection_With_More_Than_One_LinkObject()
+	{
+		var loc = new LinkObjectCollection
+		{
+			LinkObjectBuilder.WithHref(null, "/foo/2").BuildPart(),
+			LinkObjectBuilder.WithHref(null, "/bar/4").BuildPart()
+		};
 
-	//	var serial = JsonSerializer.Serialize(loc);
-	//	var deserial = JsonSerializer.Deserialize<LinkObjectCollection>(serial);
-	//	var serialAgain = JsonSerializer.Serialize(deserial);
-	//	Assert.Equal(serial, serialAgain);
-	//}
+		var serial = JsonSerializer.Serialize(loc);
+		var deserial = JsonSerializer.Deserialize<LinkObjectCollection>(serial);
+		Assert.Equal(loc!.ToString(), deserial!.ToString());
+	}
 
-	//[Fact]
-	//public void Must_Deserialize_LinkObjectCollection_With_Exactly_One_LinkObject()
-	//{
-	//	var loc = new LinkObjectCollection();
-	//	loc.Add(LinkObjectBuilder.WithHref("/foo/2").Build());
+	[Fact]
+	public void Must_Deserialize_LinkObjectCollection_With_Exactly_One_LinkObject()
+	{
+		var loc = new LinkObjectCollection
+		{
+			LinkObjectBuilder.WithHref(null, "/bar/4").BuildPart()
+		};
 
-	//	var serial = JsonSerializer.Serialize(loc);
-	//	var deserial = JsonSerializer.Deserialize<LinkObjectCollection>(serial);
-	//	var serialAgain = JsonSerializer.Serialize(deserial);
-	//	Assert.Equal(serial, serialAgain);
-	//}
+		var serial = JsonSerializer.Serialize(loc);
+		var deserial = JsonSerializer.Deserialize<LinkObjectCollection>(serial);
+		Assert.Equal(loc!.ToString(), deserial!.ToString());
+	}
 
-	//[Fact]
-	//public void Must_Deserialize_EmbeddedResourceCollection_With_More_Than_One_EmbeddedResource()
-	//{
-	//	var erc = new EmbeddedResourceCollection();
-	//	erc.Add(EmbeddedResourceBuilder.WithName("num1")
-	//				.AddResource(ResourceBuilder.New(new { Id = 123 }))
-	//			.Build());
-	//	erc.Add(EmbeddedResourceBuilder.WithName("num2")
-	//				.AddResource(ResourceBuilder.New(new { Id = 234, Name = "Steve" }))
-	//			.Build());
+	[Fact]
+	public void Must_Deserialize_EmbeddedResourceCollection_With_More_Than_One_EmbeddedResource()
+	{
+		var erc = new EmbeddedResourceCollection
+		{
+			EmbeddedResourceBuilder.WithName(null, "num1").BuildPart(),
+			EmbeddedResourceBuilder.WithName(null, "num2").BuildPart(),
+		};
 
-	//	var serial = JsonSerializer.Serialize(erc);
-	//	var deserial = JsonSerializer.Deserialize<EmbeddedResourceCollection>(serial);
-	//	var serialAgain = JsonSerializer.Serialize(deserial);
-	//	Assert.Equal(serial, serialAgain);
-	//}
+		var serial = JsonSerializer.Serialize(erc);
+		var deserial = JsonSerializer.Deserialize<EmbeddedResourceCollection>(serial);
+		Assert.Equal(erc!.ToString(), deserial!.ToString());
+	}
 
-	//[Fact]
-	//public void Must_Deserialize_EmbeddedResourceCollection_With_Exactly_One_EmbeddedResource()
-	//{
-	//	var erc = new EmbeddedResourceCollection();
-	//	erc.Add(EmbeddedResourceBuilder.WithName("num1")
-	//				.AddResource(ResourceBuilder.New(new { Id = 234, Name = "Steve" }))
-	//			.Build());
+	[Fact]
+	public void Must_Deserialize_EmbeddedResourceCollection_With_Exactly_One_EmbeddedResource()
+	{
+		var erc = new EmbeddedResourceCollection
+		{
+			EmbeddedResourceBuilder.WithName(null, "num1").BuildPart()
+		};
 
-	//	var serial = JsonSerializer.Serialize(erc);
-	//	var deserial = JsonSerializer.Deserialize<EmbeddedResourceCollection>(serial);
-	//	var serialAgain = JsonSerializer.Serialize(deserial);
-	//	Assert.Equal(serial, serialAgain);
-	//}
+		var serial = JsonSerializer.Serialize(erc);
+		var deserial = JsonSerializer.Deserialize<EmbeddedResourceCollection>(serial);
+		Assert.Equal(erc!.ToString(), deserial!.ToString());
+	}
 
 	[Fact]
 	public void Must_Serialize_Resource_State_If_Exists()

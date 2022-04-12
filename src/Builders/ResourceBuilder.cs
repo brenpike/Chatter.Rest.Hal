@@ -4,7 +4,7 @@ using Chatter.Rest.Hal.Builders.Stages.Resource;
 
 namespace Chatter.Rest.Hal.Builders;
 
-public sealed class ResourceBuilder : HalBuilder<Resource>, IEmbeddedResourceCreationStage, IResourceCreationStage, IAddEmbeddedResourceToResourceStage
+public sealed class ResourceBuilder : HalBuilder<Resource>, IEmbeddedResourceCreationStage, IResourceCreationStage
 {
 	private readonly object? _state;
 	private readonly LinkCollectionBuilder _linkCollectionBuilder;
