@@ -98,7 +98,7 @@ var resource = ResourceBuilder.WithState(new { currentlyProcessing = 14, shipped
 
 ### Strongly Typed Object
 
-Deserializing application/hal+json content type as defined [above](###example-json) to a strongly typed `Order` object:
+Deserializing `application/hal+json` content type as defined [above](###example-json) to a strongly typed `Order` object:
 
 ```csharp
 public class Order
@@ -120,7 +120,7 @@ var stronglyTypedOrder = JsonSerializer.Deserialize<Order>(halJson);
 
 ### Resource Object
 
-Deserializing application/hal+json content type as defined [above](###example-json) to a [Resource object](https://github.com/brenpike/Chatter.Rest.Hal/blob/main/src/Resource.cs):
+Deserializing `application/hal+json` content type as defined [above](###example-json) to a [Resource object](https://github.com/brenpike/Chatter.Rest.Hal/blob/main/src/Resource.cs):
 
 ```csharp
 public class Order
