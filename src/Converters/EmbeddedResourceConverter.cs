@@ -10,7 +10,7 @@ public class EmbeddedResourceConverter : JsonConverter<EmbeddedResource>
 
 		if (node is not JsonObject)
 		{
-			throw new JsonException($"A single {nameof(EmbeddedResource)} was expect.");
+			throw new JsonException($"A single {nameof(EmbeddedResource)} was expected.");
 		}
 
 		var jsonObject = node.AsObject();

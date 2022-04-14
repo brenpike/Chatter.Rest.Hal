@@ -1,5 +1,6 @@
 ﻿using Chatter.Rest.Hal.Builders;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Xunit;
 
 namespace Chatter.Rest.Hal.Tests;
@@ -49,6 +50,46 @@ public class Tests
 	//		}]
 	//    }
 	//}
+
+	private class Order
+	{
+		[JsonPropertyName("currentlyProcessing")]
+		public int CurrentlyProcessing { get; set; }
+		[JsonPropertyName("shippedToday")]
+		public int ShippedToday { get; set; }
+		[JsonPropertyName("_links")]
+		public LinkCollection? Links { get; set; }
+		[JsonPropertyName("_embedded")]
+		public EmbeddedResourceCollection? Embedded { get; set; }
+	}
+
+	[Fact]
+	public void Json_Must_Be_Same_After_Deserialization_To_Strongly_Typed_Object()
+	{
+		var resource = ResourceBuilder.WithState(new { currentlyProcessing = 14, shippedToday = 20 })
+			.AddSelf().AddLinkObject("/orders")
+			.AddCuries().AddLinkObject("http://example.com/docs/rels/{rel}", "ea")
+			.AddLink("next").AddLinkObject("/orders?page=2")
+			.AddLink("ea:find").AddLinkObject("/orders{?id}").Templated()
+			.AddLink("ea:admin").AddLinkObject("/admins/2").WithTitle("Fred")
+								.AddLinkObject("/admins/5").WithTitle("Kate")
+			.AddEmbedded("ea:order")
+				.AddResource(new { total = 30.00F, currency = "USD", status = "shipped" })
+					.AddSelf().AddLinkObject("/orders/123")
+					.AddLink("ea:basket").AddLinkObject("/baskets/98712")
+					.AddLink("ea:customer").AddLinkObject("/customers/7809")
+				.AddResource(new { total = 20.00F, currency = "USD", status = "processing" })
+					.AddSelf().AddLinkObject("/orders/124")
+					.AddLink("ea:basket").AddLinkObject("/baskets/97213")
+					.AddLink("ea:customer").AddLinkObject("/customers/12369")
+			.Build();
+
+		var serial = JsonSerializer.Serialize(resource);
+		var deserial = JsonSerializer.Deserialize<Order>(serial);
+		var serialAgain = JsonSerializer.Serialize(deserial);
+
+		Assert.Equal(serial, serialAgain);
+	}
 
 	private record Object1(string P1, int P2, List<Object2> P3);
 	private record Object2(string P1, int P2, bool P3, List<Object3> P4);
@@ -260,5 +301,25 @@ public class Tests
 		var deserial = JsonSerializer.Deserialize<LinkCollection>(str);
 		var serialAgain = JsonSerializer.Serialize(deserial);
 		Assert.Equal(serial, serialAgain);
+	}
+
+	[Fact]
+	public void Empty_Object_Json_Should_Be_Valid_Resource()
+	{
+		string json = "{}";
+		var deserial = JsonSerializer.Deserialize<Resource>(json);
+
+		Assert.Equal(json, deserial!.StateImpl!.ToString());
+		Assert.Empty(deserial.EmbeddedResources);
+		Assert.Empty(deserial.Links);
+	}
+
+	[Fact]
+	public void Default_Resource_Should_Deserialize_To_Empty_Json_Object()
+	{
+		string json = "{}";
+		var resource = ResourceBuilder.New();
+		var serial = JsonSerializer.Serialize(resource);
+		Assert.Equal(json, serial);
 	}
 }
