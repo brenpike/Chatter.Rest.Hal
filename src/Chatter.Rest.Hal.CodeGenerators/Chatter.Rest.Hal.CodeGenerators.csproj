@@ -1,0 +1,26 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>netstandard2.0</TargetFramework>
+		<LangVersion>10.0</LangVersion>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<IncludeBuildOutput>false</IncludeBuildOutput>
+		<Version>0.3</Version>
+		<Authors>Brennan Pike</Authors>
+		<Owners>Brennan Pike</Owners>
+		<Description>Generates the appropriate additional attributes of a response object to match the HAL specification</Description>
+		<PackageId>Chatter.Rest.Hal.CodeGenerators</PackageId>
+		<RepositoryUrl>https://github.com/brenpike/Chatter.Rest.Hal</RepositoryUrl>
+		<RepositoryType>git</RepositoryType>
+		<PackageTags>.net;Chatter;REST;HAL;hal+json;HATEOAS</PackageTags>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<IsPackable>true</IsPackable>
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+	</PropertyGroup>
+	<ItemGroup>
+		<None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+	</ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.0.1" PrivateAssets="all" />
+	</ItemGroup>
+</Project>

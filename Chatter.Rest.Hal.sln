@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Chatter.Rest.Hal", "src\Chatter.Rest.Hal.csproj", "{D1710D41-D785-4D3D-A947-968FDAB0C31A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Chatter.Rest.Hal", "src\Chatter.Rest.Hal\Chatter.Rest.Hal.csproj", "{D1710D41-D785-4D3D-A947-968FDAB0C31A}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Chatter.Rest.Hal.Tests", "test\Chatter.Rest.Hal.Tests.csproj", "{4E2AACBE-D681-4C10-9876-76891957FAD6}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Chatter.Rest.Hal.Tests", "test\Chatter.Rest.Hal.Tests\Chatter.Rest.Hal.Tests.csproj", "{4E2AACBE-D681-4C10-9876-76891957FAD6}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Files", "Solution Files", "{A2C0ED77-5CC1-4B9D-8891-AA58700BBE22}"
 	ProjectSection(SolutionItems) = preProject
@@ -13,6 +13,16 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Files", "Solution 
 		.gitignore = .gitignore
 		README.md = README.md
 	EndProjectSection
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Chatter.Rest.Hal.CodeGenerators", "src\Chatter.Rest.Hal.CodeGenerators\Chatter.Rest.Hal.CodeGenerators.csproj", "{5A39A031-D4C0-4406-9FC2-74F1544AB305}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Chatter.Rest.Hal.CodeGenerators.Tests", "test\Chatter.Rest.Hal.CodeGenerators.Tests\Chatter.Rest.Hal.CodeGenerators.Tests.csproj", "{D1565C66-D00E-458C-A0A7-724AEB3374D8}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Chatter.Rest.Hal.Core", "src\Chatter.Rest.Hal.Core\Chatter.Rest.Hal.Core.csproj", "{B3A5963B-B924-4789-9C57-3978F2421EA4}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{0E221BC3-7B08-4D7F-99AA-ED8076485AF3}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{BA32BD6D-0F68-44A8-975B-9FBA735BE801}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -28,9 +38,28 @@ Global
 		{4E2AACBE-D681-4C10-9876-76891957FAD6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4E2AACBE-D681-4C10-9876-76891957FAD6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4E2AACBE-D681-4C10-9876-76891957FAD6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5A39A031-D4C0-4406-9FC2-74F1544AB305}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5A39A031-D4C0-4406-9FC2-74F1544AB305}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5A39A031-D4C0-4406-9FC2-74F1544AB305}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5A39A031-D4C0-4406-9FC2-74F1544AB305}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D1565C66-D00E-458C-A0A7-724AEB3374D8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D1565C66-D00E-458C-A0A7-724AEB3374D8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D1565C66-D00E-458C-A0A7-724AEB3374D8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D1565C66-D00E-458C-A0A7-724AEB3374D8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B3A5963B-B924-4789-9C57-3978F2421EA4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B3A5963B-B924-4789-9C57-3978F2421EA4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B3A5963B-B924-4789-9C57-3978F2421EA4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B3A5963B-B924-4789-9C57-3978F2421EA4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{D1710D41-D785-4D3D-A947-968FDAB0C31A} = {0E221BC3-7B08-4D7F-99AA-ED8076485AF3}
+		{4E2AACBE-D681-4C10-9876-76891957FAD6} = {BA32BD6D-0F68-44A8-975B-9FBA735BE801}
+		{5A39A031-D4C0-4406-9FC2-74F1544AB305} = {0E221BC3-7B08-4D7F-99AA-ED8076485AF3}
+		{D1565C66-D00E-458C-A0A7-724AEB3374D8} = {BA32BD6D-0F68-44A8-975B-9FBA735BE801}
+		{B3A5963B-B924-4789-9C57-3978F2421EA4} = {0E221BC3-7B08-4D7F-99AA-ED8076485AF3}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {BCD6BF2C-05E7-4927-B420-7FE878B1A4BC}
