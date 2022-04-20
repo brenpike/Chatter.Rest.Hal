@@ -8,7 +8,12 @@ on:
         required: true
         default: 'Manual build from GitHub UI'
   push:
-    branches: [ main, feature/** ]
+    branches: [ feature/** ]
+    paths: 
+      - '**/src/Chatter.Rest.Hal.CodeGenerators/**'
+  pull_request:
+    branches: [ main ]
+    types: [ closed ]
     paths: 
       - '**/src/Chatter.Rest.Hal.CodeGenerators/**'
     
