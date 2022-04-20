@@ -1,4 +1,4 @@
-![ci](https://github.com/brenpike/Chatter.Rest.Hal/actions/workflows/cicd.yml/badge.svg)
+![ci](https://github.com/brenpike/Chatter.Rest.Hal/actions/workflows/hal-cicd.yml/badge.svg) ![ci](https://github.com/brenpike/Chatter.Rest.Hal/actions/workflows/codegen-cicd.yml/badge.svg)
 
 ## Hypertext Application Language
 
