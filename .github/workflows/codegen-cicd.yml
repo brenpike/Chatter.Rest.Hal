@@ -8,7 +8,7 @@ on:
         required: true
         default: 'Manual build from GitHub UI'
   push:
-    branches: [ main, feature/* ]
+    branches: [ main, feature/** ]
     paths: 
       - '**/src/Chatter.Rest.Hal.CodeGenerators/**'
     
@@ -30,8 +30,8 @@ jobs:
       run: dotnet restore
     - name: Build
       run: dotnet build -c Release --no-restore
-    #- name: Test
-    #  run: dotnet test --no-restore --verbosity normal
+    - name: Test
+      run: dotnet test --no-restore --verbosity normal
     - name: Publish
       run: dotnet publish **/Chatter.Rest.Hal.CodeGenerators.csproj -c Release -o publish/source
     - name: Create nupkg

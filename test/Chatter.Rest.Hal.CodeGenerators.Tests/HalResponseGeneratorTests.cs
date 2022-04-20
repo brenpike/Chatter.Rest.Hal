@@ -1,4 +1,5 @@
-﻿using Xunit;
+﻿using FluentAssertions;
+using Xunit;
 
 namespace Chatter.Rest.Hal.CodeGenerators.Tests;
 
