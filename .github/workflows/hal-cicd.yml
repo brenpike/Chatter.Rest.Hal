@@ -13,6 +13,7 @@ on:
       - '**/src/Chatter.Rest.Hal/**'
   pull_request:
     branches: [ main ]
+    types: [ closed ]
     
 env:
   dotnet-version:  '6.0.x'
