@@ -27,11 +27,11 @@ jobs:
       with:
         dotnet-version: ${{ env.dotnet-version }}
     - name: Install dependencies
-      run: dotnet restore
+      run: dotnet restore -s **/Chatter.Rest.Hal.csproj -s **/Chatter.Rest.Hal.Tests.csproj
     - name: Build
-      run: dotnet build --configuration Release --no-restore
+      run: dotnet build --source **/Chatter.Rest.Hal.csproj --source **/Chatter.Rest.Hal.Tests.csproj -c Release --no-restore
     - name: Test
-      run: dotnet test --no-restore --verbosity normal
+      run: dotnet test **/Chatter.Rest.Hal.Tests.csproj --no-restore --verbosity normal
     - name: Publish
       run: dotnet publish **/Chatter.Rest.Hal.csproj -c Release -o publish/source
     - name: Create nupkg
