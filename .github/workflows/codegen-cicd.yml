@@ -31,7 +31,7 @@ jobs:
     - name: Build
       run: dotnet build -c Release --no-restore
     - name: Test
-      run: dotnet test --no-restore --verbosity normal
+      run: dotnet test '/home/runner/work/Chatter.Rest.Hal/Chatter.Rest.Hal/test/Chatter.Rest.Hal.CodeGenerators.Tests/Chatter.Rest.Hal.CodeGenerators.Tests.csproj' --no-restore
     - name: Publish
       run: dotnet publish '/home/runner/work/Chatter.Rest.Hal/Chatter.Rest.Hal/src/Chatter.Rest.Hal.CodeGenerators/Chatter.Rest.Hal.CodeGenerators.csproj' -c Release -o publish/source
     - name: Create nupkg
@@ -40,14 +40,14 @@ jobs:
       uses: actions/upload-artifact@v2.3.1
       with:
         name: source
-        path: /home/runner/work/Chatter.Rest.Hal/Chatter.Rest.Hal.CodeGenerators/publish/source/**
+        path: /home/runner/work/Chatter.Rest.Hal/Chatter.Rest.Hal/publish/source/**
         retention-days: 5
         if-no-files-found: error
     - name: Upload NuGet
       uses: actions/upload-artifact@v2.3.1
       with:
         name: nuget
-        path: /home/runner/work/Chatter.Rest.Hal/Chatter.Rest.Hal.CodeGenerators/publish/nuget/**
+        path: /home/runner/work/Chatter.Rest.Hal/Chatter.Rest.Hal/publish/nuget/**
         retention-days: 5
         if-no-files-found: error
         
