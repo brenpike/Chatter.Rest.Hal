@@ -17,7 +17,9 @@ public class EmbeddedResourceBuilder : HalBuilder<EmbeddedResource>, IAddResourc
 	public static EmbeddedResourceBuilder WithName(IBuildHalPart<EmbeddedResourceCollection> ercb, string name)
 		=> new(ercb, name);
 
+	///<inheritdoc/>
 	public IEmbeddedResourceCreationStage AddResource() => _resourceCollectionBuilder.AddResource();
+	///<inheritdoc/>
 	public IEmbeddedResourceCreationStage AddResource(object? state) => _resourceCollectionBuilder.AddResource(state);
 
 	public override EmbeddedResource BuildPart()
