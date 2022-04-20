@@ -27,9 +27,9 @@ jobs:
       with:
         dotnet-version: ${{ env.dotnet-version }}
     - name: Install dependencies
-      run: dotnet restore -s **/Chatter.Rest.Hal.csproj -s **/Chatter.Rest.Hal.Tests.csproj
+      run: dotnet restore
     - name: Build
-      run: dotnet build --source **/Chatter.Rest.Hal.csproj --source **/Chatter.Rest.Hal.Tests.csproj -c Release --no-restore
+      run: dotnet build -c Release --no-restore
     - name: Test
       run: dotnet test **/Chatter.Rest.Hal.Tests.csproj --no-restore --verbosity normal
     - name: Publish
