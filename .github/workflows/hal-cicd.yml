@@ -31,7 +31,7 @@ jobs:
     - name: Build
       run: dotnet build -c Release --no-restore
     - name: Test
-      run: dotnet test --no-restore --verbosity normal
+      run: dotnet test '/home/runner/work/Chatter.Rest.Hal/Chatter.Rest.Hal/test/Chatter.Rest.Hal.Tests/Chatter.Rest.Hal.Tests.csproj' --no-restore --verbosity normal
     - name: Publish
       run: dotnet publish '/home/runner/work/Chatter.Rest.Hal/Chatter.Rest.Hal/src/Chatter.Rest.Hal/Chatter.Rest.Hal.csproj' -c Release -o publish/source
     - name: Create nupkg
