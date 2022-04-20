@@ -8,9 +8,11 @@ on:
         required: true
         default: 'Manual build from GitHub UI'
   push:
-    branches: [ main, feature/** ]
+    branches: [ feature/** ]
     paths:
       - '**/src/Chatter.Rest.Hal/**'
+  pull_request:
+    branches: [ main ]
     
 env:
   dotnet-version:  '6.0.x'
