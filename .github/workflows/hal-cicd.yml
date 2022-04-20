@@ -1,4 +1,4 @@
-name: CI/CD
+name: Hal CI/CD
 
 on:
   workflow_dispatch:
@@ -8,9 +8,9 @@ on:
         required: true
         default: 'Manual build from GitHub UI'
   push:
-    branches: [ main ]
+    branches: [ main, feature/* ]
     paths:
-    - 'Chatter.Rest.Hal/**'
+      - '**/src/Chatter.Rest.Hal/**'
     
 env:
   dotnet-version:  '6.0.x'
@@ -54,7 +54,7 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: github.event.pull_request.merged == true
     
     environment:
       name: Production
