@@ -30,12 +30,12 @@ jobs:
       run: dotnet restore
     - name: Build
       run: dotnet build -c Release --no-restore
-    #- name: Test
-    #  run: dotnet test --no-restore --verbosity normal
+    - name: Test
+      run: dotnet test --no-restore --verbosity normal
     - name: Publish
-      run: dotnet publish '**/Chatter.Rest.Hal.CodeGenerators.csproj' -c Release -o publish/source
+      run: dotnet publish **/Chatter.Rest.Hal.CodeGenerators.csproj -c Release -o publish/source
     - name: Create nupkg
-      run: dotnet pack '**/Chatter.Rest.Hal.CodeGenerators.csproj' -c Release -o publish/nuget
+      run: dotnet pack **/Chatter.Rest.Hal.CodeGenerators.csproj -c Release -o publish/nuget
     - name: Upload Source
       uses: actions/upload-artifact@v2.3.1
       with:
