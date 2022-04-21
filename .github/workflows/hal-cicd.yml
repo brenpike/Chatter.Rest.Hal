@@ -8,11 +8,11 @@ on:
         required: true
         default: 'Manual build from GitHub UI'
   push:
-    branches: [ main ]
+    branches: [ feature ]
     paths:
       - '**/src/Chatter.Rest.Hal/**'
   pull_request:
-    branches: [ feature/** ]
+    branches: [ main ]
     types: [ closed ]
     paths:
       - '**/src/Chatter.Rest.Hal/**'
