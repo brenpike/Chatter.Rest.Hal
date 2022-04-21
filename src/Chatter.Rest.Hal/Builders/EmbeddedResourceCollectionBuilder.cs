@@ -10,6 +10,7 @@ public class EmbeddedResourceCollectionBuilder : HalBuilder<EmbeddedResourceColl
 
 	internal static EmbeddedResourceCollectionBuilder New(IBuildHalPart<Resource> parent) => new(parent);
 
+	///<inheritdoc/>
 	public IAddResourceStage AddEmbedded(string name)
 	{
 		var embedded = EmbeddedResourceBuilder.WithName(this, name);
