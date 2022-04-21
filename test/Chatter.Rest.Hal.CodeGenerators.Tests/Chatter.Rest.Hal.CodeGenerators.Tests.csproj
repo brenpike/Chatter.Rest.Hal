@@ -9,6 +9,7 @@
 	</PropertyGroup>
 	<ItemGroup>
 		<PackageReference Include="Chatter.Rest.Hal" Version="0.3.0" />
+    <PackageReference Include="Chatter.Rest.Hal.CodeGenerators" Version="0.2.0" />
 		<PackageReference Include="FluentAssertions" Version="6.6.0" />
 		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.1.0" />
 		<PackageReference Include="xunit" Version="2.4.1" />
@@ -22,8 +23,6 @@
 		</PackageReference>
 	</ItemGroup>
 	<ItemGroup>
-		<ProjectReference Include="..\..\src\Chatter.Rest.Hal.CodeGenerators\Chatter.Rest.Hal.CodeGenerators.csproj"
-		                  ReferenceOutputAssembly="false" OutputItemType="Analyzer" />
 		<ProjectReference Include="..\..\src\Chatter.Rest.Hal.Core\Chatter.Rest.Hal.Core.csproj" />
 	</ItemGroup>
 </Project>
