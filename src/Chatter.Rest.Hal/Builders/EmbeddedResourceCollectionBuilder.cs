@@ -18,6 +18,7 @@ public class EmbeddedResourceCollectionBuilder : HalBuilder<EmbeddedResourceColl
 		return embedded;
 	}
 
+	///<inheritdoc/>
 	public override EmbeddedResourceCollection BuildPart()
 	{
 		var embeddedCollection = new EmbeddedResourceCollection();
