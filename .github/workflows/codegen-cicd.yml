@@ -13,7 +13,8 @@ on:
       - '**/src/Chatter.Rest.Hal.CodeGenerators/**'
   pull_request:
     branches: [ main ]
-    types: [ closed ]
+    types:
+      - closed
     paths: 
       - '**/src/Chatter.Rest.Hal.CodeGenerators/**'
     
