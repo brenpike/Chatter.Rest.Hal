@@ -1,0 +1,6 @@
+{
+    "omnisharp.enableImportCompletion": true,
+    "omnisharp.enableAsyncCompletion": true,
+    "omnisharp.enableRoslynAnalyzers": true,
+    "omnisharp.useModernNet": true
+}
