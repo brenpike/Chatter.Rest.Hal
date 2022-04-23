@@ -1,8 +1,8 @@
 {
 	"recommendations": [
+		"ms-dotnettools.csharp",
 		"ms-vscode-remote.vscode-remote-extensionpack",
 		"formulahendry.dotnet-test-explorer",
-		"ms-dotnettools.csharp",
 		"ryanluker.vscode-coverage-gutters"
 	]
 }
