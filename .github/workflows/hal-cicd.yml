@@ -98,4 +98,4 @@ jobs:
       - name: Push Nuget packages
         shell: bash
         run: |
-          dotnet nuget push "./dist/nuget/*.nupkg" -k '${{ env.NUGET_AUTH_TOKEN }}' -s '${{ env.NUGET_URL }}'
+          dotnet nuget push "./dist/nuget/*.nupkg" -k '${{ env.NUGET_AUTH_TOKEN }}' -s '${{ env.NUGET_URL }}' --skip-duplicate

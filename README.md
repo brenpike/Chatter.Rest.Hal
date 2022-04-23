@@ -1,5 +1,14 @@
 ![ci](https://github.com/brenpike/Chatter.Rest.Hal/actions/workflows/hal-cicd.yml/badge.svg) ![ci](https://github.com/brenpike/Chatter.Rest.Hal/actions/workflows/codegen-cicd.yml/badge.svg)
 
+- [Hypertext Application Language](#hypertext-application-language)
+- [Building a HAL Resource](#building-a-hal-resource)
+  - [Example JSON](#example-json)
+  - [Creating a HAL Resource leveraging the Fluent Builder](#creating-a-hal-resource-leveraging-the-fluent-builder)
+- [Deserializing a HAL Resource](#deserializing-a-hal-resource)
+  - [Strongly Typed Object](#strongly-typed-object)
+  - [Resource Object](#resource-object)
+  - [Strongly Typed Object + Source Generator](#strongly-typed-object--source-generator)
+
 ## Hypertext Application Language
 
 A dotnet/c# implementation of [HAL - The Hypertext Application Language specification](https://datatracker.ietf.org/doc/html/draft-kelly-json-hal) for RESTful Web Api
@@ -120,7 +129,7 @@ var stronglyTypedOrder = JsonSerializer.Deserialize<Order>(halJson);
 
 ### Resource Object
 
-Deserializing `application/hal+json` content type as defined [above](###example-json) to a [Resource object](https://github.com/brenpike/Chatter.Rest.Hal/blob/main/src/Resource.cs):
+Deserializing `application/hal+json` content type as defined [above](###example-json) to a [Resource object](https://github.com/brenpike/Chatter.Rest.Hal/blob/main/src/Chatter.Rest.Hal/Resource.cs):
 
 ```csharp
 public class Order
@@ -140,4 +149,30 @@ To get a strongly typed object from the [Resource's state](https://datatracker.i
 
 ```csharp
 var stronglyTypeOrder = resource.State<Order>();
+```
+
+### Strongly Typed Object + Source Generator
+
+Deserializing `application/hal+json` content as defined [above](###example-json) to a strongly typed `Order` object using [source generators](https://github.com/brenpike/Chatter.Rest.Hal/tree/main/src/Chatter.Rest.Hal.CodeGenerators):
+
+Add the `Chatter.Rest.Hal.CodeGenerators` nuget package to your project and decorate your strongly typed object with the [HalResponseAttribute](https://github.com/brenpike/Chatter.Rest.Hal/blob/main/src/Chatter.Rest.Hal.Core/HalResponseAttribute.cs)
+
+```csharp
+[HalResponse]
+public partial class Order
+{
+	[JsonPropertyName("currentlyProcessing")]
+	public int CurrentlyProcessing { get; set; }
+	[JsonPropertyName("shippedToday")]
+	public int ShippedToday { get; set; }
+}
+```
+
+Decorating with the [HalResponseAttribute](https://github.com/brenpike/Chatter.Rest.Hal/blob/main/src/Chatter.Rest.Hal.Core/HalResponseAttribute.cs) will create another partial class with the same name as your strongly typed object, eg., `Order`, and add the `_links` and `_embedded` properties:
+
+```csharp
+[JsonPropertyName("_links")]
+public LinkCollection? Links {{ get; set; }}
+[JsonPropertyName("_embedded")]
+public EmbeddedResourceCollection? Embedded {{ get; set; }}
 ```
