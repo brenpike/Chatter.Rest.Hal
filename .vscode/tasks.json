@@ -35,7 +35,7 @@
                 "test",
                 "/p:CollectCoverage=true",
                 "/p:CoverletOutputFormat=lcov",
-                "/p:CoverletOutput=./lcov.info",
+                "/p:CoverletOutput=${workspaceFolder}/coverage/lcov.info",
                 "${workspaceFolder}/Chatter.Rest.Hal.sln"
             ],
             "problemMatcher": "$msCompile",
