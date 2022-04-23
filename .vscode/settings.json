@@ -2,5 +2,13 @@
     "omnisharp.enableImportCompletion": true,
     "omnisharp.enableAsyncCompletion": true,
     "omnisharp.enableRoslynAnalyzers": true,
-    "omnisharp.useModernNet": true
+    "omnisharp.useModernNet": true,
+    "coverage-gutters.coverageFileNames": [
+        "lcov.info",
+        "cov.xml",
+        "coverage.xml",
+        "jacoco.xml"
+    ],
+    "coverage-gutters.showLineCoverage": true,
+    "coverage-gutters.showRulerCoverage": true
 }
