@@ -1,4 +1,8 @@
-﻿namespace Chatter.Rest.Hal;
+﻿using System;
+using System.Text.Json.Serialization;
+using Chatter.Rest.Hal.Converters;
+
+namespace Chatter.Rest.Hal;
 
 [JsonConverter(typeof(EmbeddedResourceConverter))]
 public sealed record EmbeddedResource : IHalPart
@@ -12,6 +16,6 @@ public sealed record EmbeddedResource : IHalPart
 		Name = name;
 	}
 
-	public string Name { get; init; }
-	public ResourceCollection Resources { get; init; } = new();
+	public string Name { get; }
+	public ResourceCollection Resources { get; set; } = new();
 }

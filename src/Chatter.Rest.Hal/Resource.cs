@@ -1,4 +1,8 @@
-﻿namespace Chatter.Rest.Hal;
+﻿using System.Text.Json;
+using System.Text.Json.Serialization;
+using Chatter.Rest.Hal.Converters;
+
+namespace Chatter.Rest.Hal;
 
 [JsonConverter(typeof(ResourceConverter))]
 public sealed record Resource : IHalPart
@@ -7,9 +11,9 @@ public sealed record Resource : IHalPart
 	public Resource() { }
 	public Resource(object? state) => StateImpl = state;
 
-	internal object? StateImpl { get; init; }
-	public LinkCollection Links { get; init; } = new();
-	public EmbeddedResourceCollection EmbeddedResources { get; init; } = new();
+	internal object? StateImpl { get; set; }
+	public LinkCollection Links { get; set; } = new();
+	public EmbeddedResourceCollection EmbeddedResources { get; set; } = new();
 
 	public T? State<T>() where T : class
 	{

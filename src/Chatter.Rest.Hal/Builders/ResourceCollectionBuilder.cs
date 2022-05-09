@@ -1,4 +1,5 @@
-﻿using Chatter.Rest.Hal.Builders.Stages;
+﻿using System.Collections.Generic;
+using Chatter.Rest.Hal.Builders.Stages;
 using Chatter.Rest.Hal.Builders.Stages.Embedded;
 
 namespace Chatter.Rest.Hal.Builders;
