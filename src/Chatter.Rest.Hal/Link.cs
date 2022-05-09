@@ -1,4 +1,8 @@
-﻿namespace Chatter.Rest.Hal;
+﻿using System;
+using System.Text.Json.Serialization;
+using Chatter.Rest.Hal.Converters;
+
+namespace Chatter.Rest.Hal;
 
 [JsonConverter(typeof(LinkConverter))]
 public sealed record Link : IHalPart
@@ -12,6 +16,6 @@ public sealed record Link : IHalPart
 		Rel = rel;
 	}
 
-	public string Rel { get; init; }
-	public LinkObjectCollection LinkObjects { get; init; } = new();
+	public string Rel { get; }
+	public LinkObjectCollection LinkObjects { get; set; } = new();
 }

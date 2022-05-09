@@ -1,4 +1,8 @@
-﻿namespace Chatter.Rest.Hal;
+﻿using System;
+using System.Text.Json.Serialization;
+using Chatter.Rest.Hal.Converters;
+
+namespace Chatter.Rest.Hal;
 
 /// <summary>
 /// A Link Object represents a hyperlink from the containing resource to a URI.
@@ -28,7 +32,7 @@ public sealed record LinkObject : IHalPart
 	/// If the value is a URI Template then the Link Object SHOULD have a
 	/// "templated" attribute whose value is true.
 	/// </remarks>
-	public string Href { get; init; }
+	public string Href { get; }
 
 	/// <summary>
 	/// The OPTIONAL templated property of the Link Object as defined by the HAL specification
@@ -44,7 +48,7 @@ public sealed record LinkObject : IHalPart
 	/// Its value SHOULD be considered false if it is undefined or any other
 	/// value than true.
 	/// </remarks>
-	public bool? Templated { get; init; }
+	public bool? Templated { get; set; }
 
 	/// <summary>
 	/// The OPTIONAL type property of the Link Object as defined by the HAL specification
@@ -59,7 +63,7 @@ public sealed record LinkObject : IHalPart
 	/// Its value is a string used as a hint to indicate the media type
 	/// expected when dereferencing the target resource.
 	/// </remarks>
-	public string? Type { get; init; }
+	public string? Type { get; set; }
 
 	/// <summary>
 	/// The OPTIONAL depreciation property of the Link Object as defined by the HAL specification
@@ -81,7 +85,7 @@ public sealed record LinkObject : IHalPart
 	/// value so that a client manitainer can easily find information about
 	/// the deprecation.
 	/// </remarks>
-	public string? Deprecation { get; init; }
+	public string? Deprecation { get; set; }
 
 	/// <summary>
 	/// The OPTIONAL name property of the Link Object as defined by the HAL specification
@@ -96,7 +100,7 @@ public sealed record LinkObject : IHalPart
 	/// Its value MAY be used as a secondary key for selecting Link Objects
 	/// which share the same relation type.
 	/// </remarks>
-	public string? Name { get; init; }
+	public string? Name { get; set; }
 
 	/// <summary>
 	/// The OPTIONAL profile property of the Link Object as defined by the HAL specification
@@ -111,7 +115,7 @@ public sealed record LinkObject : IHalPart
 	/// Its value is a string which is a URI that hints about the profile(as
 	/// defined by [I-D.wilde-profile-link]) of the target resource.
 	/// </remarks>
-	public string? Profile { get; init; }
+	public string? Profile { get; set; }
 
 	/// <summary>
 	/// The OPTIONAL title property of the Link Object as defined by the HAL specification
@@ -126,7 +130,7 @@ public sealed record LinkObject : IHalPart
 	/// Its value is a string and is intended for labelling the link with a
 	/// human-readable identifier(as defined by [RFC5988]).
 	/// </remarks>
-	public string? Title { get; init; }
+	public string? Title { get; set; }
 
 	/// <summary>
 	/// The OPTIONAL hreflang property of the Link Object as defined by the HAL specification
@@ -141,5 +145,5 @@ public sealed record LinkObject : IHalPart
 	/// Its value is a string and is intended for indicating the language of
 	/// the target resource(as defined by [RFC5988]).
 	/// </remarks>
-	public string? Hreflang { get; init; }
+	public string? Hreflang { get; set; }
 }

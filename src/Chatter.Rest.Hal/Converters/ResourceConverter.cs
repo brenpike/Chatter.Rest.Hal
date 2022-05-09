@@ -1,4 +1,9 @@
-﻿namespace Chatter.Rest.Hal.Converters;
+﻿using System;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
+
+namespace Chatter.Rest.Hal.Converters;
 
 public class ResourceConverter : JsonConverter<Resource>
 {
