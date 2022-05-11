@@ -15,6 +15,11 @@ public sealed record Resource : IHalPart
 	public LinkCollection Links { get; set; } = new();
 	public EmbeddedResourceCollection EmbeddedResources { get; set; } = new();
 
+	/// <summary>
+	/// Gets the strongly typed State of a Resource given a generic type parameter
+	/// </summary>
+	/// <typeparam name="T">The expected type of the Resource state</typeparam>
+	/// <returns>The Resource state of type <typeparamref name="T"/> or null if the Resource state is not type <typeparamref name="T"/></returns>
 	public T? State<T>() where T : class
 	{
 		if (StateImpl is JsonElement je)
