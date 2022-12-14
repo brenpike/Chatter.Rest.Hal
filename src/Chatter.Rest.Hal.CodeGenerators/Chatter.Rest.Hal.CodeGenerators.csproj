@@ -5,7 +5,7 @@
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<IncludeBuildOutput>false</IncludeBuildOutput>
-		<Version>0.2.1</Version>
+		<Version>0.2.2</Version>
 		<Authors>Brennan Pike</Authors>
 		<Owners>Brennan Pike</Owners>
 		<Description>Generates the appropriate additional attributes of a response object to match the HAL specification</Description>
@@ -21,5 +21,8 @@
 	</ItemGroup>
 	<ItemGroup>
 		<PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.1.0" PrivateAssets="all" />
+	</ItemGroup>
+	<ItemGroup>
+	  <ProjectReference Include="..\Chatter.Rest.Hal.Core\Chatter.Rest.Hal.Core.csproj" />
 	</ItemGroup>
 </Project>
