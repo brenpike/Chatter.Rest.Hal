@@ -5,7 +5,7 @@
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<IncludeBuildOutput>false</IncludeBuildOutput>
-		<Version>0.2.3</Version>
+		<Version>0.2.4</Version>
 		<Authors>Brennan Pike</Authors>
 		<Owners>Brennan Pike</Owners>
 		<Description>Generates the appropriate additional attributes of a response object to match the HAL specification</Description>
