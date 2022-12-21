@@ -1,68 +1,11 @@
 ﻿using Chatter.Rest.Hal.Builders;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using Xunit;
 
 namespace Chatter.Rest.Hal.Tests;
 
 public class Tests
 {
-	//	{
-	//    "_links": {
-	//        "self": { "href": "/orders" },
-	//        "curies": [{ "name": "ea", "href": "http://example.com/docs/rels/{rel}", "templated": true }],
-	//        "next": { "href": "/orders?page=2" },
-	//        "ea:find": {
-	//	"href": "/orders{?id}",
-	//            "templated": true
-	//		},
-	//        "ea:admin": [{
-	//            "href": "/admins/2",
-	//            "title": "Fred"
-	//        }, {
-	//			  "href": "/admins/5",
-	//            "title": "Kate"
-	//		}]
-	//    },
-	//    "currentlyProcessing": 14,
-	//    "shippedToday": 20,
-	//    "_embedded": {
-	//	"ea:order": [{
-	//		"_links": {
-	//			"self": { "href": "/orders/123" },
-	//                "ea:basket": { "href": "/baskets/98712" },
-	//                "ea:customer": { "href": "/customers/7809" }
-	//		},
-	//            "total": 30.00,
-	//            "currency": "USD",
-	//            "status": "shipped"
-
-	//		}, {
-	//		"_links": {
-	//			"self": { "href": "/orders/124" },
-	//                "ea:basket": { "href": "/baskets/97213" },
-	//                "ea:customer": { "href": "/customers/12369" }
-	//		},
-	//            "total": 20.00,
-	//            "currency": "USD",
-	//            "status": "processing"
-
-	//		}]
-	//    }
-	//}
-
-	private class Order
-	{
-		[JsonPropertyName("currentlyProcessing")]
-		public int CurrentlyProcessing { get; set; }
-		[JsonPropertyName("shippedToday")]
-		public int ShippedToday { get; set; }
-		[JsonPropertyName("_links")]
-		public LinkCollection? Links { get; set; }
-		[JsonPropertyName("_embedded")]
-		public EmbeddedResourceCollection? Embedded { get; set; }
-	}
-
 	[Fact]
 	public void Json_Must_Be_Same_After_Deserialization_To_Strongly_Typed_Object()
 	{
@@ -85,7 +28,7 @@ public class Tests
 			.Build();
 
 		var serial = JsonSerializer.Serialize(resource);
-		var deserial = JsonSerializer.Deserialize<Order>(serial);
+		var deserial = JsonSerializer.Deserialize<OrderCollection>(serial);
 		var serialAgain = JsonSerializer.Serialize(deserial);
 
 		Assert.Equal(serial, serialAgain);
@@ -107,7 +50,9 @@ public class Tests
 		var serial = JsonSerializer.Serialize(resource);
 		var deserial = JsonSerializer.Deserialize<Resource>(serial);
 
-		Assert.Equal(resource!.State<Object1>()!.ToString(), deserial!.State<Object1>()!.ToString());
+		var s1 = resource?.State<Object1>()?.ToString();
+		var s2 = deserial?.State<Object1>()?.ToString();
+		Assert.Equal(s1, s2);
 	}
 
 	[Fact]
@@ -309,8 +254,8 @@ public class Tests
 		string json = "{}";
 		var deserial = JsonSerializer.Deserialize<Resource>(json);
 
-		Assert.Equal(json, deserial!.StateImpl!.ToString());
-		Assert.Empty(deserial.EmbeddedResources);
+		Assert.Equal(json, deserial!.StateObject!.ToString());
+		Assert.Empty(deserial.Embedded);
 		Assert.Empty(deserial.Links);
 	}
 

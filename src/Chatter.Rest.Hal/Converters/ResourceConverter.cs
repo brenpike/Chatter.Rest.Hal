@@ -11,41 +11,40 @@ public class ResourceConverter : JsonConverter<Resource>
 	{
 		var node = JsonNode.Parse(ref reader, new JsonNodeOptions() { PropertyNameCaseInsensitive = true })!;
 
-		var linksNode = node["_links"];
-		var linkCache = new LinkCollection();
-		if (linksNode != null)
-		{
-			linkCache = linksNode.Deserialize<LinkCollection>(options)!;
-		}
+		LinkCollection? linkCollectionCreator()
+			=> node?["_links"]?.Deserialize<LinkCollection>(options);
 
-		var embResourcesNode = node["_embedded"]!;
-		var erCache = new EmbeddedResourceCollection();
-		if (embResourcesNode != null)
-		{
-			erCache = embResourcesNode.Deserialize<EmbeddedResourceCollection>(options)!;
-		}
+		EmbeddedResourceCollection? embeddedCollectionCreator()
+			=> node?["_embedded"]?.Deserialize<EmbeddedResourceCollection>(options);
 
-		node.AsObject().Remove("_links");
-		node.AsObject().Remove("_embedded");
-
-		return new Resource(node.Deserialize(typeof(object), options))
+		JsonObject? jsonObjectCreator()
 		{
-			Links = linkCache,
-			EmbeddedResources = erCache
+			var cloneObject = node?.Deserialize<JsonNode>()?.AsObject();
+			cloneObject?.Remove("_links");
+			cloneObject?.Remove("_embedded");
+			return cloneObject;
 		};
+
+		return new Resource(node, jsonObjectCreator, linkCollectionCreator, embeddedCollectionCreator);
 	}
 
 	public override void Write(Utf8JsonWriter writer, Resource value, JsonSerializerOptions options)
 	{
 		writer.WriteStartObject();
 
-		if (value.StateImpl != null)
+		if (value.StateObject != null)
 		{
-			var node = JsonNode.Parse(JsonSerializer.Serialize(value.StateImpl, options));
+			var node = JsonSerializer.SerializeToNode(value.StateObject, options);//JsonNode.Parse(JsonSerializer.Serialize(value.StateObject, options));
 			if (node != null)
 			{
 				foreach (var item in node.AsObject())
 				{
+					if (item.Key.Equals(nameof(Resource.Links)))
+						continue;
+
+					if (item.Key.Equals(nameof(Resource.Embedded)))
+						continue;
+
 					if (item.Value is not null || options.DefaultIgnoreCondition != JsonIgnoreCondition.WhenWritingNull)
 					{
 						writer.WritePropertyName(item.Key);
@@ -68,10 +67,10 @@ public class ResourceConverter : JsonConverter<Resource>
 			JsonSerializer.Serialize(writer, value.Links, options);
 		}
 
-		if (value.EmbeddedResources != null && value.EmbeddedResources.Count > 0)
+		if (value.Embedded != null && value.Embedded.Count > 0)
 		{
 			writer.WritePropertyName("_embedded");
-			JsonSerializer.Serialize(writer, value.EmbeddedResources, options);
+			JsonSerializer.Serialize(writer, value.Embedded, options);
 		}
 
 		writer.WriteEndObject();
