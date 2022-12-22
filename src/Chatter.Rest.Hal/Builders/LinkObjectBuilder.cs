@@ -1,7 +1,8 @@
-﻿using System;
-using Chatter.Rest.Hal.Builders.Stages;
+﻿using Chatter.Rest.Hal.Builders.Stages;
 using Chatter.Rest.Hal.Builders.Stages.Embedded;
 using Chatter.Rest.Hal.Builders.Stages.Resource;
+using System;
+using System.Collections.Generic;
 
 namespace Chatter.Rest.Hal.Builders;
 
@@ -155,6 +156,13 @@ public sealed class LinkObjectBuilder : HalBuilder<LinkObject>, ILinkObjectPrope
 	{
 		var resource = FindParent<ResourceCollection>() as IAddResourceStage;
 		return resource!.AddResource(state);
+	}
+
+	///<inheritdoc/>
+	IEmbeddedResourceCreationStage IAddResourceStage.AddResources<T>(IEnumerable<T> resources, Action<T, IEmbeddedResourceCreationStage>? builder)
+	{
+		var resource = FindParent<ResourceCollection>() as IAddResourceStage;
+		return resource!.AddResources(resources, builder);
 	}
 
 	///<inheritdoc/>

@@ -4,7 +4,7 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <LangVersion>10.0</LangVersion>
     <Nullable>enable</Nullable>
-    <Version>0.8</Version>
+    <Version>0.9</Version>
     <Authors>Brennan Pike</Authors>
     <Owners>Brennan Pike</Owners>
     <Description>A dotnet/c# implementation of the Hypertext Application Language (HAL+json) specification for RESTful Web Apis</Description>

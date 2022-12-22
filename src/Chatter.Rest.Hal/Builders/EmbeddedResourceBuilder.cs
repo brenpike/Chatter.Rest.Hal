@@ -1,5 +1,7 @@
 ﻿using Chatter.Rest.Hal.Builders.Stages;
 using Chatter.Rest.Hal.Builders.Stages.Embedded;
+using System;
+using System.Collections.Generic;
 
 namespace Chatter.Rest.Hal.Builders;
 
@@ -22,6 +24,9 @@ public class EmbeddedResourceBuilder : HalBuilder<EmbeddedResource>, IAddResourc
 	///<inheritdoc/>
 	public IEmbeddedResourceCreationStage AddResource(object? state) => _resourceCollectionBuilder.AddResource(state);
 
+	IEmbeddedResourceCreationStage IAddResourceStage.AddResources<T>(IEnumerable<T> resources, Action<T, IEmbeddedResourceCreationStage>? builder = null) 
+		=> _resourceCollectionBuilder.AddResources(resources, builder);
+
 	public override EmbeddedResource BuildPart()
 	{
 		return new EmbeddedResource(_name)
@@ -29,4 +34,5 @@ public class EmbeddedResourceBuilder : HalBuilder<EmbeddedResource>, IAddResourc
 			Resources = _resourceCollectionBuilder.BuildPart()
 		};
 	}
+
 }
