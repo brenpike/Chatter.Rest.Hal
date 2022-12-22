@@ -1,6 +1,7 @@
 ![ci](https://github.com/brenpike/Chatter.Rest.Hal/actions/workflows/hal-cicd.yml/badge.svg) ![ci](https://github.com/brenpike/Chatter.Rest.Hal/actions/workflows/codegen-cicd.yml/badge.svg)
 
 - [Hypertext Application Language](#hypertext-application-language)
+- [Using the Library](#using-the-library)
 - [Building a HAL Resource](#building-a-hal-resource)
   - [Example JSON](#example-json)
   - [Creating a HAL Resource leveraging the Fluent Builder](#creating-a-hal-resource-leveraging-the-fluent-builder)
@@ -9,7 +10,7 @@
   - [Strongly Typed Object](#strongly-typed-object)
   - [Resource Object](#resource-object)
   - [Strongly Typed Object + Source Generator](#strongly-typed-object--source-generator)
-- [Accessing data in a HAL Resource](#accessing-data-in-a-HAL-Resource)
+- [Accessing data in a HAL Resource](#accessing-data-in-a-hal-resource)
   - [Get strongly typed embedded resources](#get-strongly-typed-embedded-resources)
   - [Get a Resource Collection](#get-a-resource-collection)
   - [Get a Link by relation](#get-a-link-by-relation)
@@ -38,6 +39,13 @@ A dotnet/c# implementation of [HAL - The Hypertext Application Language specific
 > ```
 
 More information regarding HAL can be found [here](https://stateless.group/hal_specification.html) or on [Mike Kelly's github](https://github.com/mikekelly/hal_specification/blob/master/hal_specification.md).
+
+## Using the Library
+
+The libraries can be found on nuget:
+
+- Core library can be found at [https://www.nuget.org/packages/Chatter.Rest.Hal](https://www.nuget.org/packages/Chatter.Rest.Hal.CodeGenerators)
+- Code generation library can be found at [https://www.nuget.org/packages/Chatter.Rest.Hal.CodeGenerators](https://www.nuget.org/packages/Chatter.Rest.Hal.CodeGenerators)
 
 ## Building a HAL Resource
 
