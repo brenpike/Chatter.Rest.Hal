@@ -1,5 +1,4 @@
 ﻿using Chatter.Rest.Hal.Builders.Stages;
-using Chatter.Rest.Hal.Builders.Stages.Embedded;
 using Chatter.Rest.Hal.Builders.Stages.Resource;
 
 namespace Chatter.Rest.Hal.Builders;
@@ -38,4 +37,5 @@ public class ResourceBuilder : HalBuilder<Resource>, IResourceCreationStage
 			Embedded = _embeddedCollectionBuilder.BuildPart()
 		};
 	}
+
 }

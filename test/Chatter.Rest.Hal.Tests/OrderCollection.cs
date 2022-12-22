@@ -16,9 +16,6 @@ public partial class OrderCollection
 
 public partial class Order
 {
-	[JsonPropertyName("_links")]
-	public LinkCollection? Links { get; set; }
-
 	[JsonPropertyName("total")]
 	public decimal? Total { get; set; }
 
@@ -27,6 +24,9 @@ public partial class Order
 
 	[JsonPropertyName("status")]
 	public string? Status { get; set; }
+
+	[JsonPropertyName("id")]
+	public string? Id { get; set; }
 }
 
 public partial class OrderCollectionState
