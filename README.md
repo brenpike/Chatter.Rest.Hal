@@ -9,6 +9,13 @@
   - [Strongly Typed Object](#strongly-typed-object)
   - [Resource Object](#resource-object)
   - [Strongly Typed Object + Source Generator](#strongly-typed-object--source-generator)
+- [Accessing data in a HAL Resource](#accessing-data-in-a-HAL-Resource)
+  - [Get strongly typed embedded resources](#get-strongly-typed-embedded-resources)
+  - [Get a Resource Collection](#get-a-resource-collection)
+  - [Get a Link by relation](#get-a-link-by-relation)
+  - [Get all Link Objects of a Link by relation](#get-all-link-objects-of-a-link-by-relation)
+  - [Get a Link Object of a Link by relation and Link Object name](#get-a-link-object-of-a-link-by-relation-and-link-object-name)
+  - [Get a Link Object of a Link by relation only](#get-a-link-object-of-a-link-by-relation-only)
 
 ## Hypertext Application Language
 
@@ -418,7 +425,7 @@ In this case, the Link Object name is used as a secondary key. Common when curie
 var linkObj = resource!.GetLinkObjectOrDefault("curies", "ea");
 ```
 
-## Get a Link Object of a Link by relation only
+### Get a Link Object of a Link by relation only
 
 Most Links have only a single Link Object. Use this extension method to get the exact Link Object you're expecting using the Link's relation. Returns null if no matching relations are found or throw an exception if more than one relation is found.
 
