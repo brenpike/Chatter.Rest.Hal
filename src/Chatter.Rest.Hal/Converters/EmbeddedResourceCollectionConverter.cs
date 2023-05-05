@@ -58,12 +58,18 @@ public class EmbeddedResourceCollectionConverter : JsonConverter<EmbeddedResourc
 		}
 	}
 
+	/// <summary>
+	/// Write embedded collection into JSON as either a single Resource Object or an array of Resource Objects
+	/// (see <see href="https://datatracker.ietf.org/doc/html/draft-kelly-json-hal#section-4.1.2"/>)
+	/// </summary>
 	public override void Write(Utf8JsonWriter writer, EmbeddedResourceCollection embeddedResources, JsonSerializerOptions options)
 	{
 		writer.WriteStartObject();
 		foreach (var embeddedvalue in embeddedResources)
 		{
 			writer.WritePropertyName(embeddedvalue.Name);
+			// If there is only one resource in collection, write as Object (unless collection has been explicitly
+			// flagged as a collection, in which case it should be written as an array even if only one element)
 			if (embeddedvalue.Resources.Count == 1 && !embeddedvalue.ForceWriteAsCollection)
 			{
 				JsonSerializer.Serialize(writer, embeddedvalue.Resources.First(), options);
