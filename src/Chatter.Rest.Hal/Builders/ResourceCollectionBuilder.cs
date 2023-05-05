@@ -12,7 +12,11 @@ public sealed class ResourceCollectionBuilder : HalBuilder<ResourceCollection>, 
 
 	public static ResourceCollectionBuilder New(IBuildHalPart<EmbeddedResource> parent) => new(parent);
 
-	public bool ForceWriteAsCollection { get; private set; }
+	/// <summary>
+	/// Flag indicating whether this resource (if embedded) should be explicitly written to JSON as an array,
+	/// rather than dynamically written as either an object or collection based on its resource count
+	/// </summary>
+	public bool ForceWriteAsCollection { get; private set; } = false;
 
 	public IEmbeddedResourceCreationStage AddResource()
 	{
@@ -30,7 +34,7 @@ public sealed class ResourceCollectionBuilder : HalBuilder<ResourceCollection>, 
 
 	public IEmbeddedResourceCreationStage AddResources<T>(IEnumerable<T> resources, Action<T, IEmbeddedResourceCreationStage>? builder = null)
 	{
-		ForceWriteAsCollection = true;
+		ForceWriteAsCollection = true; // Flag that this resource (if embedded) is a collection
 		foreach (var resource in resources)
 		{
 			var rb = new ResourceCollectionResourceBuilder(this, resource);
