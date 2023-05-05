@@ -17,6 +17,12 @@ public sealed record EmbeddedResource : IHalPart
 	}
 
 	public string Name { get; }
-	public bool ForceWriteAsCollection { get; set; }
+
+	/// <summary>
+	/// Flag indicating (if true) that this embedded resource represents a collection, to override the default
+	/// behavior of writing to JSON as an object or a collection based on count of <see cref="Resources"/>
+	/// </summary>
+	public bool ForceWriteAsCollection { get; set; } = false;
+
 	public ResourceCollection Resources { get; set; } = new();
 }
