@@ -17,5 +17,6 @@ public sealed record EmbeddedResource : IHalPart
 	}
 
 	public string Name { get; }
+	public bool ForceWriteAsCollection { get; set; }
 	public ResourceCollection Resources { get; set; } = new();
 }
