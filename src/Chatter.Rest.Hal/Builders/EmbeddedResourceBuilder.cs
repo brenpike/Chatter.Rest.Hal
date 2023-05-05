@@ -31,7 +31,8 @@ public class EmbeddedResourceBuilder : HalBuilder<EmbeddedResource>, IAddResourc
 	{
 		return new EmbeddedResource(_name)
 		{
-			Resources = _resourceCollectionBuilder.BuildPart()
+			Resources = _resourceCollectionBuilder.BuildPart(),
+			ForceWriteAsCollection = _resourceCollectionBuilder.ForceWriteAsCollection
 		};
 	}
 

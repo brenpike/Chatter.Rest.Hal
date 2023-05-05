@@ -12,6 +12,8 @@ public sealed class ResourceCollectionBuilder : HalBuilder<ResourceCollection>, 
 
 	public static ResourceCollectionBuilder New(IBuildHalPart<EmbeddedResource> parent) => new(parent);
 
+	public bool ForceWriteAsCollection { get; private set; }
+
 	public IEmbeddedResourceCreationStage AddResource()
 	{
 		var rb = ResourceCollectionResourceBuilder.New(this, null);
@@ -28,10 +30,10 @@ public sealed class ResourceCollectionBuilder : HalBuilder<ResourceCollection>, 
 
 	public IEmbeddedResourceCreationStage AddResources<T>(IEnumerable<T> resources, Action<T, IEmbeddedResourceCreationStage>? builder = null)
 	{
-		ResourceCollectionResourceBuilder rb = new(this, null);
+		ForceWriteAsCollection = true;
 		foreach (var resource in resources)
 		{
-			rb = new ResourceCollectionResourceBuilder(this, resource);
+			var rb = new ResourceCollectionResourceBuilder(this, resource);
 			builder?.Invoke(resource, rb);
 			_resourceBuilders.Add(rb);
 		}

@@ -64,7 +64,7 @@ public class EmbeddedResourceCollectionConverter : JsonConverter<EmbeddedResourc
 		foreach (var embeddedvalue in embeddedResources)
 		{
 			writer.WritePropertyName(embeddedvalue.Name);
-			if (embeddedvalue.Resources.Count == 1)
+			if (embeddedvalue.Resources.Count == 1 && !embeddedvalue.ForceWriteAsCollection)
 			{
 				JsonSerializer.Serialize(writer, embeddedvalue.Resources.First(), options);
 			}
