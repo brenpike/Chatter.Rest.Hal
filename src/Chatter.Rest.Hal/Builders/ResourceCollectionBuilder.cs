@@ -14,7 +14,8 @@ public sealed class ResourceCollectionBuilder : HalBuilder<ResourceCollection>, 
 
 	/// <summary>
 	/// Flag indicating whether this resource (if embedded) should be explicitly written to JSON as an array,
-	/// rather than dynamically written as either an object or collection based on its resource count
+	/// rather than dynamically written as either an object or collection based on its resource count (as
+	/// specified by <see href="https://datatracker.ietf.org/doc/html/draft-kelly-json-hal#section-4.1.2"/>)
 	/// </summary>
 	public bool ForceWriteAsCollection { get; private set; } = false;
 
