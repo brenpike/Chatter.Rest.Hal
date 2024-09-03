@@ -79,13 +79,13 @@ jobs:
           source-url: ${{ env.NUGET_URL }}
           
       - name: Download Source
-        uses: actions/download-artifact@v2.1.0
+        uses: actions/download-artifact@v4.1.7
         with:
           name: source
           path: ./dist/source
       
       - name: Download NuGet
-        uses: actions/download-artifact@v2.1.0
+        uses: actions/download-artifact@v4.1.7
         id: download-nuget
         with:
           name: nuget
