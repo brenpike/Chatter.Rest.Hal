@@ -1,4 +1,6 @@
-﻿namespace Chatter.Rest.Hal;
+using System;
+
+namespace Chatter.Rest.Hal;
 
 [AttributeUsage(AttributeTargets.Class)]
 public class HalResponseAttribute : Attribute
