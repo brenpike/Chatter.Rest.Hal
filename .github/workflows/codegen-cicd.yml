@@ -40,8 +40,22 @@ jobs:
       run: dotnet test '/home/runner/work/Chatter.Rest.Hal/Chatter.Rest.Hal/test/Chatter.Rest.Hal.CodeGenerators.Tests/Chatter.Rest.Hal.CodeGenerators.Tests.csproj' --no-restore
     - name: Publish
       run: dotnet publish '/home/runner/work/Chatter.Rest.Hal/Chatter.Rest.Hal/src/Chatter.Rest.Hal.CodeGenerators/Chatter.Rest.Hal.CodeGenerators.csproj' -c Release -o publish/source
+    - name: Build CodeGenerators for all TFMs
+      run: |
+        # Ensure analyzer DLLs are built for each TFM declared in the project so the pack step can include them
+        dotnet build '/home/runner/work/Chatter.Rest.Hal/Chatter.Rest.Hal/src/Chatter.Rest.Hal.CodeGenerators/Chatter.Rest.Hal.CodeGenerators.csproj' -c Release -f net8.0 --no-restore
+        dotnet build '/home/runner/work/Chatter.Rest.Hal/Chatter.Rest.Hal/src/Chatter.Rest.Hal.CodeGenerators/Chatter.Rest.Hal.CodeGenerators.csproj' -c Release -f netstandard2.0 --no-restore
     - name: Create nupkg
       run: dotnet pack '/home/runner/work/Chatter.Rest.Hal/Chatter.Rest.Hal/src/Chatter.Rest.Hal.CodeGenerators/Chatter.Rest.Hal.CodeGenerators.csproj' -c Release -o publish/nuget
+    - name: Inspect nupkg analyzers
+      run: |
+        echo "Listing contents of created nupkg(s):"
+        for f in publish/nuget/*.nupkg; do
+          echo "---- $f ----"
+          unzip -l "$f" | sed -n '1,200p' || true
+          echo "Analyzers (if any):"
+          unzip -l "$f" | grep -i analyzers || true
+        done
     - name: Upload Source
       uses: actions/upload-artifact@v2.3.1
       with:
