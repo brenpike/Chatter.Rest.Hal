@@ -66,4 +66,7 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
+  <ItemGroup>
+    <Compile Remove="TestHelpers.cs" />
+  </ItemGroup>
 </Project>
