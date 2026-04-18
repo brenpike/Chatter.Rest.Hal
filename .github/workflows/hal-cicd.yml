@@ -19,7 +19,7 @@ on:
       - '**/src/Chatter.Rest.Hal/**'
     
 env:
-  dotnet-version:  '6.0.x'
+  dotnet-version:  '8.0.x'
       
 jobs:
   build:
