@@ -1,4 +1,5 @@
-﻿using Microsoft.CodeAnalysis;
+﻿using System.Linq;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Chatter.Rest.Hal.CodeGenerators;
@@ -11,26 +12,27 @@ internal class Parser
 
 	internal static ClassDeclarationSyntax? GetSemanticTargetForGeneration(GeneratorSyntaxContext context)
 	{
-		var attributeSyntax = (AttributeSyntax)context.Node;
+		if (context.Node is not AttributeSyntax attributeSyntax)
+			return null;
 
 		if (context.SemanticModel.GetSymbolInfo(attributeSyntax).Symbol is not IMethodSymbol attributeSymbol)
-		{
 			return null;
-		}
 
-		var fullName = attributeSymbol.ContainingType.ToDisplayString();
-
-		if (fullName != HalResponseAttributeQualifiedName)
-		{
+		var fullName = attributeSymbol.ContainingType?.ToDisplayString();
+		if (fullName != HalResponseAttributeQualifiedName)
 			return null;
-		}
-
-		return attributeSyntax.Parent?.Parent as ClassDeclarationSyntax;
+		// find the nearest enclosing class declaration rather than relying on Parent.Parent
+		return attributeSyntax.Ancestors().OfType<ClassDeclarationSyntax>().FirstOrDefault();
 	}
 
-	internal static bool IsSyntaxTargetForGeneration(SyntaxNode node) =>
-		node is AttributeSyntax attribute &&
-		ExtractName(attribute.Name) is HalResponse or HalResponseAttribute;
+	internal static bool IsSyntaxTargetForGeneration(SyntaxNode node)
+	{
+		if (node is not AttributeSyntax attribute)
+			return false;
+
+		var name = ExtractName(attribute.Name);
+		return name == HalResponse || name == HalResponseAttribute;
+	}
 
 	private static string? ExtractName(NameSyntax? name) =>
 		name switch
