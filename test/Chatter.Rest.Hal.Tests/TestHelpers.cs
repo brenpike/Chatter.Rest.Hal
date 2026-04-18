@@ -13,7 +13,8 @@ namespace Chatter.Rest.Hal.Tests
     public static class TestHelpers
     {
         private static string FixtureDirectory => Path.Combine(AppContext.BaseDirectory, "Json");
-n        /// <summary>
+
+        /// <summary>
         /// Reads a JSON fixture file from the test project's Json folder and returns a JsonNode.
         /// The returned JsonNode is suitable for use with the project's converters and JsonSerializer APIs.
         /// </summary>
@@ -22,10 +23,12 @@ namespace Chatter.Rest.Hal.Tests
             var path = Path.Combine(FixtureDirectory, name);
             if (!File.Exists(path))
                 throw new FileNotFoundException($"Fixture not found: {path}", path);
-n            var text = File.ReadAllText(path);
+
+            var text = File.ReadAllText(path);
             return JsonNode.Parse(text, new JsonNodeOptions { PropertyNameCaseInsensitive = true })!;
         }
-n        /// <summary>
+
+        /// <summary>
         /// Loads a Resource from a fixture JSON by name. Useful for assertions against Links/Embedded/State.
         /// </summary>
         public static Chatter.Rest.Hal.Resource LoadResourceFromFixture(string name)
@@ -36,7 +39,8 @@ namespace Chatter.Rest.Hal.Tests
                 throw new InvalidOperationException($"Unable to deserialize fixture '{name}' to Resource.");
             return resource;
         }
-n        /// <summary>
+
+        /// <summary>
         /// Asserts that the provided JSON contains the expected fragment when both are normalized.
         /// Normalization is performed by parsing and re-serializing with default (compact) formatting.
         /// </summary>
@@ -44,11 +48,14 @@ namespace Chatter.Rest.Hal.Tests
         {
             var node = JsonNode.Parse(json, new JsonNodeOptions { PropertyNameCaseInsensitive = true });
             var fragment = JsonNode.Parse(expectedFragment, new JsonNodeOptions { PropertyNameCaseInsensitive = true });
-n            var normalized = node!.ToJsonString(new JsonSerializerOptions { WriteIndented = false });
+
+            var normalized = node!.ToJsonString(new JsonSerializerOptions { WriteIndented = false });
             var expectedNormalized = fragment!.ToJsonString(new JsonSerializerOptions { WriteIndented = false });
-n            normalized.Should().Contain(expectedNormalized);
+
+            normalized.Should().Contain(expectedNormalized);
         }
-n        /// <summary>
+
+        /// <summary>
         /// Small factory helper for creating a LinkObject for use in tests.
         /// </summary>
         public static Chatter.Rest.Hal.LinkObject CreateLinkObject(string href, bool? templated = null)
@@ -57,7 +64,8 @@ namespace Chatter.Rest.Hal.Tests
             lo.Templated = templated;
             return lo;
         }
-n        /// <summary>
+
+        /// <summary>
         /// Small factory helper for creating a Link (with a single LinkObject) for use in tests.
         /// </summary>
         public static Chatter.Rest.Hal.Link CreateLink(string rel, string href, bool? templated = null)
@@ -66,7 +74,8 @@ namespace Chatter.Rest.Hal.Tests
             l.LinkObjects.Add(CreateLinkObject(href, templated));
             return l;
         }
-n        /// <summary>
+
+        /// <summary>
         /// Convenience helper to create a Resource that contains a single link relation.
         /// </summary>
         public static Chatter.Rest.Hal.Resource CreateResourceWithLink(string rel, string href, bool? templated = null)
