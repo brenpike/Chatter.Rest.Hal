@@ -16,9 +16,15 @@
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<IsPackable>true</IsPackable>
 	</PropertyGroup>
-	<ItemGroup>
-		<None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
-	</ItemGroup>
+	<Target Name="AddAnalyzersToPackage" AfterTargets="Build">
+		<!-- Find built analyzer assemblies for all target frameworks and add them to the nupkg -->
+		<ItemGroup>
+			<PackageAnalyzers Include="$(OutputPath)**\$(AssemblyName).dll" />
+		</ItemGroup>
+		<ItemGroup>
+			<None Include="@(PackageAnalyzers)" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+		</ItemGroup>
+	</Target>
 	<ItemGroup>
 		<PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.1.0" PrivateAssets="all" />
 	</ItemGroup>
