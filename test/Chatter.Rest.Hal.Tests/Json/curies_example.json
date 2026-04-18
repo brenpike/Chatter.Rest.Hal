@@ -1,0 +1,8 @@
+{
+  "_links": {
+    "curies": [
+      { "name": "acme", "href": "http://docs.acme.com/{rel}", "templated": true }
+    ],
+    "acme:order": { "href": "/orders/123" }
+  }
+}

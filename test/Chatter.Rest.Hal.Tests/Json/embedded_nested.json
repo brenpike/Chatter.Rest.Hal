@@ -1,0 +1,10 @@
+{
+  "_embedded": {
+    "parent": {
+      "id": "p1",
+      "_embedded": {
+        "child": { "id": "c1" }
+      }
+    }
+  }
+}

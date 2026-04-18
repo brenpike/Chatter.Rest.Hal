@@ -1,0 +1,8 @@
+{
+  "_links": {
+    "curies": [ { "name": "ex", "href": "http://example.com/docs/{rel}", "templated": true } ],
+    "ex:item": { "href": "/items/{id}", "templated": true },
+    "self": { "href": "/items/1" }
+  },
+  "id": 1
+}
