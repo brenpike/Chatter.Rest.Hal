@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -8,49 +9,47 @@ namespace Chatter.Rest.Hal.Converters;
 
 public class EmbeddedResourceConverter : JsonConverter<EmbeddedResource>
 {
-	public override EmbeddedResource? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-	{
-		var node = JsonNode.Parse(ref reader, new JsonNodeOptions() { PropertyNameCaseInsensitive = true })!;
+    public override EmbeddedResource? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        var node = JsonNode.Parse(ref reader, new JsonNodeOptions() { PropertyNameCaseInsensitive = true });
 
-		EmbeddedResource? embedded = null;
+        if (node is not JsonObject jo)
+        {
+            throw new JsonException($"A single {nameof(EmbeddedResource)} was expected.");
+        }
 
-		if (node is not JsonObject)
-		{
-			throw new JsonException($"A single {nameof(EmbeddedResource)} was expected.");
-		}
+        var kvp = jo.FirstOrDefault();
+        if (kvp.Equals(default(KeyValuePair<string, JsonNode?>)))
+        {
+            return null;
+        }
 
-		var jsonObject = node.AsObject();
+        EmbeddedResource embedded = new EmbeddedResource(kvp.Key);
 
-		if (jsonObject.Count != 1)
-		{
-			throw new JsonException($"A single {nameof(EmbeddedResource)} was expect.");
-		}
+        if (kvp.Value is JsonObject val)
+        {
+            var res = val.Deserialize<Resource>(options);
+            if (res != null) embedded.Resources.Add(res);
+        }
 
-		var kvp = jsonObject.First();
+        if (kvp.Value is JsonArray ja)
+        {
+            var rc = ja.Deserialize<ResourceCollection>(options) ?? new ResourceCollection();
+            embedded = new EmbeddedResource(kvp.Key)
+            {
+                Resources = rc
+            };
+        }
 
-		if (kvp.Value is JsonObject val)
-		{
-			embedded = new EmbeddedResource(kvp.Key)!;
-			embedded.Resources.Add(val.Deserialize<Resource>(options)!);
-		}
+        // If value is null or other JSON types we return an embedded with empty resources
+        return embedded;
+    }
 
-		if (kvp.Value is JsonArray ja)
-		{
-			var rc = ja.Deserialize<ResourceCollection>(options)!;
-			embedded = new EmbeddedResource(kvp.Key)
-			{
-				Resources = rc
-			};
-		}
-
-		return embedded;
-	}
-
-	public override void Write(Utf8JsonWriter writer, EmbeddedResource value, JsonSerializerOptions options)
-	{
-		writer.WriteStartObject();
-		writer.WritePropertyName(value.Name);
-		JsonSerializer.Serialize(writer, value.Resources, options);
-		writer.WriteEndObject();
-	}
+    public override void Write(Utf8JsonWriter writer, EmbeddedResource value, JsonSerializerOptions options)
+    {
+        writer.WriteStartObject();
+        writer.WritePropertyName(value.Name);
+        JsonSerializer.Serialize(writer, value.Resources, options);
+        writer.WriteEndObject();
+    }
 }

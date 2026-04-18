@@ -18,10 +18,17 @@ public class LinkObjectConverter : JsonConverter<LinkObject>
 		
         if (node[nameof(LinkObject.Href)] is null)
         {
-            throw new JsonException($"No Href property found. Href is required.");
+            // Href is required for a valid LinkObject. Be tolerant and return null for malformed input.
+            return null;
         }
 
-        return new LinkObject(node[nameof(LinkObject.Href)]?.GetValue<string>()!)
+        var href = node[nameof(LinkObject.Href)]?.GetValue<string>();
+        if (string.IsNullOrWhiteSpace(href))
+        {
+            return null;
+        }
+
+        return new LinkObject(href)
         {
             Templated = node[nameof(LinkObject.Templated)]?.GetValue<bool>(),
             Type = node[nameof(LinkObject.Type)]?.GetValue<string>(),

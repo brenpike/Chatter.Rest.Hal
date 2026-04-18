@@ -39,19 +39,26 @@ public class LinkCollectionConverter : JsonConverter<LinkCollection>
 
 		foreach (var kvp in jo)
 		{
-			var link = new Link(kvp.Key)!;
+			if (string.IsNullOrWhiteSpace(kvp.Key))
+			{
+				continue;
+			}
+			var link = new Link(kvp.Key);
+			// If the value is literally null ("rel": null) leave LinkObjects empty and add the link.
+			if (kvp.Value == null || kvp.Value.ToJsonString() == "null")
+			{
+				links.Add(link);
+				continue;			}
 			if (kvp.Value is JsonObject val)
 			{
-				link.LinkObjects.Add(val.Deserialize<LinkObject>(options)!);
+				var lo = val.Deserialize<LinkObject>(options);
+				if (lo != null) link.LinkObjects.Add(lo);
 			}
 
 			if (kvp.Value is JsonArray ja)
 			{
-				var loc = ja.Deserialize<LinkObjectCollection>(options)!;
-				link = new Link(kvp.Key)
-				{
-					LinkObjects = loc
-				};
+				var loc = ja.Deserialize<LinkObjectCollection>(options);
+				if (loc != null) link.LinkObjects = loc;
 			}
 
 			links.Add(link);

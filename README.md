@@ -61,21 +61,36 @@ Install the NuGet package:
 dotnet add package Chatter.Rest.Hal
 ```
 
-Build a simple HAL resource:
+Minimal, copy-paste example (build, serialize):
 
 ```csharp
+using System;
+using System.Text.Json;
 using Chatter.Rest.Hal;
 
+// Build a simple resource with state and a self link
 var resource = ResourceBuilder
     .WithState(new { message = "Hello, HAL!" })
     .AddSelf().AddLinkObject("/api/greeting")
     .Build();
 
-var json = JsonSerializer.Serialize(resource);
-// Output: {"message":"Hello, HAL!","_links":{"self":{"href":"/api/greeting"}}}
+// Serialize with System.Text.Json (pretty-print for readability)
+var json = JsonSerializer.Serialize(resource, new JsonSerializerOptions { WriteIndented = true });
+Console.WriteLine(json);
+
+/* Output:
+{
+  "message": "Hello, HAL!",
+  "_links": {
+    "self": {
+      "href": "/api/greeting"
+    }
+  }
+}
+*/
 ```
 
-For source-generated deserialization, also install:
+If you want compile-time helpers generated for your response types, also install the code generators package:
 
 ```bash
 dotnet add package Chatter.Rest.Hal.CodeGenerators
