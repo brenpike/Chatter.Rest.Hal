@@ -1,5 +1,4 @@
 {
-    "omnisharp.enableImportCompletion": true,
     "omnisharp.enableAsyncCompletion": true,
     "omnisharp.enableRoslynAnalyzers": true,
     "omnisharp.useModernNet": true,
@@ -7,5 +6,6 @@
         "lcov.info"
     ],
     "coverage-gutters.showLineCoverage": true,
-    "coverage-gutters.showRulerCoverage": true
+    "coverage-gutters.showRulerCoverage": true,
+    "dotnet.completion.showCompletionItemsFromUnimportedNamespaces": true
 }

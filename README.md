@@ -1,55 +1,135 @@
-![ci](https://github.com/brenpike/Chatter.Rest.Hal/actions/workflows/hal-cicd.yml/badge.svg) ![ci](https://github.com/brenpike/Chatter.Rest.Hal/actions/workflows/codegen-cicd.yml/badge.svg)
+# 🔗 Chatter.Rest.Hal
 
-- [Hypertext Application Language](#hypertext-application-language)
-- [Using the Library](#using-the-library)
-- [Building a HAL Resource](#building-a-hal-resource)
-  - [Example JSON](#example-json)
-  - [Creating a HAL Resource leveraging the Fluent Builder](#creating-a-hal-resource-leveraging-the-fluent-builder)
-  - [Creating a HAL Resource dynamically](#creating-a-hal-resource-dynamically)
-- [Deserializing a HAL Resource](#deserializing-a-hal-resource)
-  - [Strongly Typed Object](#strongly-typed-object)
-  - [Resource Object](#resource-object)
-  - [Strongly Typed Object + Source Generator](#strongly-typed-object--source-generator)
-- [Accessing data in a HAL Resource](#accessing-data-in-a-hal-resource)
-  - [Get strongly typed embedded resources](#get-strongly-typed-embedded-resources)
-  - [Get a Resource Collection](#get-a-resource-collection)
-  - [Get a Link by relation](#get-a-link-by-relation)
-  - [Get all Link Objects of a Link by relation](#get-all-link-objects-of-a-link-by-relation)
-  - [Get a Link Object of a Link by relation and Link Object name](#get-a-link-object-of-a-link-by-relation-and-link-object-name)
-  - [Get a Link Object of a Link by relation only](#get-a-link-object-of-a-link-by-relation-only)
+> A comprehensive .NET/C# implementation of the HAL (Hypertext Application Language) specification for building and consuming RESTful APIs
 
-## Hypertext Application Language
+[![CI - HAL](https://github.com/brenpike/Chatter.Rest.Hal/actions/workflows/hal-cicd.yml/badge.svg)](https://github.com/brenpike/Chatter.Rest.Hal/actions/workflows/hal-cicd.yml)
+[![CI - Code Generation](https://github.com/brenpike/Chatter.Rest.Hal/actions/workflows/codegen-cicd.yml/badge.svg)](https://github.com/brenpike/Chatter.Rest.Hal/actions/workflows/codegen-cicd.yml)
+[![NuGet - Core](https://img.shields.io/nuget/v/Chatter.Rest.Hal?label=Chatter.Rest.Hal)](https://www.nuget.org/packages/Chatter.Rest.Hal)
+[![NuGet - Code Generators](https://img.shields.io/nuget/v/Chatter.Rest.Hal.CodeGenerators?label=Chatter.Rest.Hal.CodeGenerators)](https://www.nuget.org/packages/Chatter.Rest.Hal.CodeGenerators)
 
-A dotnet/c# implementation of [HAL - The Hypertext Application Language specification](https://datatracker.ietf.org/doc/html/draft-kelly-json-hal) for RESTful Web Api
+---
 
-> ```text
-> "HAL is a simple format that gives a consistent and easy way to
-> hyperlink between resources in your API.
->
-> Adopting HAL will make your API explorable, and its documentation easily
-> discoverable from within the API itself. In short, it will make your API
-> easier to work with and therefore more attractive to client developers.
->
-> APIs that adopt HAL can be easily served and consumed using open source
-> libraries available for most major programming languages. It's also
-> simple enough that you can just deal with it as you would any other
-> JSON."
-> 
->  - Mike Kelly, HAL Specification
-> ```
+## Features
 
-More information regarding HAL can be found [here](https://stateless.group/hal_specification.html) or on [Mike Kelly's github](https://github.com/mikekelly/hal_specification/blob/master/hal_specification.md).
+- **Fluent Builder API** - Intuitive, chainable methods for constructing HAL resources
+- **Multiple Deserialization Options** - Support for strongly-typed objects, Resource objects, and source-generated types
+- **Embedded Resources** - Easily work with nested HAL resources
+- **Link Management** - Comprehensive link handling with curies, templates, and metadata
+- **Source Generators** - Code generation support via `Chatter.Rest.Hal.CodeGenerators` package
+- **Flexible Data Access** - Extension methods for querying links and embedded resources
+- **HAL Specification Compliant** - Full compliance with the [official HAL specification](https://datatracker.ietf.org/doc/html/draft-kelly-json-hal)
 
-## Using the Library
+---
 
-The libraries can be found on nuget:
+## Table of Contents
 
-- Core library can be found at [https://www.nuget.org/packages/Chatter.Rest.Hal](https://www.nuget.org/packages/Chatter.Rest.Hal.CodeGenerators)
-- Code generation library can be found at [https://www.nuget.org/packages/Chatter.Rest.Hal.CodeGenerators](https://www.nuget.org/packages/Chatter.Rest.Hal.CodeGenerators)
+- [🔗 Chatter.Rest.Hal](#-chatterresthal)
+  - [Features](#features)
+  - [Table of Contents](#table-of-contents)
+  - [Quick Start](#quick-start)
+  - [Installation](#installation)
+    - [Core Library](#core-library)
+    - [Code Generators (Optional)](#code-generators-optional)
+  - [What is HAL?](#what-is-hal)
+    - [Learn More](#learn-more)
+  - [Building a HAL Resource](#building-a-hal-resource)
+    - [Example JSON](#example-json)
+    - [Creating a HAL Resource leveraging the Fluent Builder](#creating-a-hal-resource-leveraging-the-fluent-builder)
+    - [Creating a HAL Resource dynamically](#creating-a-hal-resource-dynamically)
+  - [Deserializing a HAL Resource](#deserializing-a-hal-resource)
+    - [Strongly Typed Object](#strongly-typed-object)
+    - [Resource Object](#resource-object)
+    - [Strongly Typed Object + Source Generator](#strongly-typed-object--source-generator)
+  - [Accessing data in a HAL Resource](#accessing-data-in-a-hal-resource)
+    - [Get strongly typed embedded resources](#get-strongly-typed-embedded-resources)
+    - [Get a Resource Collection](#get-a-resource-collection)
+    - [Get a Link by relation](#get-a-link-by-relation)
+    - [Get all Link Objects of a Link by relation](#get-all-link-objects-of-a-link-by-relation)
+    - [Get a Link Object of a Link by relation and Link Object name](#get-a-link-object-of-a-link-by-relation-and-link-object-name)
+    - [Get a Link Object of a Link by relation only](#get-a-link-object-of-a-link-by-relation-only)
+  - [Additional Resources](#additional-resources)
+  - [License](#license)
+  - [Contributing](#contributing)
+
+---
+
+## Quick Start
+
+Install the NuGet package:
+
+```bash
+dotnet add package Chatter.Rest.Hal
+```
+
+Build a simple HAL resource:
+
+```csharp
+using Chatter.Rest.Hal;
+
+var resource = ResourceBuilder
+    .WithState(new { message = "Hello, HAL!" })
+    .AddSelf().AddLinkObject("/api/greeting")
+    .Build();
+
+var json = JsonSerializer.Serialize(resource);
+// Output: {"message":"Hello, HAL!","_links":{"self":{"href":"/api/greeting"}}}
+```
+
+For source-generated deserialization, also install:
+
+```bash
+dotnet add package Chatter.Rest.Hal.CodeGenerators
+```
+
+---
+
+## Installation
+
+### Core Library
+
+The core library provides builders and runtime support for HAL resources:
+
+```bash
+dotnet add package Chatter.Rest.Hal
+```
+
+**NuGet Link:** [Chatter.Rest.Hal](https://www.nuget.org/packages/Chatter.Rest.Hal)
+
+### Code Generators (Optional)
+
+For compile-time code generation support, add the code generators package:
+
+```bash
+dotnet add package Chatter.Rest.Hal.CodeGenerators
+```
+
+**NuGet Link:** [Chatter.Rest.Hal.CodeGenerators](https://www.nuget.org/packages/Chatter.Rest.Hal.CodeGenerators)
+
+---
+
+## What is HAL?
+
+
+**HAL** stands for **Hypertext Application Language** — a simple, standardized format for designing REST APIs that are easy to explore, understand, and consume. It enables self-documenting APIs where hypermedia controls and resource relationships are discoverable through the API itself.
+
+According to [Mike Kelly, the HAL specification creator](https://stateless.group/hal_specification.html):
+
+> "HAL is a simple format that gives a consistent and easy way to hyperlink between resources in your API. Adopting HAL will make your API explorable, and its documentation easily discoverable from within the API itself. In short, it will make your API easier to work with and therefore more attractive to client developers."
+
+### Learn More
+
+- [Official HAL Specification](https://datatracker.ietf.org/doc/html/draft-kelly-json-hal)
+- [HAL Specification Overview](https://stateless.group/hal_specification.html)
+- [GitHub Repository](https://github.com/mikekelly/hal_specification)
+
+---
 
 ## Building a HAL Resource
 
+
 ### Example JSON
+
+A typical HAL response includes `_links` for navigation and `_embedded` for related resources. Here's a comprehensive example:
 
 ```json
 {
@@ -97,7 +177,9 @@ The libraries can be found on nuget:
 
 ### Creating a HAL Resource leveraging the Fluent Builder
 
-The Fluent Builder will build a HAL Resource that is compliant with the HAL Specification. The example below shows how to build a complex HAL Resource object for the JSON [above](###example-json).
+The Fluent Builder API makes it easy to construct complex, HAL-compliant resources. It ensures your resource structure matches the HAL specification while maintaining readable, chainable code.
+
+**Example:** Building the resource structure shown in the JSON above:
 
 ```csharp
 var resource = ResourceBuilder.WithState(new { currentlyProcessing = 14, shippedToday = 20 })
@@ -121,7 +203,21 @@ var resource = ResourceBuilder.WithState(new { currentlyProcessing = 14, shipped
 
 ### Creating a HAL Resource dynamically
 
-In most cases, your resource state and embedded resources will be strongly typed objects retrieved from a datastore and links will be calculated values based on these objects. The example below shows how the fluent builder can be used to construct a valid HAL object dynamically.
+In real-world scenarios, you typically construct resources dynamically from database objects. This example demonstrates building a HAL resource from a collection of `Order` objects:
+
+**Define your model:**
+
+```csharp
+public class Order
+{
+    public string Id { get; set; }
+    public float Total { get; set; }
+    public string Currency { get; set; }
+    public string Status { get; set; }
+}
+```
+
+**Build the resource dynamically:**
 
 ```csharp
 var orders = new List<Order>()
@@ -151,7 +247,7 @@ var resource = ResourceBuilder.WithState(new { currentlyProcessing = 14, shipped
 	.Build();
 ```
 
-Below is the resulting JSON:
+**Resulting JSON output:**
 
 ```json
 {
@@ -299,11 +395,14 @@ Below is the resulting JSON:
 }
 ```
 
+---
+
 ## Deserializing a HAL Resource
+
 
 ### Strongly Typed Object
 
-Deserializing `application/hal+json` content type as defined [above](###example-json) to a strongly typed `OrderCollection` object:
+Deserialize HAL+JSON responses into strongly typed .NET objects for type safety and IntelliSense support:
 
 ```csharp
 public class OrderCollection
@@ -318,14 +417,13 @@ public class OrderCollection
 	public EmbeddedResourceCollection? Embedded { get; set; }
 }
 
-...
-
+// Deserialize from HAL+JSON
 var stronglyTypedOrder = JsonSerializer.Deserialize<OrderCollection>(halJson);
 ```
 
 ### Resource Object
 
-Deserializing `application/hal+json` content type as defined [above](###example-json) to a [Resource object](https://github.com/brenpike/Chatter.Rest.Hal/blob/main/src/Chatter.Rest.Hal/Resource.cs):
+For more flexible deserialization when you don't have a strongly-typed target class, use the `Resource` object:
 
 ```csharp
 public class OrderState
@@ -336,18 +434,14 @@ public class OrderState
 	public int ShippedToday { get; set; }
 }
 
-...
-
+// Deserialize to a Resource object
 var resource = JsonSerializer.Deserialize<Resource>(halJson);
+
+// Access the state as a strongly-typed object
+var orderState = resource.State<OrderState>();
 ```
 
-To get a [Resource's state](https://datatracker.ietf.org/doc/html/draft-kelly-json-hal#section-4), use a [Resource object's](https://github.com/brenpike/Chatter.Rest.Hal/blob/main/src/Chatter.Rest.Hal/Resource.cs) `State<T>` method:
-
-```csharp
-var stronglyTypeOrder = resource.State<OrderState>();
-```
-
-To cast the [Resource object](https://github.com/brenpike/Chatter.Rest.Hal/blob/main/src/Chatter.Rest.Hal/Resource.cs) as a strongly typed object use the `.As<T>` method:
+**Convert a Resource object to a strongly-typed object:**
 
 ```csharp
 var resource = ResourceBuilder.WithState(new { currentlyProcessing = 14, shippedToday = 20 })
@@ -366,14 +460,23 @@ var resource = ResourceBuilder.WithState(new { currentlyProcessing = 14, shipped
 		})
 	.Build();
 
+// Cast to strongly-typed object using the .As<T>() method
 var orderCollection = resource!.As<OrderCollection>();
 ```
 
+For more details, see the [Resource class documentation](https://github.com/brenpike/Chatter.Rest.Hal/blob/main/src/Chatter.Rest.Hal/Resource.cs).
+
 ### Strongly Typed Object + Source Generator
 
-Deserializing `application/hal+json` content as defined [above](###example-json) to a strongly typed `OrderCollection` object using [source generators](https://github.com/brenpike/Chatter.Rest.Hal/tree/main/src/Chatter.Rest.Hal.CodeGenerators):
+For automatic property generation, use the `Chatter.Rest.Hal.CodeGenerators` package to generate HAL-specific properties at compile time.
 
-Add the `Chatter.Rest.Hal.CodeGenerators` nuget package to your project and decorate your strongly typed object with the [HalResponseAttribute](https://github.com/brenpike/Chatter.Rest.Hal/blob/main/src/Chatter.Rest.Hal.Core/HalResponseAttribute.cs)
+**Step 1:** Install the code generators package:
+
+```bash
+dotnet add package Chatter.Rest.Hal.CodeGenerators
+```
+
+**Step 2:** Decorate your class with the `[HalResponse]` attribute:
 
 ```csharp
 [HalResponse]
@@ -386,20 +489,27 @@ public partial class OrderCollection
 }
 ```
 
-Decorating with the [HalResponseAttribute](https://github.com/brenpike/Chatter.Rest.Hal/blob/main/src/Chatter.Rest.Hal.Core/HalResponseAttribute.cs) will create another partial class with the same name as your strongly typed object, eg., `OrderCollection`, and add the `_links` and `_embedded` properties:
+The `[HalResponse]` attribute automatically generates a partial class that adds the required HAL properties:
 
 ```csharp
 [JsonPropertyName("_links")]
-public LinkCollection? Links {{ get; set; }}
+public LinkCollection? Links { get; set; }
 [JsonPropertyName("_embedded")]
-public EmbeddedResourceCollection? Embedded {{ get; set; }}
+public EmbeddedResourceCollection? Embedded { get; set; }
 ```
+
+See the [HalResponseAttribute documentation](https://github.com/brenpike/Chatter.Rest.Hal/blob/main/src/Chatter.Rest.Hal.Core/HalResponseAttribute.cs) for more information.
+
+---
 
 ## Accessing data in a HAL Resource
 
-Once you've received a response with a `application/hal+json` content type from a server, you'll want to easily access various parts of the [Resource object](https://github.com/brenpike/Chatter.Rest.Hal/blob/main/src/Chatter.Rest.Hal/Resource.cs).  This can be done using the various extension methods.
+
+Once you've received a `application/hal+json` response from your API, the library provides convenient extension methods to navigate links and access embedded resources. The following examples show how to use the [Resource object](https://github.com/brenpike/Chatter.Rest.Hal/blob/main/src/Chatter.Rest.Hal/Resource.cs) extension methods.
 
 ### Get strongly typed embedded resources
+
+Extract embedded resources as strongly-typed objects:
 
 ```csharp
 var embeddedOrders = resource!.GetEmbeddedResources<Order>("ea:order");
@@ -407,13 +517,15 @@ var embeddedOrders = resource!.GetEmbeddedResources<Order>("ea:order");
 
 ### Get a Resource Collection
 
+Retrieve a collection of Resource objects by relation name:
+
 ```csharp
 var resources = resource!.GetResourceCollection("ea:order");
 ```
 
 ### Get a Link by relation
 
-This will return the Link with the matching relation, null if no matching relations are found or throw an exception if more than one relation is found.
+Retrieve a single link by its relation. Returns `null` if not found, or throws an exception if multiple links with the same relation exist:
 
 ```csharp
 var link = resource!.GetLinkOrDefault("self");
@@ -421,13 +533,15 @@ var link = resource!.GetLinkOrDefault("self");
 
 ### Get all Link Objects of a Link by relation
 
+Retrieve all link objects associated with a specific relation:
+
 ```csharp
 var linkObjCol = resource!.GetLinkObjects("self");
 ```
 
 ### Get a Link Object of a Link by relation and Link Object name
 
-In this case, the Link Object name is used as a secondary key. Common when curies are used. Returns null if no matching relations+name is found or throws an exception if more than one relation+name is found.
+When using custom namespaces (curies), retrieve a link object by both relation and name. Returns `null` if not found, or throws an exception if multiple matches exist:
 
 ```csharp
 var linkObj = resource!.GetLinkObjectOrDefault("curies", "ea");
@@ -435,10 +549,33 @@ var linkObj = resource!.GetLinkObjectOrDefault("curies", "ea");
 
 ### Get a Link Object of a Link by relation only
 
-Most Links have only a single Link Object. Use this extension method to get the exact Link Object you're expecting using the Link's relation. Returns null if no matching relations are found or throw an exception if more than one relation is found.
+For relations with a single link object, retrieve it directly by relation:
 
 ```csharp
 var linkObj = resource!.GetLinkObjectOrDefault("self");
 ```
 
-If the extension above were used on a Resource which was deserialized from [the example JSON](###example-json), a Link Object with `{ "href": "/orders" }` would be returned as it is the only Link Object with the relation "self".
+If used on the resource from the example JSON above, this would return a Link Object with `{ "href": "/orders" }` since "self" is the only link object for that relation.
+
+---
+
+## Additional Resources
+
+- **Source Code:** [GitHub Repository](https://github.com/brenpike/Chatter.Rest.Hal)
+- **Core Library:** [Resource.cs](https://github.com/brenpike/Chatter.Rest.Hal/blob/main/src/Chatter.Rest.Hal/Resource.cs)
+- **Code Generators:** [Source Generator Project](https://github.com/brenpike/Chatter.Rest.Hal/tree/main/src/Chatter.Rest.Hal.CodeGenerators)
+- **HAL Specification:** [Official Spec](https://datatracker.ietf.org/doc/html/draft-kelly-json-hal)
+
+---
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit issues, fork the repository, and create pull requests for any improvements.
+
+For more information, visit the [GitHub Repository](https://github.com/brenpike/Chatter.Rest.Hal).
+
+---
