@@ -1,0 +1,5 @@
+{
+  "_links": {
+    "self": { "href": "/orders/{id}", "templated": true }
+  }
+}

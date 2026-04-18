@@ -1,0 +1,5 @@
+[
+  { "_links": null },
+  { "_links": { "self": { "href": null } } },
+  { "_embedded": "not-an-object" }
+]

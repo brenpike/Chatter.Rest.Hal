@@ -1,0 +1,6 @@
+{
+  "_embedded": {
+    "item": { "id": 1, "name": "Single" },
+    "items": [ { "id": 2 }, { "id": 3 } ]
+  }
+}
