@@ -8,9 +8,12 @@ on:
         required: true
         default: 'Manual build from GitHub UI'
   push:
-    branches: [ feature/** ]
+    branches:
+      - 'feature/**'
     paths:
       - '**/src/Chatter.Rest.Hal/**'
+      - '.github/workflows/hal-cicd.yml'
+      - '**/test/Chatter.Rest.Hal.Tests/**'
   pull_request:
     branches: [ main ]
     types:
