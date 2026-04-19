@@ -36,7 +36,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -61,7 +61,7 @@ jobs:
         run: dotnet pack '/home/runner/work/Chatter.Rest.Hal/Chatter.Rest.Hal/src/Chatter.Rest.Hal/Chatter.Rest.Hal.csproj' -c Release --no-build -o publish/nuget
 
       - name: Upload NuGet
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: nuget
           path: /home/runner/work/Chatter.Rest.Hal/Chatter.Rest.Hal/publish/nuget/**
@@ -85,7 +85,7 @@ jobs:
 
     steps:
       - name: Download NuGet
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: nuget
           path: ./dist/nuget
