@@ -61,11 +61,6 @@ jobs:
       - name: Test
         run: dotnet test "${{ env.test-project-path }}" -c Release --no-build
 
-      - name: Build CodeGenerators for all TFMs
-        run: |
-          dotnet build "${{ env.project-path }}" -c Release -f net8.0 --no-restore
-          dotnet build "${{ env.project-path }}" -c Release -f netstandard2.0 --no-restore
-
       - name: Pack
         run: dotnet pack "${{ env.project-path }}" -c Release --no-build -o publish/nuget
 

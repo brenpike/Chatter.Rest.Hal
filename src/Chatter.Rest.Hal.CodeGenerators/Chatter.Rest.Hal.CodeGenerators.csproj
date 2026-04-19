@@ -1,32 +1,33 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-	<PropertyGroup>
-		<TargetFrameworks>net8.0;netstandard2.0</TargetFrameworks>
-		<LangVersion>10.0</LangVersion>
-		<Nullable>enable</Nullable>
-		<ImplicitUsings>enable</ImplicitUsings>
-		<IncludeBuildOutput>false</IncludeBuildOutput>
-		<Version>0.2.5</Version>
-		<Authors>Brennan Pike</Authors>
-		<Owners>Brennan Pike</Owners>
-		<Description>Generates the appropriate additional attributes of a response object to match the HAL specification</Description>
-		<PackageId>Chatter.Rest.Hal.CodeGenerators</PackageId>
-		<RepositoryUrl>https://github.com/brenpike/Chatter.Rest.Hal</RepositoryUrl>
-		<RepositoryType>git</RepositoryType>
-		<PackageTags>.net;Chatter;REST;HAL;hal+json;HATEOAS</PackageTags>
-		<PackageLicenseExpression>MIT</PackageLicenseExpression>
-		<IsPackable>true</IsPackable>
-		<RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
-	</PropertyGroup>
-	<Target Name="AddAnalyzersToPackage" AfterTargets="Build">
-		<!-- Find built analyzer assemblies for all target frameworks and add them to the nupkg -->
-		<ItemGroup>
-			<PackageAnalyzers Include="$(OutputPath)**\$(AssemblyName).dll" />
-		</ItemGroup>
-		<ItemGroup>
-			<None Include="@(PackageAnalyzers)" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
-		</ItemGroup>
-	</Target>
-	<ItemGroup>
-		<PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.1.0" PrivateAssets="all" />
-	</ItemGroup>
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>10.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+
+    <IsPackable>true</IsPackable>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+
+    <Version>0.2.5</Version>
+    <Authors>Brennan Pike</Authors>
+    <Owners>Brennan Pike</Owners>
+    <Description>Generates the appropriate additional attributes of a response object to match the HAL specification</Description>
+    <PackageId>Chatter.Rest.Hal.CodeGenerators</PackageId>
+    <RepositoryUrl>https://github.com/brenpike/Chatter.Rest.Hal</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>.net;Chatter;REST;HAL;hal+json;HATEOAS</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.1.0" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="$(OutputPath)$(AssemblyName).dll"
+          Pack="true"
+          PackagePath="analyzers/dotnet/cs"
+          Visible="false" />
+  </ItemGroup>
 </Project>
