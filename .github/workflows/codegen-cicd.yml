@@ -106,8 +106,8 @@ jobs:
           dotnet-version: ${{ env.dotnet-version }}
           source-url: ${{ env.NUGET_URL }}
           cache: true
-        cache-dependency-path: |
-          **/Chatter.Rest.Hal.CodeGenerators/packages.lock.json
+          cache-dependency-path: |
+            **/Chatter.Rest.Hal.CodeGenerators/packages.lock.json
 
       - name: Download Source
         uses: actions/download-artifact@v4.1.7
