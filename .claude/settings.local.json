@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dotnet build *)",
+      "Bash(dotnet test *)",
+      "Bash(dotnet clean *)",
+      "Bash(git stash *)",
+      "Bash(cat)",
+      "Bash(dotnet run *)",
+      "Bash(dotnet restore *)",
+      "Bash(xargs -I {} sh -c 'echo \"=== {} ===\" && head -20 {}')"
+    ]
+  },
+  "enabledMcpjsonServers": [
+    "code-review-graph",
+    "context7",
+    "github"
+  ],
+  "spinnerTipsEnabled": false,
+  "outputStyle": "default"
+}

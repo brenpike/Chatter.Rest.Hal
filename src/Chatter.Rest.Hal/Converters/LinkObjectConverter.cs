@@ -15,7 +15,7 @@ public class LinkObjectConverter : JsonConverter<LinkObject>
         {
             return null;
         }
-		
+
         if (node[nameof(LinkObject.Href)] is null)
         {
             // Href is required for a valid LinkObject. Be tolerant and return null for malformed input.
@@ -30,14 +30,54 @@ public class LinkObjectConverter : JsonConverter<LinkObject>
 
         return new LinkObject(href)
         {
-            Templated = node[nameof(LinkObject.Templated)]?.GetValue<bool>(),
-            Type = node[nameof(LinkObject.Type)]?.GetValue<string>(),
-            Deprecation = node[nameof(LinkObject.Deprecation)]?.GetValue<string>(),
-            Name = node[nameof(LinkObject.Name)]?.GetValue<string>(),
-            Title = node[nameof(LinkObject.Title)]?.GetValue<string>(),
-            Profile = node[nameof(LinkObject.Profile)]?.GetValue<string>(),
-            Hreflang = node[nameof(LinkObject.Hreflang)]?.GetValue<string>()
+            Templated = TryGetBooleanAsTrue(node[nameof(LinkObject.Templated)]),
+            Type = TryGetString(node[nameof(LinkObject.Type)]),
+            Deprecation = TryGetString(node[nameof(LinkObject.Deprecation)]),
+            Name = TryGetString(node[nameof(LinkObject.Name)]),
+            Title = TryGetString(node[nameof(LinkObject.Title)]),
+            Profile = TryGetString(node[nameof(LinkObject.Profile)]),
+            Hreflang = TryGetString(node[nameof(LinkObject.Hreflang)])
         };
+    }
+
+    private static bool? TryGetBooleanAsTrue(JsonNode? node)
+    {
+        if (node == null)
+        {
+            return null;
+        }
+
+        // Per HAL spec: templated should only be true if the value is boolean true
+        // Any other value (including boolean false, strings, numbers, objects, arrays) should be treated as false (null)
+        try
+        {
+            var value = node.GetValue<bool>();
+            return value ? true : null;
+        }
+        catch
+        {
+            // Not a valid boolean - treat as false (null)
+            return null;
+        }
+    }
+
+    private static string? TryGetString(JsonNode? node)
+    {
+        if (node == null)
+        {
+            return null;
+        }
+
+        // Only accept actual string values; reject numbers, booleans, objects, arrays
+        try
+        {
+            return node.GetValue<string>();
+        }
+        catch
+        {
+            // Not a valid string - return null
+            return null;
+        }
     }
 
     public override void Write(Utf8JsonWriter writer, LinkObject linkObject, JsonSerializerOptions options)
