@@ -32,6 +32,26 @@ public class LinkObjectCollectionConverter : JsonConverter<LinkObjectCollection>
 
 	private static void CreateAndAddLinkObject(JsonSerializerOptions options, LinkObjectCollection linkObjects, JsonNode? node)
 	{
+		if (node == null) return;
+
+		if (node is JsonValue jv)
+		{
+			try
+			{
+				var href = jv.GetValue<string>();
+				if (!string.IsNullOrWhiteSpace(href))
+				{
+					linkObjects.Add(new LinkObject(href));
+				}
+			}
+			catch
+			{
+				// ignore non-string values
+			}
+
+			return;
+		}
+
 		var linkObject = node.Deserialize<LinkObject>(options);
 		if (linkObject != null)
 		{
