@@ -53,6 +53,35 @@ namespace Chatter.Rest.Hal.Tests
         }
 
         [Fact]
+        public void StringArray_Shorthand_Deserializes_To_Multiple_LinkObjects()
+        {
+            var json = "{ \"_links\": { \"friends\": [\"/f/1\",\"/f/2\"] } }";
+            var res = JsonSerializer.Deserialize<Chatter.Rest.Hal.Resource>(json);
+
+            Assert.NotNull(res);
+            var friends = res!.Links.Single(l => l.Rel == "friends");
+
+            Assert.Equal(2, friends.LinkObjects.Count);
+            Assert.Equal("/f/1", friends.LinkObjects.ElementAt(0).Href);
+            Assert.Equal("/f/2", friends.LinkObjects.ElementAt(1).Href);
+        }
+
+        [Fact]
+        public void MixedArray_Shorthand_And_Object_Deserializes_To_LinkObjects()
+        {
+            var json = "{ \"_links\": { \"items\": [\"/a\", { \"href\": \"/b\", \"title\": \"B\" }] } }";
+            var res = JsonSerializer.Deserialize<Chatter.Rest.Hal.Resource>(json);
+
+            Assert.NotNull(res);
+            var items = res!.Links.Single(l => l.Rel == "items");
+
+            Assert.Equal(2, items.LinkObjects.Count);
+            Assert.Equal("/a", items.LinkObjects.ElementAt(0).Href);
+            Assert.Equal("/b", items.LinkObjects.ElementAt(1).Href);
+            Assert.Equal("B", items.LinkObjects.ElementAt(1).Title);
+        }
+
+        [Fact]
         public void Reading_Link_With_Null_Value_Produces_Link_With_No_LinkObjects()
         {
             var json = "{ \"_links\": { \"self\": null } }";
