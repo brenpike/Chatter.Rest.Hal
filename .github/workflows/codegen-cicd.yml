@@ -8,8 +8,11 @@ on:
         required: true
         default: 'Manual build from GitHub UI'
   push:
-    branches: [ feature/** ]
-    paths: 
+    branches:
+      - 'feature/**'
+    paths:
+      - '.github/workflows/codegen-cicd.yml'
+      - '**/test/Chatter.Rest.Hal.CodeGenerators.Tests/**'
       - '**/src/Chatter.Rest.Hal.CodeGenerators/**'
   pull_request:
     branches: [ main ]
