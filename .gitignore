@@ -456,3 +456,9 @@ $RECYCLE.BIN/
 !.vscode/extensions.json
 
 coverage/
+
+gh-artifacts/
+gh-artifacts/*
+# Added by code-review-graph
+.code-review-graph/
+nupkgs/

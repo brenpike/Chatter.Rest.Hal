@@ -1,5 +1,7 @@
+using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using FluentAssertions;
 using Xunit;
 
 namespace Chatter.Rest.Hal.Tests
@@ -78,6 +80,70 @@ namespace Chatter.Rest.Hal.Tests
 
             Assert.Equal(1, linksOccurrences);
             Assert.Equal(1, embeddedOccurrences);
+        }
+
+        [Fact]
+        public void Resource_With_Self_Link_Serializes_Self_Relation()
+        {
+            // HAL spec: each Resource Object SHOULD contain a 'self' link
+            // whose value is the resource's URI. This test verifies the
+            // self link is preserved through serialization round-trip.
+
+            // Arrange: create a resource with a self link
+            var state = new { id = 456, name = "order" };
+            var resource = new Chatter.Rest.Hal.Resource(state);
+            resource.Links.Add(TestHelpers.CreateLink("self", "/orders/456"));
+
+            // Act: serialize and deserialize
+            var json = JsonSerializer.Serialize(resource);
+            var deserialized = JsonSerializer.Deserialize<Chatter.Rest.Hal.Resource>(json);
+
+            // Assert: self link is preserved with correct href
+            deserialized.Should().NotBeNull();
+            var selfLink = deserialized!.Links.GetLinkOrDefault("self");
+            selfLink.Should().NotBeNull();
+            selfLink!.LinkObjects.Should().HaveCount(1);
+
+            var selfLinkObject = selfLink.LinkObjects.First();
+            selfLinkObject.Href.Should().Be("/orders/456");
+        }
+
+        [Fact]
+        public void Resource_Self_Link_Is_Accessible_Via_Extension()
+        {
+            // HAL spec: each Resource Object SHOULD contain a 'self' link
+            // whose value is the resource's URI. This test verifies the
+            // GetLinkObjectOrDefault extension method correctly retrieves
+            // the self link relation.
+
+            // Arrange: create a resource with a self link
+            var state = new { id = 789, type = "product" };
+            var resource = new Chatter.Rest.Hal.Resource(state);
+            resource.Links.Add(TestHelpers.CreateLink("self", "/products/789"));
+
+            // Act: retrieve the self link using extension method
+            var selfLinkObject = resource.GetLinkObjectOrDefault("self");
+
+            // Assert: self link is accessible and has correct href
+            selfLinkObject.Should().NotBeNull();
+            selfLinkObject!.Href.Should().Be("/products/789");
+        }
+
+        [Fact]
+        public void Resource_Without_Self_Link_Returns_Null_Via_Extension()
+        {
+            // Edge case: when a resource has no self link, the extension
+            // method should return null rather than throwing an exception.
+
+            // Arrange: create a resource without a self link
+            var state = new { id = 999, type = "item" };
+            var resource = new Chatter.Rest.Hal.Resource(state);
+
+            // Act: attempt to retrieve the self link using extension method
+            var selfLinkObject = resource.GetLinkObjectOrDefault("self");
+
+            // Assert: extension method returns null for missing self link
+            selfLinkObject.Should().BeNull();
         }
     }
 }
