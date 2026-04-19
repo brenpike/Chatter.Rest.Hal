@@ -41,6 +41,8 @@ jobs:
       with:
         dotnet-version: ${{ env.dotnet-version }}
         cache: true
+        cache-dependency-path: |
+          **/Chatter.Rest.Hal/packages.lock.json
     - name: Install dependencies
       run: dotnet restore
     - name: Build
@@ -89,7 +91,9 @@ jobs:
           dotnet-version: ${{ env.dotnet-version }}
           source-url: ${{ env.NUGET_URL }}
           cache: true
-          
+        cache-dependency-path: |
+          **/Chatter.Rest.Hal/packages.lock.json
+
       - name: Download Source
         uses: actions/download-artifact@v4.1.7
         with:
