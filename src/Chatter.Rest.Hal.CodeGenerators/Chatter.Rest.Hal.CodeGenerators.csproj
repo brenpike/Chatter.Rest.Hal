@@ -15,6 +15,7 @@
 		<PackageTags>.net;Chatter;REST;HAL;hal+json;HATEOAS</PackageTags>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<IsPackable>true</IsPackable>
+		<RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
 	</PropertyGroup>
 	<Target Name="AddAnalyzersToPackage" AfterTargets="Build">
 		<!-- Find built analyzer assemblies for all target frameworks and add them to the nupkg -->
