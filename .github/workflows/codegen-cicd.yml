@@ -2,131 +2,119 @@ name: CodeGen CI/CD
 
 on:
   workflow_dispatch:
-   inputs:
+    inputs:
       reason:
         description: 'The reason for running the workflow'
         required: true
         default: 'Manual build from GitHub UI'
+
   push:
     branches:
       - 'feature/**'
     paths:
       - '.github/workflows/codegen-cicd.yml'
+      - '**/src/Chatter.Rest.Hal.CodeGenerators/**'
       - '**/test/Chatter.Rest.Hal.CodeGenerators.Tests/**'
-      - '**/src/Chatter.Rest.Hal.CodeGenerators/**'
+
   pull_request:
-    branches: [ main ]
-    types:
-      - closed
-    paths: 
+    branches:
+      - main
+    paths:
+      - '.github/workflows/codegen-cicd.yml'
       - '**/src/Chatter.Rest.Hal.CodeGenerators/**'
-    
+      - '**/test/Chatter.Rest.Hal.CodeGenerators.Tests/**'
+
 env:
-  dotnet-version:  '8.0.x'
+  dotnet-version: '8.0.x'
+  project-path: /home/runner/work/Chatter.Rest.Hal/Chatter.Rest.Hal/src/Chatter.Rest.Hal.CodeGenerators/Chatter.Rest.Hal.CodeGenerators.csproj
+  test-project-path: /home/runner/work/Chatter.Rest.Hal/Chatter.Rest.Hal/test/Chatter.Rest.Hal.CodeGenerators.Tests/Chatter.Rest.Hal.CodeGenerators.Tests.csproj
 
 permissions:
   contents: read
-      
+
 jobs:
   build:
     name: build
     runs-on: ubuntu-latest
-    
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-    - name: Setup .NET Core
-      uses: actions/setup-dotnet@v5
-      with:
-        dotnet-version: ${{ env.dotnet-version }}
-        cache: true
-        cache-dependency-path: |
-          **/Chatter.Rest.Hal.CodeGenerators/packages.lock.json
+    if: github.event_name != 'pull_request' || github.event.pull_request.merged == true
 
-    - name: Install dependencies
-      run: dotnet restore
-    - name: Build
-      run: dotnet build -c Release --no-restore
-    - name: Test
-      run: dotnet test '/home/runner/work/Chatter.Rest.Hal/Chatter.Rest.Hal/test/Chatter.Rest.Hal.CodeGenerators.Tests/Chatter.Rest.Hal.CodeGenerators.Tests.csproj' --no-restore
-    - name: Publish
-      run: dotnet publish '/home/runner/work/Chatter.Rest.Hal/Chatter.Rest.Hal/src/Chatter.Rest.Hal.CodeGenerators/Chatter.Rest.Hal.CodeGenerators.csproj' -c Release -o publish/source
-    - name: Build CodeGenerators for all TFMs
-      run: |
-        # Ensure analyzer DLLs are built for each TFM declared in the project so the pack step can include them
-        dotnet build '/home/runner/work/Chatter.Rest.Hal/Chatter.Rest.Hal/src/Chatter.Rest.Hal.CodeGenerators/Chatter.Rest.Hal.CodeGenerators.csproj' -c Release -f net8.0 --no-restore
-        dotnet build '/home/runner/work/Chatter.Rest.Hal/Chatter.Rest.Hal/src/Chatter.Rest.Hal.CodeGenerators/Chatter.Rest.Hal.CodeGenerators.csproj' -c Release -f netstandard2.0 --no-restore
-    - name: Create nupkg
-      run: dotnet pack '/home/runner/work/Chatter.Rest.Hal/Chatter.Rest.Hal/src/Chatter.Rest.Hal.CodeGenerators/Chatter.Rest.Hal.CodeGenerators.csproj' -c Release -o publish/nuget
-    - name: Inspect nupkg analyzers
-      run: |
-        echo "Listing contents of created nupkg(s):"
-        for f in publish/nuget/*.nupkg; do
-          echo "---- $f ----"
-          unzip -l "$f" | sed -n '1,200p' || true
-          echo "Analyzers (if any):"
-          unzip -l "$f" | grep -i analyzers || true
-        done
-    - name: Upload Source
-      uses: actions/upload-artifact@v4
-      with:
-        name: source
-        path: /home/runner/work/Chatter.Rest.Hal/Chatter.Rest.Hal/publish/source/**
-        retention-days: 5
-        if-no-files-found: error
-    - name: Upload NuGet
-      uses: actions/upload-artifact@v4
-      with:
-        name: nuget
-        path: /home/runner/work/Chatter.Rest.Hal/Chatter.Rest.Hal/publish/nuget/**
-        retention-days: 5
-        if-no-files-found: error
-        
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: ${{ env.dotnet-version }}
+          cache: true
+          cache-dependency-path: |
+            **/packages.lock.json
+
+      - name: Restore
+        run: dotnet restore "${{ env.project-path }}" --locked-mode
+
+      - name: Build
+        run: dotnet build "${{ env.project-path }}" -c Release --no-restore
+
+      - name: Test
+        run: dotnet test "${{ env.test-project-path }}" -c Release --no-build
+
+      - name: Build CodeGenerators for all TFMs
+        run: |
+          dotnet build "${{ env.project-path }}" -c Release -f net8.0 --no-restore
+          dotnet build "${{ env.project-path }}" -c Release -f netstandard2.0 --no-restore
+
+      - name: Pack
+        run: dotnet pack "${{ env.project-path }}" -c Release --no-build -o publish/nuget
+
+      - name: Inspect nupkg analyzers
+        shell: bash
+        run: |
+          echo "Listing contents of created nupkg(s):"
+          for f in publish/nuget/*.nupkg; do
+            echo "---- $f ----"
+            unzip -l "$f" | sed -n '1,200p' || true
+            echo "Analyzers (if any):"
+            unzip -l "$f" | grep -i analyzers || true
+          done
+
+      - name: Upload NuGet artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuget
+          path: /home/runner/work/Chatter.Rest.Hal/Chatter.Rest.Hal/publish/nuget/**
+          retention-days: 5
+          if-no-files-found: error
+
   deploy:
+    name: deploy
     needs: build
     runs-on: ubuntu-latest
-    if: github.event.pull_request.merged == true
-    
+    if: github.event_name == 'pull_request' && github.event.pull_request.merged == true
+
     environment:
       name: Production
-    
+
     env:
       NUGET_AUTH_TOKEN: ${{ secrets.NUGET_API_KEY_CHATTER_HAL }}
       NUGET_URL: https://api.nuget.org/v3/index.json
-    permissions:
-      packages: write
-      contents: read
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: actions/setup-dotnet@v5
-        with:
-          dotnet-version: ${{ env.dotnet-version }}
-          source-url: ${{ env.NUGET_URL }}
-          cache: true
-          cache-dependency-path: |
-            **/Chatter.Rest.Hal.CodeGenerators/packages.lock.json
 
-      - name: Download Source
-        uses: actions/download-artifact@v4.1.7
-        with:
-          name: source
-          path: ./dist/source
-      
-      - name: Download NuGet
-        uses: actions/download-artifact@v4.1.7
-        id: download-nuget
+    permissions:
+      contents: read
+
+    steps:
+      - name: Download NuGet artifact
+        uses: actions/download-artifact@v4
         with:
           name: nuget
           path: ./dist/nuget
-      
-      - name: Display structure of downloaded files
-        run: ls -R
-        working-directory: ./dist
-        
-      - name: Push Nuget packages
+
+      - name: Push NuGet packages
         shell: bash
         run: |
-          dotnet nuget push "./dist/nuget/*.nupkg" -k '${{ env.NUGET_AUTH_TOKEN }}' -s '${{ env.NUGET_URL }}' --skip-duplicate
+          dotnet nuget push "./dist/nuget/*.nupkg" \
+            -k "${{ env.NUGET_AUTH_TOKEN }}" \
+            -s "${{ env.NUGET_URL }}" \
+            --skip-duplicate
