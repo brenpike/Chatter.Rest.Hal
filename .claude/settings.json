@@ -1,5 +1,4 @@
 {
-  "agent": "orchestrator",
   "hooks": {
     "PostToolUse": [
       {
@@ -26,5 +25,8 @@
       }
     ]
   },
-  "enabledPlugins": {}
+  "enabledPlugins": {
+    "claude-mem@thedotmack": true
+  },
+  "agent": "orchestrator"
 }

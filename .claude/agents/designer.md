@@ -5,6 +5,7 @@ model: claude-sonnet-4-5
 tools: Read, Write, Edit, Glob, Grep, WebSearch, WebFetch
 mcpServers:
   - context7
+  - code-review-graph
 memory: project
 ---
 

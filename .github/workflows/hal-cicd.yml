@@ -72,7 +72,7 @@ jobs:
     name: deploy
     needs: build
     runs-on: ubuntu-latest
-    if: github.event.pull_request.merged == true
+    if: github.ref == 'refs/heads/main' # main branch is protected, so this will only be true after successsful PR merge
 
     environment:
       name: Production
