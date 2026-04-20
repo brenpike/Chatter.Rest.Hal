@@ -15,6 +15,11 @@ namespace Chatter.Rest.Hal;
 [JsonConverter(typeof(ResourceConverter))]
 public sealed record Resource : IHalPart
 {
+	/// <summary>
+	/// The normative HAL media type as defined in Section 4 of the HAL specification.
+	/// </summary>
+	public const string MediaType = "application/hal+json";
+
 	private JsonNode? _resourceNode = null;
 	private object? _stateObject = null;
 	private LinkCollection? _linksImpl = null;

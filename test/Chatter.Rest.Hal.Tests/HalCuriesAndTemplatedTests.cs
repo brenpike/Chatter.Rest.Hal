@@ -320,5 +320,81 @@ namespace Chatter.Rest.Hal.Tests
 
             expandedRelation.Should().Be("ex:widgets");
         }
+
+        [Fact]
+        public void Curie_Template_Contains_Rel_Token()
+        {
+            // HAL spec section 8: CURIE Link Objects MUST have a templated href containing {rel} placeholder
+            // This test validates that CURIE definitions contain the required {rel} token in their href
+            // and validates case-sensitive matching ({rel} not {REL})
+
+            // Test case 1: Deserialize fixture with valid CURIE definition
+            var resourceFromFixture = TestHelpers.LoadResourceFromFixture("curies_and_templated.json");
+            resourceFromFixture.Should().NotBeNull();
+
+            var curiesFromFixture = resourceFromFixture!.Links.SingleOrDefault(l => l.Rel == "curies");
+            curiesFromFixture.Should().NotBeNull();
+
+            // Assert each CURIE's href contains the exact case-sensitive {rel} token
+            foreach (var curieObject in curiesFromFixture!.LinkObjects)
+            {
+                curieObject.Href.Should().Contain("{rel}", "CURIE href must contain the {rel} placeholder token");
+            }
+
+            // Test case 2: CURIE with {rel} at the start of the template
+            var resourceRelAtStart = ResourceBuilder.New()
+                .AddSelf().AddLinkObject("/test")
+                .AddCuries().AddLinkObject("{rel}/docs", "start")
+                .Build();
+
+            var curiesAtStart = resourceRelAtStart.Links.SingleOrDefault(l => l.Rel == "curies");
+            curiesAtStart.Should().NotBeNull();
+            curiesAtStart!.LinkObjects.Should().ContainSingle()
+                .Which.Href.Should().Contain("{rel}");
+
+            // Test case 3: CURIE with {rel} in the middle of the template
+            var resourceRelInMiddle = ResourceBuilder.New()
+                .AddSelf().AddLinkObject("/test")
+                .AddCuries().AddLinkObject("http://example.com/{rel}/docs", "middle")
+                .Build();
+
+            var curiesInMiddle = resourceRelInMiddle.Links.SingleOrDefault(l => l.Rel == "curies");
+            curiesInMiddle.Should().NotBeNull();
+            curiesInMiddle!.LinkObjects.Should().ContainSingle()
+                .Which.Href.Should().Contain("{rel}");
+
+            // Test case 4: CURIE with {rel} at the end of the template
+            var resourceRelAtEnd = ResourceBuilder.New()
+                .AddSelf().AddLinkObject("/test")
+                .AddCuries().AddLinkObject("http://example.com/docs/{rel}", "end")
+                .Build();
+
+            var curiesAtEnd = resourceRelAtEnd.Links.SingleOrDefault(l => l.Rel == "curies");
+            curiesAtEnd.Should().NotBeNull();
+            curiesAtEnd!.LinkObjects.Should().ContainSingle()
+                .Which.Href.Should().Contain("{rel}");
+
+            // Test case 5: CURIE with multiple {rel} tokens (edge case)
+            var resourceMultipleRel = ResourceBuilder.New()
+                .AddSelf().AddLinkObject("/test")
+                .AddCuries().AddLinkObject("http://example.com/{rel}/docs/{rel}", "multi")
+                .Build();
+
+            var curiesMultiple = resourceMultipleRel.Links.SingleOrDefault(l => l.Rel == "curies");
+            curiesMultiple.Should().NotBeNull();
+            curiesMultiple!.LinkObjects.Should().ContainSingle()
+                .Which.Href.Should().Contain("{rel}");
+
+            // Test case 6: Verify case-sensitive match - {REL} should NOT match
+            var resourceUpperCase = ResourceBuilder.New()
+                .AddSelf().AddLinkObject("/test")
+                .AddCuries().AddLinkObject("http://example.com/{REL}/docs", "upper")
+                .Build();
+
+            var curiesUpperCase = resourceUpperCase.Links.SingleOrDefault(l => l.Rel == "curies");
+            curiesUpperCase.Should().NotBeNull();
+            curiesUpperCase!.LinkObjects.Should().ContainSingle()
+                .Which.Href.Should().NotContain("{rel}", "case-sensitive: {REL} is not {rel}");
+        }
     }
 }

@@ -1,7 +1,7 @@
 ---
 name: orchestrator
 description: Use this agent for requests that require coordination across specialist agents. Breaks work into phases, delegates to Planner, Coder, and Designer, manages dependencies, and prevents file conflicts.
-model: claude-sonnet-4-5
+model: claude-sonnet-4-6
 tools: 
   - Read
   - Agent(planner, coder, designer)

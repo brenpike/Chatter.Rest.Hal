@@ -77,4 +77,47 @@ public class LinkBehaviorTests
 		Assert.Contains(links, l => l.Rel == "self");
 		Assert.Contains(links, l => l.Rel == "next");
 	}
+
+	[Fact]
+	public void Link_Array_Form_Is_Preserved_Through_Roundtrip()
+	{
+		// HAL spec Section 2.4: Servers SHOULD NOT change a relation between single-object
+		// and array form across responses. This test verifies that when a link is provided
+		// in array form with multiple LinkObjects, it maintains that array form through
+		// serialize → deserialize → serialize cycles.
+
+		// Step 1: Create a LinkCollection with a link containing multiple LinkObjects (array form)
+		var links = new LinkCollection();
+		var link = new Link("alternate");
+		link.LinkObjects.Add(new LinkObject("/items/1"));
+		link.LinkObjects.Add(new LinkObject("/items/2"));
+		links.Add(link);
+
+		// Step 2: Serialize to JSON
+		var firstSerializedJson = JsonSerializer.Serialize(links);
+
+		// Step 3: Deserialize back to object model
+		var linksSecondPass = JsonSerializer.Deserialize<LinkCollection>(firstSerializedJson);
+		Assert.NotNull(linksSecondPass);
+		Assert.Single(linksSecondPass!);
+		var alternateLink = linksSecondPass!.Single();
+		Assert.Equal("alternate", alternateLink.Rel);
+		Assert.Equal(2, alternateLink.LinkObjects.Count);
+
+		// Step 4: Re-serialize to JSON
+		var secondSerializedJson = JsonSerializer.Serialize(linksSecondPass);
+
+		// Step 5: Verify array form is preserved throughout the round-trip.
+		// The JSON should contain "alternate":[ with brackets indicating array form,
+		// not "alternate":{ which would indicate object form.
+		Assert.Contains("\"alternate\":[", firstSerializedJson);
+		Assert.Contains("\"alternate\":[", secondSerializedJson);
+
+		// Bonus: Verify that if we deserialize the original array-form JSON,
+		// it also maintains array form on re-serialization
+		var originalArrayJson = "{ \"alternate\": [ { \"href\": \"/items/1\" }, { \"href\": \"/items/2\" } ] }";
+		var linksFromArray = JsonSerializer.Deserialize<LinkCollection>(originalArrayJson);
+		var reserializedFromArray = JsonSerializer.Serialize(linksFromArray);
+		Assert.Contains("\"alternate\":[", reserializedFromArray);
+	}
 }

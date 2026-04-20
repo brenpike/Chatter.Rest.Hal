@@ -1,12 +1,13 @@
 ---
 name: planner
 description: Creates implementation plans by researching the codebase, verifying relevant documentation, identifying risks and edge cases, and assigning explicit file scopes for downstream agents.
-model: claude-sonnet-4-5
+model: claude-sonnet-4-6
 tools: Read, Glob, Grep, Bash, WebSearch, WebFetch
 mcpServers:
   - context7
   - github
   - code-review-graph
+  - claude-mem
 memory: project
 ---
 

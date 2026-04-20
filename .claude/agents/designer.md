@@ -1,11 +1,12 @@
 ---
 name: designer
 description: Handles UI/UX design tasks including design tokens, layout, accessibility, visual states, and presentational component work within explicitly assigned file scope.
-model: claude-sonnet-4-5
+model: claude-sonnet-4-6
 tools: Read, Write, Edit, Glob, Grep, WebSearch, WebFetch
 mcpServers:
   - context7
   - code-review-graph
+  - claude-mem
 memory: project
 ---
 
@@ -159,6 +160,8 @@ Files requested but not changed:
 
 External references checked:
 - Context7: yes/no
+- code-review-graph: yes/no
+- claude-mem: yes/no
 
 Visual/accessibility checks performed:
 - [what you checked]
