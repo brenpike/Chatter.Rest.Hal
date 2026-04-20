@@ -9,7 +9,7 @@
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
 
-    <Version>0.2.5</Version>
+    <Version>0.2.6</Version>
     <Authors>Brennan Pike</Authors>
     <Owners>Brennan Pike</Owners>
     <Description>Generates the appropriate additional attributes of a response object to match the HAL specification</Description>
