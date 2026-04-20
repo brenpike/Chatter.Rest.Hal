@@ -6,9 +6,19 @@ using System.Text.Json.Serialization;
 
 namespace Chatter.Rest.Hal.Converters;
 
+/// <summary>
+/// JSON converter for serializing and deserializing embedded resource collections (_embedded).
+/// </summary>
 public class EmbeddedResourceCollectionConverter : JsonConverter<EmbeddedResourceCollection>
 {
-    public override EmbeddedResourceCollection? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+	/// <summary>
+	/// Reads an EmbeddedResourceCollection from JSON, parsing named embedded resources.
+	/// </summary>
+	/// <param name="reader">The JSON reader.</param>
+	/// <param name="typeToConvert">The type to convert.</param>
+	/// <param name="options">Serializer options.</param>
+	/// <returns>The deserialized EmbeddedResourceCollection.</returns>
+	public override EmbeddedResourceCollection? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         var node = JsonNode.Parse(ref reader, new JsonNodeOptions() { PropertyNameCaseInsensitive = true });
 
@@ -30,7 +40,13 @@ public class EmbeddedResourceCollectionConverter : JsonConverter<EmbeddedResourc
         return embeddedResources;
     }
 
-    private static void CreateEmbeddedAndAddToCollection(JsonSerializerOptions options, JsonObject? jo, EmbeddedResourceCollection embeddedResources)
+	/// <summary>
+	/// Creates embedded resources from a JSON object and adds them to the collection.
+	/// </summary>
+	/// <param name="options">Serializer options.</param>
+	/// <param name="jo">The JSON object containing embedded resource data.</param>
+	/// <param name="embeddedResources">The embedded resource collection to populate.</param>
+	private static void CreateEmbeddedAndAddToCollection(JsonSerializerOptions options, JsonObject? jo, EmbeddedResourceCollection embeddedResources)
     {
         if (jo == null)
         {

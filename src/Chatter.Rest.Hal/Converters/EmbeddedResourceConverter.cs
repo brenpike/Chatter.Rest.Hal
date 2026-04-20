@@ -7,9 +7,20 @@ using System.Text.Json.Serialization;
 
 namespace Chatter.Rest.Hal.Converters;
 
+/// <summary>
+/// JSON converter for serializing and deserializing individual embedded resources.
+/// </summary>
 public class EmbeddedResourceConverter : JsonConverter<EmbeddedResource>
 {
-    public override EmbeddedResource? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+	/// <summary>
+	/// Reads an EmbeddedResource from JSON, parsing the name and resource collection.
+	/// </summary>
+	/// <param name="reader">The JSON reader.</param>
+	/// <param name="typeToConvert">The type to convert.</param>
+	/// <param name="options">Serializer options.</param>
+	/// <returns>The deserialized EmbeddedResource, or null if the JSON is malformed.</returns>
+	/// <exception cref="JsonException">Thrown when a single embedded resource object is expected but not found.</exception>
+	public override EmbeddedResource? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         var node = JsonNode.Parse(ref reader, new JsonNodeOptions() { PropertyNameCaseInsensitive = true });
 
@@ -45,7 +56,13 @@ public class EmbeddedResourceConverter : JsonConverter<EmbeddedResource>
         return embedded;
     }
 
-    public override void Write(Utf8JsonWriter writer, EmbeddedResource value, JsonSerializerOptions options)
+	/// <summary>
+	/// Writes an EmbeddedResource to JSON with the name as the property key.
+	/// </summary>
+	/// <param name="writer">The JSON writer.</param>
+	/// <param name="value">The EmbeddedResource to serialize.</param>
+	/// <param name="options">Serializer options.</param>
+	public override void Write(Utf8JsonWriter writer, EmbeddedResource value, JsonSerializerOptions options)
     {
         writer.WriteStartObject();
         writer.WritePropertyName(value.Name);

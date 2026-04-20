@@ -6,6 +6,9 @@ using System.Collections.Generic;
 
 namespace Chatter.Rest.Hal.Builders;
 
+/// <summary>
+/// Builder for constructing individual link objects with properties like href, templated, type, etc.
+/// </summary>
 public sealed class LinkObjectBuilder : HalBuilder<LinkObject>, ILinkObjectPropertiesSelectionStage
 {
 	private readonly string _href;
@@ -182,6 +185,10 @@ public sealed class LinkObjectBuilder : HalBuilder<LinkObject>, ILinkObjectPrope
 	}
 
 	///<inheritdoc/>
+	/// <summary>
+	/// Builds the LinkObject with all configured properties.
+	/// </summary>
+	/// <returns>The constructed LinkObject.</returns>
 	public override LinkObject BuildPart()
 	{
 		return new LinkObject(_href)

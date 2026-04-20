@@ -5,8 +5,18 @@ using System.Text.Json.Serialization;
 
 namespace Chatter.Rest.Hal.Converters;
 
+/// <summary>
+/// JSON converter for serializing and deserializing HAL resources, separating state from _links and _embedded.
+/// </summary>
 public class ResourceConverter : JsonConverter<Resource>
 {
+	/// <summary>
+	/// Reads a Resource from JSON, parsing state, _links, and _embedded properties.
+	/// </summary>
+	/// <param name="reader">The JSON reader.</param>
+	/// <param name="typeToConvert">The type to convert.</param>
+	/// <param name="options">Serializer options.</param>
+	/// <returns>The deserialized Resource.</returns>
 	public override Resource? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
 	{
 		var node = JsonNode.Parse(ref reader, new JsonNodeOptions() { PropertyNameCaseInsensitive = true })!;
@@ -28,6 +38,12 @@ public class ResourceConverter : JsonConverter<Resource>
 		return new Resource(node, jsonObjectCreator, linkCollectionCreator, embeddedCollectionCreator);
 	}
 
+	/// <summary>
+	/// Writes a Resource to JSON, serializing state properties followed by _links and _embedded.
+	/// </summary>
+	/// <param name="writer">The JSON writer.</param>
+	/// <param name="value">The Resource to serialize.</param>
+	/// <param name="options">Serializer options.</param>
 	public override void Write(Utf8JsonWriter writer, Resource value, JsonSerializerOptions options)
 	{
 		writer.WriteStartObject();

@@ -6,9 +6,19 @@ using System.Text.Json.Serialization;
 
 namespace Chatter.Rest.Hal.Converters;
 
+/// <summary>
+/// JSON converter for serializing and deserializing HAL links with their link objects.
+/// </summary>
 public class LinkConverter : JsonConverter<Link>
 {
-    public override Link? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+	/// <summary>
+	/// Reads a Link from JSON, handling single objects, arrays, and string shorthands.
+	/// </summary>
+	/// <param name="reader">The JSON reader.</param>
+	/// <param name="typeToConvert">The type to convert.</param>
+	/// <param name="options">Serializer options.</param>
+	/// <returns>The deserialized Link, or null if the JSON is malformed.</returns>
+	public override Link? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         var node = JsonNode.Parse(ref reader, new JsonNodeOptions() { PropertyNameCaseInsensitive = true });
 
@@ -98,7 +108,13 @@ public class LinkConverter : JsonConverter<Link>
         return null;
     }
 
-    public override void Write(Utf8JsonWriter writer, Link value, JsonSerializerOptions options)
+	/// <summary>
+	/// Writes a Link to JSON as an object with the relation as the property name.
+	/// </summary>
+	/// <param name="writer">The JSON writer.</param>
+	/// <param name="value">The Link to serialize.</param>
+	/// <param name="options">Serializer options.</param>
+	public override void Write(Utf8JsonWriter writer, Link value, JsonSerializerOptions options)
     {
         writer.WriteStartObject();
         writer.WritePropertyName(value.Rel);

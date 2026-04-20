@@ -10,6 +10,11 @@ namespace Chatter.Rest.Hal;
 [JsonConverter(typeof(LinkObjectConverter))]
 public sealed record LinkObject : IHalPart
 {
+	/// <summary>
+	/// Initializes a new instance of the <see cref="LinkObject"/> record with the specified href.
+	/// </summary>
+	/// <param name="href">The URI or URI Template for the link. Must not be null or whitespace.</param>
+	/// <exception cref="ArgumentNullException">Thrown when <paramref name="href"/> is null or whitespace.</exception>
 	public LinkObject(string href)
 	{
 		if (string.IsNullOrWhiteSpace(href))
