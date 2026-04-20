@@ -5,12 +5,15 @@ using System.Collections.Generic;
 
 namespace Chatter.Rest.Hal.Builders;
 
+/// <summary>
+/// Builder for constructing resource collections within embedded resources.
+/// </summary>
 public sealed class ResourceCollectionBuilder : HalBuilder<ResourceCollection>, IAddResourceStage, IEmbeddedResourceCreationStage
 {
 	private readonly IList<IEmbeddedResourceCreationStage> _resourceBuilders = new List<IEmbeddedResourceCreationStage>();
 	private ResourceCollectionBuilder(IBuildHalPart<EmbeddedResource> parent) : base(parent) { }
 
-	public static ResourceCollectionBuilder New(IBuildHalPart<EmbeddedResource> parent) => new(parent);
+	internal static ResourceCollectionBuilder New(IBuildHalPart<EmbeddedResource> parent) => new(parent);
 
 	/// <summary>
 	/// Flag indicating whether this resource (if embedded) should be explicitly written to JSON as an array,
@@ -19,6 +22,10 @@ public sealed class ResourceCollectionBuilder : HalBuilder<ResourceCollection>, 
 	/// </summary>
 	public bool ForceWriteAsCollection { get; private set; } = false;
 
+	/// <summary>
+	/// Adds a new resource to the collection with no state.
+	/// </summary>
+	/// <returns>An embedded resource creation stage.</returns>
 	public IEmbeddedResourceCreationStage AddResource()
 	{
 		var rb = ResourceCollectionResourceBuilder.New(this, null);
@@ -26,6 +33,11 @@ public sealed class ResourceCollectionBuilder : HalBuilder<ResourceCollection>, 
 		return rb;
 	}
 
+	/// <summary>
+	/// Adds a new resource to the collection with the specified state.
+	/// </summary>
+	/// <param name="state">The state object for the resource.</param>
+	/// <returns>An embedded resource creation stage.</returns>
 	public IEmbeddedResourceCreationStage AddResource(object? state)
 	{
 		var rb = ResourceCollectionResourceBuilder.New(this, state);
@@ -33,6 +45,13 @@ public sealed class ResourceCollectionBuilder : HalBuilder<ResourceCollection>, 
 		return rb;
 	}
 
+	/// <summary>
+	/// Adds multiple resources to the collection from an enumerable source.
+	/// </summary>
+	/// <typeparam name="T">The type of items in the source enumerable.</typeparam>
+	/// <param name="resources">The collection of items to add as resources.</param>
+	/// <param name="builder">Optional builder action to configure each resource.</param>
+	/// <returns>An embedded resource creation stage.</returns>
 	public IEmbeddedResourceCreationStage AddResources<T>(IEnumerable<T> resources, Action<T, IEmbeddedResourceCreationStage>? builder = null)
 	{
 		ForceWriteAsCollection = true; // Flag that this resource (if embedded) is a collection
@@ -79,6 +98,10 @@ public sealed class ResourceCollectionBuilder : HalBuilder<ResourceCollection>, 
 		return linkCollectionBuilder!.AddSelf();
 	}
 
+	/// <summary>
+	/// Builds the resource collection from all added resources.
+	/// </summary>
+	/// <returns>The constructed resource collection.</returns>
 	public override ResourceCollection BuildPart()
 	{
 		var resourceCollection = new ResourceCollection();
@@ -92,6 +115,9 @@ public sealed class ResourceCollectionBuilder : HalBuilder<ResourceCollection>, 
 	Resource IBuildHalPart<Resource>.BuildPart() => throw new NotImplementedException();
 }
 
+/// <summary>
+/// Builder for constructing individual resources within a resource collection.
+/// </summary>
 public sealed class ResourceCollectionResourceBuilder : ResourceBuilder, IEmbeddedResourceCreationStage
 {
 
@@ -100,18 +126,34 @@ public sealed class ResourceCollectionResourceBuilder : ResourceBuilder, IEmbedd
 
 	internal static IEmbeddedResourceCreationStage New(IBuildHalPart<ResourceCollection> parent, object? state) => new ResourceCollectionResourceBuilder(parent, state);
 
+	/// <summary>
+	/// Adds a sibling resource to the collection with no state.
+	/// </summary>
+	/// <returns>An embedded resource creation stage.</returns>
 	public IEmbeddedResourceCreationStage AddResource()
 	{
 		var resourceCollectionBuilder = FindParent<ResourceCollection>() as IAddResourceStage;
 		return resourceCollectionBuilder!.AddResource();
 	}
 
+	/// <summary>
+	/// Adds a sibling resource to the collection with the specified state.
+	/// </summary>
+	/// <param name="state">The state object for the resource.</param>
+	/// <returns>An embedded resource creation stage.</returns>
 	public IEmbeddedResourceCreationStage AddResource(object? state)
 	{
 		var resourceCollectionBuilder = FindParent<ResourceCollection>() as IAddResourceStage;
 		return resourceCollectionBuilder!.AddResource(state);
 	}
 
+	/// <summary>
+	/// Adds multiple sibling resources to the collection from an enumerable source.
+	/// </summary>
+	/// <typeparam name="T">The type of items in the source enumerable.</typeparam>
+	/// <param name="resources">The collection of items to add as resources.</param>
+	/// <param name="builder">Optional builder action to configure each resource.</param>
+	/// <returns>An embedded resource creation stage.</returns>
 	public IEmbeddedResourceCreationStage AddResources<T>(IEnumerable<T> resources, Action<T, IEmbeddedResourceCreationStage>? builder = null)
 	{
 		var resourceCollectionBuilder = FindParent<ResourceCollection>() as IAddResourceStage;

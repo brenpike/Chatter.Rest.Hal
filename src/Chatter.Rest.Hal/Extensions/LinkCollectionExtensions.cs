@@ -2,17 +2,45 @@
 
 namespace Chatter.Rest.Hal;
 
+/// <summary>
+/// Extension methods for querying and manipulating link collections.
+/// </summary>
 public static class LinkCollectionExtensions
 {
+	/// <summary>
+	/// Gets the link with the specified relation from the collection.
+	/// </summary>
+	/// <param name="links">The link collection to query.</param>
+	/// <param name="relation">The link relation to find.</param>
+	/// <returns>The link, or null if not found.</returns>
 	public static Link? GetLinkOrDefault(this LinkCollection links, string relation)
 		=> links?.SingleOrDefault(l => l.Rel.Equals(relation));
 
+	/// <summary>
+	/// Gets the collection of link objects for the specified link relation.
+	/// </summary>
+	/// <param name="links">The link collection to query.</param>
+	/// <param name="relation">The link relation to find.</param>
+	/// <returns>The link object collection, or null if the link relation is not found.</returns>
 	public static LinkObjectCollection? GetLinkObjects(this LinkCollection links, string relation)
 		=> links?.GetLinkOrDefault(relation)?.LinkObjects;
 
+	/// <summary>
+	/// Gets the link object with the specified relation and name.
+	/// </summary>
+	/// <param name="links">The link collection to query.</param>
+	/// <param name="linkRelation">The link relation to find.</param>
+	/// <param name="linkObjectName">The name of the specific link object within the relation.</param>
+	/// <returns>The link object, or null if not found.</returns>
 	public static LinkObject? GetLinkObjectOrDefault(this LinkCollection links, string linkRelation, string linkObjectName)
 		=> links?.GetLinkObjects(linkRelation)?.GetLinkObjectOrDefault(linkObjectName);
 
+	/// <summary>
+	/// Gets the first link object with the specified relation.
+	/// </summary>
+	/// <param name="links">The link collection to query.</param>
+	/// <param name="linkRelation">The link relation to find.</param>
+	/// <returns>The first link object for the relation, or null if not found.</returns>
 	public static LinkObject? GetLinkObjectOrDefault(this LinkCollection links, string linkRelation)
 		=> links?.GetLinkObjects(linkRelation)?.SingleOrDefault();
 

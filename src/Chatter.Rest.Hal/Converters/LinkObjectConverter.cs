@@ -5,9 +5,19 @@ using System.Text.Json.Serialization;
 
 namespace Chatter.Rest.Hal.Converters;
 
+/// <summary>
+/// JSON converter for serializing and deserializing HAL link objects with href, templated, type, and other properties.
+/// </summary>
 public class LinkObjectConverter : JsonConverter<LinkObject>
 {
-    public override LinkObject? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+	/// <summary>
+	/// Reads a LinkObject from JSON, validating required href and parsing optional properties.
+	/// </summary>
+	/// <param name="reader">The JSON reader.</param>
+	/// <param name="typeToConvert">The type to convert.</param>
+	/// <param name="options">Serializer options.</param>
+	/// <returns>The deserialized LinkObject, or null if href is missing or invalid.</returns>
+	public override LinkObject? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         var node = JsonNode.Parse(ref reader, new JsonNodeOptions() { PropertyNameCaseInsensitive = true });
 
@@ -40,7 +50,12 @@ public class LinkObjectConverter : JsonConverter<LinkObject>
         };
     }
 
-    private static bool? TryGetBooleanAsTrue(JsonNode? node)
+	/// <summary>
+	/// Attempts to parse a boolean value from a JSON node, returning true only for explicit boolean true values.
+	/// </summary>
+	/// <param name="node">The JSON node to parse.</param>
+	/// <returns>true if the value is boolean true; otherwise, null.</returns>
+	private static bool? TryGetBooleanAsTrue(JsonNode? node)
     {
         if (node == null)
         {
@@ -61,7 +76,12 @@ public class LinkObjectConverter : JsonConverter<LinkObject>
         }
     }
 
-    private static string? TryGetString(JsonNode? node)
+	/// <summary>
+	/// Attempts to parse a string value from a JSON node, rejecting non-string types.
+	/// </summary>
+	/// <param name="node">The JSON node to parse.</param>
+	/// <returns>The string value, or null if the node is not a valid string.</returns>
+	private static string? TryGetString(JsonNode? node)
     {
         if (node == null)
         {
@@ -80,7 +100,13 @@ public class LinkObjectConverter : JsonConverter<LinkObject>
         }
     }
 
-    public override void Write(Utf8JsonWriter writer, LinkObject linkObject, JsonSerializerOptions options)
+	/// <summary>
+	/// Writes a LinkObject to JSON, serializing all non-null properties.
+	/// </summary>
+	/// <param name="writer">The JSON writer.</param>
+	/// <param name="linkObject">The LinkObject to serialize.</param>
+	/// <param name="options">Serializer options.</param>
+	public override void Write(Utf8JsonWriter writer, LinkObject linkObject, JsonSerializerOptions options)
     {
         writer.WriteStartObject();
 

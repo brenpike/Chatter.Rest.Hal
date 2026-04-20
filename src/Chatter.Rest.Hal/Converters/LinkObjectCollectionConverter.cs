@@ -6,8 +6,18 @@ using System.Text.Json.Serialization;
 
 namespace Chatter.Rest.Hal.Converters;
 
+/// <summary>
+/// JSON converter for serializing and deserializing link object collections within a link relation.
+/// </summary>
 public class LinkObjectCollectionConverter : JsonConverter<LinkObjectCollection>
 {
+	/// <summary>
+	/// Reads a LinkObjectCollection from JSON, handling both single objects and arrays.
+	/// </summary>
+	/// <param name="reader">The JSON reader.</param>
+	/// <param name="typeToConvert">The type to convert.</param>
+	/// <param name="options">Serializer options.</param>
+	/// <returns>The deserialized LinkObjectCollection.</returns>
 	public override LinkObjectCollection? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
 	{
 		var node = JsonNode.Parse(ref reader, new JsonNodeOptions() { PropertyNameCaseInsensitive = true });
@@ -30,6 +40,12 @@ public class LinkObjectCollectionConverter : JsonConverter<LinkObjectCollection>
 		return linkObjects;
 	}
 
+	/// <summary>
+	/// Creates a link object from a JSON node and adds it to the collection.
+	/// </summary>
+	/// <param name="options">Serializer options.</param>
+	/// <param name="linkObjects">The link object collection to populate.</param>
+	/// <param name="node">The JSON node containing link object data.</param>
 	private static void CreateAndAddLinkObject(JsonSerializerOptions options, LinkObjectCollection linkObjects, JsonNode? node)
 	{
 		if (node == null) return;
@@ -59,6 +75,12 @@ public class LinkObjectCollectionConverter : JsonConverter<LinkObjectCollection>
 		}
 	}
 
+	/// <summary>
+	/// Writes a LinkObjectCollection to JSON, serializing as a single object or array based on count.
+	/// </summary>
+	/// <param name="writer">The JSON writer.</param>
+	/// <param name="linkObjects">The LinkObjectCollection to serialize.</param>
+	/// <param name="options">Serializer options.</param>
 	public override void Write(Utf8JsonWriter writer, LinkObjectCollection linkObjects, JsonSerializerOptions options)
 	{
 		if (linkObjects.Count == 1)

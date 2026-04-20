@@ -5,6 +5,9 @@ using Chatter.Rest.Hal.Builders.Stages.Resource;
 
 namespace Chatter.Rest.Hal.Builders;
 
+/// <summary>
+/// Builder for constructing link object collections within a single link.
+/// </summary>
 public sealed class LinkObjectCollectionBuilder : HalBuilder<LinkObjectCollection>, ILinkCreationStage, ICuriesLinkCreationStage
 {
 	private readonly IList<LinkObjectBuilder> _linkObjectBuilders = new List<LinkObjectBuilder>();
@@ -36,6 +39,10 @@ public sealed class LinkObjectCollectionBuilder : HalBuilder<LinkObjectCollectio
 	///<inheritdoc/>
 	IEmbeddedLinkObjectPropertiesSelectionStage IEmbeddedCuriesLinkCreationStage.AddLinkObject(string href, string name) => AddLinkObject(href, name);
 
+	/// <summary>
+	/// Builds the link object collection from all added link objects.
+	/// </summary>
+	/// <returns>The constructed link object collection.</returns>
 	public override LinkObjectCollection BuildPart()
 	{
 		var linkObjectCollection = new LinkObjectCollection();

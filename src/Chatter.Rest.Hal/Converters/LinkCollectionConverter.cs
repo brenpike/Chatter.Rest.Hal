@@ -6,8 +6,18 @@ using System.Text.Json.Serialization;
 
 namespace Chatter.Rest.Hal.Converters;
 
+/// <summary>
+/// JSON converter for serializing and deserializing link collections (_links).
+/// </summary>
 public class LinkCollectionConverter : JsonConverter<LinkCollection>
 {
+	/// <summary>
+	/// Reads a LinkCollection from JSON, parsing link relations and their associated link objects.
+	/// </summary>
+	/// <param name="reader">The JSON reader.</param>
+	/// <param name="typeToConvert">The type to convert.</param>
+	/// <param name="options">Serializer options.</param>
+	/// <returns>The deserialized LinkCollection.</returns>
 	public override LinkCollection? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
 	{
 		var node = JsonNode.Parse(ref reader, new JsonNodeOptions() { PropertyNameCaseInsensitive = true })!;
@@ -30,6 +40,12 @@ public class LinkCollectionConverter : JsonConverter<LinkCollection>
 		return links;
 	}
 
+	/// <summary>
+	/// Creates links from a JSON object and adds them to the collection.
+	/// </summary>
+	/// <param name="options">Serializer options.</param>
+	/// <param name="jo">The JSON object containing link data.</param>
+	/// <param name="links">The link collection to populate.</param>
 	private static void CreateLinksAndAddToCollection(JsonSerializerOptions options, JsonObject? jo, LinkCollection links)
 	{
 		if (jo == null)
@@ -71,6 +87,12 @@ public class LinkCollectionConverter : JsonConverter<LinkCollection>
 		}
 	}
 
+	/// <summary>
+	/// Writes a LinkCollection to JSON, serializing each link as a property with its relation as the key.
+	/// </summary>
+	/// <param name="writer">The JSON writer.</param>
+	/// <param name="links">The LinkCollection to serialize.</param>
+	/// <param name="options">Serializer options.</param>
 	public override void Write(Utf8JsonWriter writer, LinkCollection links, JsonSerializerOptions options)
 	{
 		writer.WriteStartObject();
