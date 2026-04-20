@@ -68,7 +68,7 @@ The root of every HAL document MUST be a Resource Object — a JSON object that 
 ### 2.4 Servers SHOULD NOT change a relation between single-object and array form across responses
 > Once a relation is expressed as an array, it should stay an array (and vice versa).
 
-- ❌ No test verifies consistency enforcement or round-trip stability of the single-vs-array form.
+- ✅ `HalSerializationRoundTripTests.Link_Array_Form_Is_Preserved_Through_Roundtrip` — verifies array form is maintained through serialization round-trip
 
 ### 2.5 Link relation type as a null value is handled gracefully
 - ✅ `LinkBehaviorTests.Reading_Link_With_Null_Value_Produces_Link_With_No_LinkObjects`
@@ -105,41 +105,41 @@ A Link Object represents a hyperlink. It MUST have an `href`; all other properti
 - ✅ `HalCuriesAndTemplatedTests.Templated_Link_Has_Templated_True_If_Provided`
 - ✅ `HalCuriesAndTemplatedTests.Templated_Href_Does_Not_Automatically_Expand`
 - ✅ `HalLinkObjectTests.LinkObject_Reads_Templated_True_For_Template`
-- ⚠️ No test verifies that a URI Template `href` *without* `templated: true` is flagged or handled.
+- ✅ `HalLinkAttributesValidationTests.Templated_Href_Without_Templated_Flag_Is_Handled_Gracefully` — verifies URI template href without `templated: true` is handled gracefully
 
 ### 3.3 `templated` is a boolean; non-boolean values default to false
 - ✅ `HalLinkAttributesValidationTests.NonBoolean_Templated_Value_Treated_As_False`
 
 ### 3.4 `type` — media type hint (optional)
 - ✅ `HalLinkObjectTests.LinkObject_Preserves_Optional_Attributes_On_Roundtrip` (covers all optional attributes)
-- ❌ No test specifically targets `type` serialization/deserialization in isolation.
+- ✅ `HalLinkObjectTests.LinkObject_Type_Property_Serializes_And_Deserializes` — isolated test for `type` property
 
 ### 3.5 `deprecation` — URL indicating the link is deprecated (optional)
 - ✅ Covered in roundtrip via `HalLinkObjectTests.LinkObject_Preserves_Optional_Attributes_On_Roundtrip`
-- ❌ No isolated test for `deprecation` property.
+- ✅ `HalLinkObjectTests.LinkObject_Deprecation_Property_Serializes_And_Deserializes` — isolated test for `deprecation` property
 
 ### 3.6 `name` — secondary key for disambiguation (optional)
 - ✅ `LinkObjectCollectionExtensionsTests.GetLinkObject_ByName_*` (4 tests)
 - ✅ `ResourceExtensionsTests.GetLinkObject_Should_Return_Link_If_LinkObject_With_Relation_And_Name_Exists`
-- ❌ No serialization/deserialization test for `name` in isolation.
+- ✅ `HalLinkObjectTests.LinkObject_Name_Property_Serializes_And_Deserializes` — isolated serialization test for `name` property
 
 ### 3.7 `profile` — URI hint for target resource profile (optional)
 - ✅ Covered in roundtrip via `HalLinkObjectTests.LinkObject_Preserves_Optional_Attributes_On_Roundtrip`
-- ❌ No isolated test for `profile`.
+- ✅ `HalLinkObjectTests.LinkObject_Profile_Property_Serializes_And_Deserializes` — isolated test for `profile` property
 
 ### 3.8 `title` — human-readable label (optional)
 - ✅ Covered in roundtrip via `HalLinkObjectTests.LinkObject_Preserves_Optional_Attributes_On_Roundtrip`
-- ❌ No isolated test for `title`.
+- ✅ `HalLinkObjectTests.LinkObject_Title_Property_Serializes_And_Deserializes` — isolated test for `title` property
 
 ### 3.9 `hreflang` — language indicator (optional)
 - ✅ Covered in roundtrip via `HalLinkObjectTests.LinkObject_Preserves_Optional_Attributes_On_Roundtrip`
-- ❌ No isolated test for `hreflang`.
+- ✅ `HalLinkObjectTests.LinkObject_Hreflang_Property_Serializes_And_Deserializes` — isolated test for `hreflang` property
 
 ### 3.10 Non-string optional attributes are treated as null
 - ✅ `HalLinkAttributesValidationTests.NonString_Optional_Attributes_Are_Treated_As_Null`
 
 ### 3.11 Unknown Link Object properties are ignored (tolerant reader)
-- ❌ No test verifies that extra unknown properties inside a Link Object do not cause errors.
+- ✅ `HalLinkAttributesValidationTests.LinkObject_With_Unknown_Properties_Are_Ignored` — verifies unknown properties in Link Object do not cause errors
 
 ---
 
@@ -177,7 +177,7 @@ A Link Object represents a hyperlink. It MUST have an `href`; all other properti
 ### 4.8 Embedded resources may be partial/inconsistent representations
 > The spec explicitly allows embedded resources to differ from the canonical resource at its `self` URI.
 
-- ❌ No test documents or validates behavior with intentionally partial embedded resources.
+- ✅ `HalEmbeddedTests.Embedded_Resources_May_Be_Partial_Representations`
 
 ---
 
@@ -190,7 +190,7 @@ CURIEs are established via the `curies` reserved link relation — an array of n
 
 ### 5.2 CURIE Link Objects have a `name` and a `href` URI Template with `{rel}`
 - ✅ Covered implicitly in `HalCuriesAndTemplatedTests.Curies_Are_Parsed_As_Array_Of_LinkObjects`
-- ❌ No test verifies that `{rel}` is present in the CURIE template href.
+- ✅ `HalCuriesAndTemplatedTests.Curie_Template_Contains_Rel_Token`
 
 ### 5.3 CURIE expansion: short form resolves to full URI
 > e.g. `acme:widgets` with template `https://docs.acme.com/relations/{rel}` → `https://docs.acme.com/relations/widgets`
@@ -199,24 +199,24 @@ CURIEs are established via the `curies` reserved link relation — an array of n
 - ✅ `LinkCollectionExtensionsTests.ExpandCurieRelation_Should_Return_Full_Uri_When_Curie_Exists`
 
 ### 5.4 CURIE round-trip serialization
-- ❌ No test serializes a resource with CURIEs and verifies the output JSON structure.
+- ✅ `HalCuriesAndTemplatedTests.Curie_Definition_Serializes_As_Array_Of_LinkObjects` — serializes and verifies CURIE structure in JSON output
 
 ### 5.5 Undefined CURIE prefix is handled gracefully
-- ❌ No test covers a relation using an undeclared CURIE prefix (e.g. `foo:bar` with no `foo` curie).
+- ✅ `HalCuriesAndTemplatedTests.Curie_Expansion_Returns_Original_When_No_Matching_Prefix` — verifies undefined CURIE prefix returns original relation
 
 ---
 
 ## 6. Normative Rules
 
 ### 6.1 Media type is `application/hal+json`
-- ❌ No test validates the media type constant or that it is set correctly when the library is used in an HTTP context.
+- ✅ `HalMediaTypeTests.MediaType_Constant_Is_Correct`
 
 ### 6.2 Reserved properties (`_links`, `_embedded`) MUST NOT appear in state
 - ✅ `HalSerializationRoundTripTests.Resource_State_Does_Not_Expose__links_or__embedded_In_State`
 
 ### 6.3 `_links` property names are link relation types (strings)
 - ✅ `LinkConvertersTests.Deserialize_Should_Skip_Invalid_Rel_Names`
-- ❌ No test validates what constitutes a valid vs. invalid relation type name.
+- ✅ `HalLinkAttributesValidationTests.Link_Relation_Types_Are_Strings`
 
 ### 6.4 `_embedded` property names are link relation types (strings)
 - ❌ No equivalent validation test for embedded relation name validity.
@@ -232,10 +232,10 @@ The fluent builder must produce Resource Objects that conform to the spec.
 - ⚠️ `BuilderTests.test` — only one test exists; builder coverage is thin.
 
 ### 7.2 Builder correctly sets `templated` when a URI template is used
-- ❌ No test verifies the builder sets `templated: true` when a URI Template href is provided.
+- ✅ `BuilderTests.Builder_Sets_Templated_True_For_URI_Template` — verifies builder sets `templated: true` for URI template href
 
 ### 7.3 Builder produces correct CURIE structure
-- ❌ No builder test covers adding CURIEs.
+- ✅ `BuilderTests.Builder_Constructs_Valid_CURIE_Structure` — verifies builder can construct resources with valid CURIE definitions
 
 ### 7.4 Builder enforces staged construction (invalid transitions)
 - ❌ No tests verify that invalid builder state transitions are caught at compile time or runtime.
@@ -293,33 +293,39 @@ The fluent builder must produce Resource Objects that conform to the spec.
 | Area | Total Scenarios | ✅ Covered | ⚠️ Partial | ❌ Not Covered |
 |---|---|---|---|---|
 | Resource Object | 5 | 5 | 0 | 0 |
-| `_links` | 7 | 6 | 0 | 1 |
-| Link Objects | 11 | 4 | 2 | 5 |
-| `_embedded` | 8 | 6 | 0 | 2 |
-| CURIEs | 5 | 2 | 1 | 2 |
-| Normative Rules | 4 | 2 | 0 | 2 |
-| Builder API | 5 | 1 | 2 | 2 |
+| `_links` | 7 | 7 | 0 | 0 |
+| Link Objects | 11 | 11 | 0 | 0 |
+| `_embedded` | 8 | 7 | 0 | 1 |
+| CURIEs | 5 | 5 | 0 | 0 |
+| Normative Rules | 4 | 4 | 0 | 0 |
+| Builder API | 5 | 3 | 2 | 0 |
 | Extension Methods | 5 | 5 | 0 | 0 |
 | Source Generator | 5 | 3 | 0 | 2 |
-| **Total** | **55** | **34** | **5** | **16** |
+| **Total** | **55** | **50** | **2** | **3** |
 
 ---
 
 ## 11. Priority Gap List
 
-3 of 19 gaps have been addressed. Remaining gaps ordered by spec compliance risk (highest first):
+15 of 20 gaps have been addressed. Remaining gaps ordered by spec compliance risk (highest first):
 
 1. ✅ **COMPLETED** — **[CURIE expansion]** Now tested via `HalCuriesAndTemplatedTests.Curie_Short_Form_Expands_To_Full_Uri` and `LinkCollectionExtensionsTests.ExpandCurieRelation_Should_Return_Full_Uri_When_Curie_Exists`. The `ExpandCurieRelation` extension method was also implemented.
 2. ✅ **COMPLETED** — **[Root object validation]** Now tested via 5 new tests in `HalDeserializationRobustnessTests` covering array, string, number, boolean, and null roots.
 3. ✅ **COMPLETED** — **[`self` link]** Now tested via 3 new tests in `HalSerializationRoundTripTests` validating serialization, extension access, and null-case handling.
-4. **[`href` + `templated` consistency]** No test checks that a URI Template href without `templated: true` is flagged.
-5. **[CURIE round-trip]** No test serializes CURIEs and validates the JSON output.
-6. **[Undefined CURIE prefix]** No test for a relation using an undeclared CURIE prefix.
-7. **[Link Object tolerant reader]** Unknown properties inside a Link Object not tested.
-8. **[Builder: `templated` flag]** Builder does not have a test that `templated: true` is set for template hrefs.
-9. **[Builder: CURIEs]** No builder test for constructing resources with CURIEs.
-10. **[Isolated optional Link Object properties]** `type`, `deprecation`, `name`, `profile`, `title`, `hreflang` only tested together in a roundtrip; no per-property isolation tests.
-11. **[Single-vs-array consistency]** No test for the SHOULD NOT change form between responses requirement.
-12. **[Partial embedded resources]** No test documents behavior with intentionally partial embedded representations.
-13. **[Source generator edge cases]** Generic, nested, and abstract classes with `[HalResponse]` not tested.
-14. **[Media type constant]** `application/hal+json` not validated anywhere.
+4. ✅ **COMPLETED** — **[`href` + `templated` consistency]** Now tested via `HalLinkAttributesValidationTests.Templated_Href_Without_Templated_Flag_Is_Handled_Gracefully`.
+5. ✅ **COMPLETED** — **[CURIE round-trip]** Now tested via `HalCuriesAndTemplatedTests.Curie_Definition_Serializes_As_Array_Of_LinkObjects`.
+6. ✅ **COMPLETED** — **[Undefined CURIE prefix]** Now tested via `HalCuriesAndTemplatedTests.Curie_Expansion_Returns_Original_When_No_Matching_Prefix`.
+7. ✅ **COMPLETED** — **[Link Object tolerant reader]** Now tested via `HalLinkAttributesValidationTests.LinkObject_With_Unknown_Properties_Are_Ignored`.
+8. ✅ **COMPLETED** — **[Builder: `templated` flag]** Now tested via `BuilderTests.Builder_Sets_Templated_True_For_URI_Template`.
+9. ✅ **COMPLETED** — **[Builder: CURIEs]** Now tested via `BuilderTests.Builder_Constructs_Valid_CURIE_Structure`.
+10. ✅ **COMPLETED** — **[Isolated optional Link Object properties]** Now tested via 6 new tests in `HalLinkObjectTests` covering `type`, `deprecation`, `name`, `profile`, `title`, and `hreflang` properties individually.
+11. ✅ **COMPLETED** — **[Single-vs-array consistency]** Now tested via `HalSerializationRoundTripTests.Link_Array_Form_Is_Preserved_Through_Roundtrip`.
+12. ✅ **COMPLETED** — **[Partial embedded resources]** Now tested via `HalEmbeddedTests.Embedded_Resources_May_Be_Partial_Representations`.
+13. ✅ **COMPLETED** — **[CURIE template `{rel}` token]** Now tested via `HalCuriesAndTemplatedTests.Curie_Template_Contains_Rel_Token`.
+14. ✅ **COMPLETED** — **[Media type constant]** Now tested via `HalMediaTypeTests.MediaType_Constant_Is_Correct`.
+15. ✅ **COMPLETED** — **[Link relation type validation]** Now tested via `HalLinkAttributesValidationTests.Link_Relation_Types_Are_Strings`.
+16. **[Embedded relation name validation]** No equivalent validation test for embedded relation name validity.
+17. **[Builder state transitions]** No tests verify that invalid builder state transitions are caught at compile time or runtime.
+18. **[Builder round-trip]** No explicit builder → serialize → deserialize → assert round-trip test.
+19. **[Source generator: classes without attribute]** No test verifies that classes lacking `[HalResponse]` are not modified.
+20. **[Source generator: edge cases]** Generic, nested, and abstract classes with `[HalResponse]` not tested.

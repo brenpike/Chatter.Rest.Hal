@@ -1,12 +1,13 @@
 ---
 name: coder
 description: Writes code, fixes bugs, and implements logic within explicitly assigned file scope. Use for implementation tasks including features, refactors, tests, and bug fixes.
-model: claude-sonnet-4-5
+model: claude-sonnet-4-6
 tools: Read, Write, Edit, Bash, Glob, Grep, WebSearch, WebFetch, LSP
 mcpServers:
   - context7
   - github
   - code-review-graph
+  - claude-mem
 memory: project
 ---
 
@@ -131,6 +132,8 @@ Files requested but not changed:
 External references checked:
 - Context7: yes/no
 - GitHub MCP: yes/no
+- code-review-graph: yes/no
+- claude-mem: yes/no
 
 Validation performed:
 - [what you ran or checked]

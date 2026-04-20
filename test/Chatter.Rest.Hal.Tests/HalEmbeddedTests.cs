@@ -108,5 +108,99 @@ namespace Chatter.Rest.Hal.Tests
                 ex.Message.Should().Contain("same key");
             }
         }
+
+        [Fact]
+        public void Embedded_Resources_May_Be_Partial_Representations()
+        {
+            // HAL Spec Section 4.1.2 states that embedded resources MAY be partial representations.
+            // A partial representation contains a subset of the fields that would be present in the
+            // canonical/full representation of a resource. This test verifies that the SDK correctly
+            // handles partial embedded resources with:
+            // - Subset of fields (e.g., only `id` when canonical has `id`, `name`, `description`)
+            // - Different properties than canonical
+            // - Null or missing fields
+            // - Empty state (no properties)
+
+            // Create a parent resource with multiple embedded resources demonstrating partial representations
+            var parentResource = new Chatter.Rest.Hal.Resource(new { id = "parent1", title = "Parent Resource" });
+
+            // Embedded resource 1: Partial representation with only subset of fields
+            // Canonical might have id, name, description, price, but partial only has id and name
+            var partialProduct = new Chatter.Rest.Hal.Resource(new { id = "prod123", name = "Widget" });
+
+            // Embedded resource 2: Different properties than canonical
+            // Canonical user might have id, username, email, but partial only exposes id and displayName
+            var partialUser = new Chatter.Rest.Hal.Resource(new { id = "user456", displayName = "John D." });
+
+            // Embedded resource 3: Minimal representation with just identifier
+            var minimalItem = new Chatter.Rest.Hal.Resource(new { id = "item789" });
+
+            // Embedded resource 4: Empty state (no properties) - valid per spec
+            var emptyResource = new Chatter.Rest.Hal.Resource();
+
+            // Add all partial representations to embedded collections
+            var productsEmbedded = new Chatter.Rest.Hal.EmbeddedResource("products");
+            productsEmbedded.Resources.Add(partialProduct);
+
+            var usersEmbedded = new Chatter.Rest.Hal.EmbeddedResource("users");
+            usersEmbedded.Resources.Add(partialUser);
+
+            var itemsEmbedded = new Chatter.Rest.Hal.EmbeddedResource("items");
+            itemsEmbedded.Resources.Add(minimalItem);
+
+            var emptyEmbedded = new Chatter.Rest.Hal.EmbeddedResource("empty");
+            emptyEmbedded.Resources.Add(emptyResource);
+
+            parentResource.Embedded.Add(productsEmbedded);
+            parentResource.Embedded.Add(usersEmbedded);
+            parentResource.Embedded.Add(itemsEmbedded);
+            parentResource.Embedded.Add(emptyEmbedded);
+
+            // Serialize to JSON
+            var json = JsonSerializer.Serialize(parentResource);
+            json.Should().NotBeNullOrEmpty();
+
+            // Deserialize back
+            var deserialized = JsonSerializer.Deserialize<Chatter.Rest.Hal.Resource>(json);
+            deserialized.Should().NotBeNull();
+
+            // Assert partial product representation is preserved
+            var productsEmb = deserialized!.Embedded.FirstOrDefault(e => e.Name == "products");
+            productsEmb.Should().NotBeNull();
+            productsEmb!.Resources.Should().HaveCount(1);
+            var product = productsEmb.Resources.First().As<JsonNode>();
+            product.Should().NotBeNull();
+            product!["id"]!.ToString().Should().Be("prod123");
+            product["name"]!.ToString().Should().Be("Widget");
+            product["description"].Should().BeNull(); // Partial - description not included
+            product["price"].Should().BeNull(); // Partial - price not included
+
+            // Assert partial user representation is preserved
+            var usersEmb = deserialized.Embedded.FirstOrDefault(e => e.Name == "users");
+            usersEmb.Should().NotBeNull();
+            usersEmb!.Resources.Should().HaveCount(1);
+            var user = usersEmb.Resources.First().As<JsonNode>();
+            user.Should().NotBeNull();
+            user!["id"]!.ToString().Should().Be("user456");
+            user["displayName"]!.ToString().Should().Be("John D.");
+            user["username"].Should().BeNull(); // Partial - different properties than canonical
+            user["email"].Should().BeNull(); // Partial - different properties than canonical
+
+            // Assert minimal representation with only id is preserved
+            var itemsEmb = deserialized.Embedded.FirstOrDefault(e => e.Name == "items");
+            itemsEmb.Should().NotBeNull();
+            itemsEmb!.Resources.Should().HaveCount(1);
+            var item = itemsEmb.Resources.First().As<JsonNode>();
+            item.Should().NotBeNull();
+            item!["id"]!.ToString().Should().Be("item789");
+
+            // Assert empty resource is preserved
+            var emptyEmb = deserialized.Embedded.FirstOrDefault(e => e.Name == "empty");
+            emptyEmb.Should().NotBeNull();
+            emptyEmb!.Resources.Should().HaveCount(1);
+            var empty = emptyEmb.Resources.First().As<JsonNode>();
+            // Empty resource should deserialize successfully even with no state properties
+            empty.Should().NotBeNull();
+        }
     }
 }
