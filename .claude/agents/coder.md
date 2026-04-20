@@ -6,6 +6,7 @@ tools: Read, Write, Edit, Bash, Glob, Grep, WebSearch, WebFetch, LSP
 mcpServers:
   - context7
   - github
+  - code-review-graph
 memory: project
 ---
 

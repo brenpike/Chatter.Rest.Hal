@@ -8,7 +8,9 @@
       "Bash(cat)",
       "Bash(dotnet run *)",
       "Bash(dotnet restore *)",
-      "Bash(xargs -I {} sh -c 'echo \"=== {} ===\" && head -20 {}')"
+      "Bash(xargs -I {} sh -c 'echo \"=== {} ===\" && head -20 {}')",
+      "mcp__code-review-graph__get_minimal_context_tool",
+      "Bash(dotnet script *)"
     ]
   },
   "enabledMcpjsonServers": [
@@ -16,6 +18,6 @@
     "context7",
     "github"
   ],
-  "spinnerTipsEnabled": false,
-  "outputStyle": "default"
+  "outputStyle": "default",
+  "spinnerTipsEnabled": false
 }
