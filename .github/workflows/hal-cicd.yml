@@ -11,6 +11,7 @@ on:
   push:
     branches:
       - 'feature/**'
+      - main
     paths:
       - '**/src/Chatter.Rest.Hal/**'
       - '.github/workflows/hal-cicd.yml'
