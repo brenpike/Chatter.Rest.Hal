@@ -3,4 +3,5 @@
 public interface IEmbeddedLinkCreationStage
 {
 	IEmbeddedLinkObjectPropertiesSelectionStage AddLinkObject(string href);
+	IEmbeddedLinkCreationStage AsArray();
 }

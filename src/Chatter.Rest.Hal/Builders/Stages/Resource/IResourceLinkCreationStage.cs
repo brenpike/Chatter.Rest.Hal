@@ -3,4 +3,5 @@
 public interface IResourceLinkCreationStage
 {
 	IResourceLinkObjectPropertiesSelectionStage AddLinkObject(string href);
+	IResourceLinkCreationStage AsArray();
 }

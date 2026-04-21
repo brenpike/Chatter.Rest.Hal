@@ -108,4 +108,5 @@ public interface IEmbeddedLinkObjectPropertiesSelectionStage : IEmbeddedLinkCrea
 	/// Its value is a string and is intended for indicating the language of
 	/// the target resource(as defined by [RFC5988]).
 	IEmbeddedLinkObjectPropertiesSelectionStage WithHreflang(string hreflang);
+	new IEmbeddedLinkObjectPropertiesSelectionStage AsArray();
 }
