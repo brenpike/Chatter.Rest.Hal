@@ -24,7 +24,7 @@ skills:
 
 You create plans only. You do not write or edit code.
 
-Follow `agent-system-policy-v4.md` for shared rules.
+Follow `agent-system-policy.md` for shared rules.
 
 ## Core Responsibilities
 - research the codebase and relevant context

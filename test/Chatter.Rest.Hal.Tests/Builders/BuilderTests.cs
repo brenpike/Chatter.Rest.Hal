@@ -1,5 +1,9 @@
-﻿using Chatter.Rest.Hal.Builders;
+using Chatter.Rest.Hal.Builders;
+using Chatter.Rest.Hal.Builders.Stages;
+using Chatter.Rest.Hal.Builders.Stages.Resource;
+using System.Linq;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using FluentAssertions;
 using Xunit;
 
@@ -214,5 +218,83 @@ public class BuilderTests
 		curieQuery.GetProperty("href").GetString().Should().Be("https://api.test.com/relations/{rel}?format=json");
 		curieQuery.GetProperty("href").GetString().Should().Contain("{rel}");
 		curieQuery.GetProperty("templated").GetBoolean().Should().BeTrue();
+	}
+
+	[Fact]
+	public void Builder_Staged_Interfaces_Enforce_Valid_Construction_Order()
+	{
+		// The builder uses staged interfaces to enforce valid construction order at compile time.
+		// IResourceCreationStage is the entry point; it does NOT expose AddLinkObject directly.
+		// You must first call AddSelf() or AddLink() to reach IResourceLinkCreationStage,
+		// which exposes AddLinkObject.
+
+		// IResourceCreationStage (entry) must NOT expose AddLinkObject directly
+		typeof(IResourceCreationStage).GetMethod("AddLinkObject")
+			.Should().BeNull("the entry stage should require specifying a relation before adding a link object");
+
+		// IResourceCreationStage must expose Build() (via IBuildResource)
+		typeof(IResourceCreationStage).GetInterfaces()
+			.Should().Contain(typeof(IBuildResource),
+				"the root stage must always allow building even without links");
+
+		// After specifying a relation (AddSelf/AddLink), AddLinkObject becomes available
+		typeof(IResourceLinkCreationStage).GetMethod("AddLinkObject")
+			.Should().NotBeNull("after specifying a relation, AddLinkObject must be accessible");
+
+		// Runtime verification: the full staged path compiles and executes correctly
+		var resource = ResourceBuilder.New()
+			.AddSelf().AddLinkObject("/test")
+			.Build();
+		resource.Should().NotBeNull();
+		resource!.Links.Should().HaveCount(1);
+	}
+
+	[Fact]
+	public void Builder_RoundTrip_BuiltResource_SerializesAndDeserializesCorrectly()
+	{
+		// HAL spec section 7.5: a resource built via the fluent API must survive a
+		// serialize -> deserialize round-trip with all state, links, and embedded intact.
+		//
+		// Note: chaining .AddLinkObject() off another .AddLinkObject() is a known builder
+		// limitation -- the second object is not registered in the parent collection.
+		var resource = ResourceBuilder.WithState(new { id = 42, name = "Test" })
+			.AddSelf().AddLinkObject("/items/42")
+			.AddLink("collection").AddLinkObject("/items")
+			.AddEmbedded("author")
+				.AddResources(
+					new[] { new { authorName = "Alice" } },
+					(a, b) => b.AddSelf().AddLinkObject("/authors/alice"))
+			.Build();
+
+		// Serialize to JSON
+		var json = JsonSerializer.Serialize(resource);
+		json.Should().Contain("\"_links\"").And.Contain("\"_embedded\"");
+
+		// Deserialize back
+		var deserialized = JsonSerializer.Deserialize<Resource>(json);
+		deserialized.Should().NotBeNull();
+
+		// Verify state is preserved
+		var state = deserialized!.State<JsonObject>();
+		state.Should().NotBeNull();
+		((int)state!["id"]!).Should().Be(42);
+		((string)state["name"]!).Should().Be("Test");
+
+		// Verify self link
+		var selfLink = deserialized.Links.FirstOrDefault(l => l.Rel == "self");
+		selfLink.Should().NotBeNull();
+		selfLink!.LinkObjects.Should().HaveCount(1);
+		selfLink.LinkObjects.First().Href.Should().Be("/items/42");
+
+		// Verify collection link
+		var collectionLink = deserialized.Links.FirstOrDefault(l => l.Rel == "collection");
+		collectionLink.Should().NotBeNull();
+		collectionLink!.LinkObjects.Should().HaveCount(1);
+		collectionLink.LinkObjects.First().Href.Should().Be("/items");
+
+		// Verify embedded is preserved
+		var authorEmbedded = deserialized.Embedded.FirstOrDefault(e => e.Name == "author");
+		authorEmbedded.Should().NotBeNull();
+		authorEmbedded!.Resources.Should().HaveCount(1);
 	}
 }

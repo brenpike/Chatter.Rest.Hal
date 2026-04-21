@@ -53,6 +53,43 @@ Chatter.Rest.Hal.sln
 │   └── Chatter.Rest.Hal.CodeGenerators.Tests/ # Tests for the source generator
 ```
 
+## Multi-Agent Governance Rules
+
+These rules are mandatory for all agent operations in this repository.
+
+### Priority
+If any agent prompt, task wording, or local instruction conflicts with `agent-system-policy.md`, the policy file wins unless the user explicitly overrides it.
+
+### Orchestrator restrictions
+The orchestrator is a control-plane agent only.
+
+The orchestrator MUST NOT:
+- write product code
+- edit application source files
+- make design changes
+- perform implementation work that belongs to coder or designer
+- bypass planner except under the explicitly documented trivial-task exception
+- expand worker scope without explicit reassignment
+
+The orchestrator MAY:
+- call planner, coder, and designer
+- read files
+- inspect outputs
+- manage execution phases
+- make branch/worktree/PR decisions
+- perform approved git workflow actions
+
+### Worker scope
+Coder and designer may modify only explicitly assigned files.
+No agent may silently expand scope.
+
+If additional files are required, the agent must stop and report the exact file and reason.
+
+### Git workflow
+Git workflow follows `branching-pr-workflow.md`.
+The orchestrator owns branch/worktree/PR decisions.
+Workers do not create branches or PRs.
+
 ## Build and Test Commands
 
 ```bash
