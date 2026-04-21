@@ -231,7 +231,7 @@ public class ResourceTests
 	public void Getting_Resource_Embedded_Should_Return_New_EmbeddedResourceollection_If_EmbeddedCreator_Returns_Null()
 	{
 		var node = JsonSerializer.SerializeToNode(new { foo = 1, bar = "baz" });
-		Func<EmbeddedResourceCollection> embeddedCollection = () => null;
+		Func<EmbeddedResourceCollection> embeddedCollection = () => null!;
 		var res = new Resource(node, () => node!.AsObject(), () => new LinkCollection(), embeddedCollection);
 
 		var embedded = res.Embedded;
