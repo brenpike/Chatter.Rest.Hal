@@ -92,10 +92,10 @@ public sealed class LinkObjectBuilder : HalBuilder<LinkObject>, ILinkObjectPrope
 	}
 
 	private ILinkObjectPropertiesSelectionStage AddLinkObject(string href)
-		=> WithHref((IBuildHalPart<LinkObjectCollection>)Parent!, href);
+		=> ((LinkObjectCollectionBuilder)Parent!).AddLinkObject(href);
 
 	private ILinkObjectPropertiesSelectionStage AddLinkObject(string href, string name)
-		=> WithHref((IBuildHalPart<LinkObjectCollection>)Parent!, href).WithName(name);
+		=> ((LinkObjectCollectionBuilder)Parent!).AddLinkObject(href, name);
 
 	///<inheritdoc/>
 	IResourceLinkObjectPropertiesSelectionStage IResourceLinkCreationStage.AddLinkObject(string href) => AddLinkObject(href);

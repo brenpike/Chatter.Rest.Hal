@@ -254,12 +254,9 @@ public class BuilderTests
 	{
 		// HAL spec section 7.5: a resource built via the fluent API must survive a
 		// serialize -> deserialize round-trip with all state, links, and embedded intact.
-		//
-		// Note: chaining .AddLinkObject() off another .AddLinkObject() is a known builder
-		// limitation -- the second object is not registered in the parent collection.
 		var resource = ResourceBuilder.WithState(new { id = 42, name = "Test" })
 			.AddSelf().AddLinkObject("/items/42")
-			.AddLink("collection").AddLinkObject("/items")
+			.AddLink("collection").AddLinkObject("/items").AddLinkObject("/items/latest")
 			.AddEmbedded("author")
 				.AddResources(
 					new[] { new { authorName = "Alice" } },
@@ -286,11 +283,11 @@ public class BuilderTests
 		selfLink!.LinkObjects.Should().HaveCount(1);
 		selfLink.LinkObjects.First().Href.Should().Be("/items/42");
 
-		// Verify collection link
+		// Verify collection link (two objects chained via .AddLinkObject().AddLinkObject())
 		var collectionLink = deserialized.Links.FirstOrDefault(l => l.Rel == "collection");
 		collectionLink.Should().NotBeNull();
-		collectionLink!.LinkObjects.Should().HaveCount(1);
-		collectionLink.LinkObjects.First().Href.Should().Be("/items");
+		collectionLink!.LinkObjects.Should().HaveCount(2);
+		collectionLink.LinkObjects.Select(lo => lo.Href).Should().BeEquivalentTo(new[] { "/items", "/items/latest" });
 
 		// Verify embedded is preserved
 		var authorEmbedded = deserialized.Embedded.FirstOrDefault(e => e.Name == "author");
