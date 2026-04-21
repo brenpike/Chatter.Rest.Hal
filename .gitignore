@@ -462,3 +462,4 @@ gh-artifacts/*
 # Added by code-review-graph
 .code-review-graph/
 nupkgs/
+.claude/settings.local.json

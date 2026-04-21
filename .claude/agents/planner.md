@@ -56,6 +56,34 @@ Never:
 - create branches, worktrees, commits, or PRs
 - use vague file references such as "relevant files"
 
+## Tool Failure and Blocked-State Rule
+
+If a required planning tool errors, times out, or returns unusable output:
+- do not hang or retry indefinitely
+- retry at most once when the failure appears transient
+- if the retry fails, return a blocked result immediately
+
+When a non-essential tool fails:
+- use one reasonable fallback when available
+- if planning accuracy would become unreliable, return blocked instead of guessing
+
+Do not remain silent after an internal tool/runtime failure.
+Surface the failure promptly so the orchestrator can retry, change strategy, or escalate.
+
+## Blocked Report Format
+
+Status: blocked
+Blocker: [tool error | timeout | unavailable context | other]
+Failed step: [what planning activity failed]
+Retry attempted: [yes|no]
+Fallback used: [none | brief fallback]
+Impact: [what planning cannot be completed]
+Need:
+- [retry by orchestrator]
+- [tool fix]
+- [user input]
+- [other]
+
 ## Output Mode
 Use compact output when all are true:
 - one specialist owner

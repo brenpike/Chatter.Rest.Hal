@@ -184,7 +184,26 @@ Notes:
 - [only if needed]
 ```
 
-## Replanning and Failure Handling
+## Planner Failure Handling
+
+If planner fails due to a tool/runtime error:
+1. do not wait indefinitely
+2. allow at most one immediate planner retry when the failure appears transient
+3. if the retry fails, choose exactly one next action:
+   - ask planner to continue with a reduced-tool or fallback planning approach
+   - report the blocker to the user
+4. do not retry planner more than twice for the same task without new information or a changed strategy
+5. do not create infinite retry loops
+
+A changed strategy may include:
+- fallback from graph/MCP-assisted planning to direct repo inspection
+- narrowing the task scope
+- removing reliance on a non-essential tool
+- obtaining missing user input
+
+If planner returns `blocked`, treat that as a surfaced failure state, not as silence or pending work.
+
+## Worker and Failure Handling
 If a worker returns blocked, partial, conflicting, or incomplete output:
 1. do not silently proceed
 2. determine whether the issue is caused by sequencing, ownership, scope, or git workflow state
@@ -239,3 +258,17 @@ Blocked by:
 Next action:
 - [what must happen]
 ```
+
+## User-Facing Blocked Report
+
+When planning or execution is blocked, report in this format:
+
+Status: blocked
+Stage: [planning | implementation | validation | git workflow]
+Blocker: [one-line reason]
+Retry status: [not attempted | retried once | exhausted]
+Impact: [what cannot proceed]
+Next action:
+- [retry with changed strategy]
+- [fix tool/config]
+- [need user input]

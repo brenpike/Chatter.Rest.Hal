@@ -23,7 +23,15 @@
       "Bash(sed -n '191,193p' docs/HAL_TEST_PLAN.md)",
       "Bash(sed -n '211,212p' docs/HAL_TEST_PLAN.md)",
       "Bash(sed -n '217,219p' docs/HAL_TEST_PLAN.md)",
-      "Bash(sed -n '304p' docs/HAL_TEST_PLAN.md)"
+      "Bash(sed -n '304p' docs/HAL_TEST_PLAN.md)",
+      "Bash(git pull *)",
+      "Bash(code-review-graph build *)",
+      "Bash(code-review-graph mcp *)",
+      "Bash(git checkout *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(gh pr *)"
     ]
   },
   "enabledMcpjsonServers": [

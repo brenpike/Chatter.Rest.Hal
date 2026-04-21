@@ -108,6 +108,23 @@ A worker must stop and report instead of guessing when:
 - repository/worktree/git state blocks safe progress
 - required git workflow context has not been explicitly established
 
+## Retry and Timeout Policy
+
+Agents must not retry indefinitely after tool errors, timeouts, failed delegations, or missing required context.
+
+Rules:
+- Retry at most once when the failure appears transient.
+- If the same failure repeats, return `blocked` immediately.
+- Do not repeat the same failing action without a changed strategy or new information.
+- Surface blocked status promptly so the orchestrator can retry, re-route, or escalate.
+- Do not remain silent after an internal tool/runtime failure.
+
+A changed strategy may include:
+- using a fallback read-only method
+- narrowing scope
+- changing tool choice
+- asking the user for missing information
+
 ## Delivery Shape Rules
 
 ### single-plan
