@@ -66,9 +66,15 @@ The root of every HAL document MUST be a Resource Object — a JSON object that 
 - ✅ `LinkConvertersTests.Deserialize_Link_As_Array_Should_Parse_Multiple`
 
 ### 2.4 Servers SHOULD NOT change a relation between single-object and array form across responses
-> Once a relation is expressed as an array, it should stay an array (and vice versa).
+> Once a relation is expressed as an array, it should stay an array (and vice versa). Implementors may force array form via `Link.IsArray`, `AsArray()`, or global `HalJsonOptions.AlwaysUseArrayForLinks`.
 
 - ✅ `HalSerializationRoundTripTests.Link_Array_Form_Is_Preserved_Through_Roundtrip` — verifies array form is maintained through serialization round-trip
+- ✅ `HalForceArrayTests.Serialize_WithAlwaysUseArrayTrue_ViaAddHalConverters_SingleLink_ProducesArray` — global opt-in via `AddHalConverters` forces array for single link object
+- ✅ `HalForceArrayTests.Serialize_GlobalFalse_PerRelationIsArrayTrue_ProducesArray` — per-relation `IsArray` forces array when global is off
+- ✅ `HalForceArrayTests.RoundTrip_LinkWithIsArrayTrue_PreservesArrayRepresentation` — array form preserved through full serialize/deserialize/re-serialize cycle
+- ✅ `LinkConvertersTests.Deserialize_LinkRelationAsArray_SetsIsArrayTrue_OnLink` — deserializing an array relation sets `IsArray=true` for round-trip fidelity
+- ✅ `LinkConvertersTests.Serialize_Link_WithIsArrayTrue_SingleLinkObject_ProducesJsonArray` — `Link.IsArray=true` emits array even with one link object
+- ✅ `LinkConvertersTests.Serialize_Link_WithIsArrayTrue_ZeroLinkObjects_ProducesEmptyArray` — zero link objects with `IsArray=true` emits `[]`
 
 ### 2.5 Link relation type as a null value is handled gracefully
 - ✅ `LinkBehaviorTests.Reading_Link_With_Null_Value_Produces_Link_With_No_LinkObjects`
@@ -243,6 +249,13 @@ The fluent builder must produce Resource Objects that conform to the spec.
 ### 7.5 Builder round-trip: built resource serializes to valid HAL JSON
 - ✅ `BuilderTests.Builder_RoundTrip_BuiltResource_SerializesAndDeserializesCorrectly` — builds a resource with state, links, and embedded; serializes and deserializes; asserts all components are preserved. Chained `.AddLinkObject()` calls (fixed in commit `83dfb97`) are verified: the `collection` relation asserts `HaveCount(2)` with both `/items` and `/items/latest`.
 
+### 7.6 Builder supports `AsArray()` for per-relation forced array serialization
+- ✅ `BuilderTests.Builder_AsArray_SetsFlagOnLink` — `AsArray()` after `AddLink()` sets `Link.IsArray=true` on built link
+- ✅ `BuilderTests.Builder_AsArray_AfterAddLinkObject_SetsFlagOnLink` — `AsArray()` after `AddLinkObject()` propagates to parent link
+- ✅ `BuilderTests.Builder_WithoutAsArray_IsArrayDefaultsFalse` — confirms default is false (no breaking change)
+- ✅ `BuilderTests.Builder_AddSelf_AsArray_Works` — `AsArray()` works on self link
+- ✅ `BuilderTests.Builder_AddCuries_AsArray_Works` — `AsArray()` works on curies link
+
 ---
 
 ## 8. Extension Methods
@@ -299,10 +312,10 @@ The fluent builder must produce Resource Objects that conform to the spec.
 | `_embedded` | 8 | 8 | 0 | 0 |
 | CURIEs | 5 | 5 | 0 | 0 |
 | Normative Rules | 4 | 4 | 0 | 0 |
-| Builder API | 5 | 5 | 0 | 0 |
+| Builder API | 6 | 6 | 0 | 0 |
 | Extension Methods | 5 | 5 | 0 | 0 |
 | Source Generator | 5 | 4 | 0 | 1 |
-| **Total** | **55** | **53** | **0** | **2** |
+| **Total** | **56** | **54** | **0** | **2** |
 
 ---
 
