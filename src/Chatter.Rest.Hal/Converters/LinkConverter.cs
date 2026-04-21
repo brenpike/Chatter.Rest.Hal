@@ -3,6 +3,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using Chatter.Rest.Hal;
 
 namespace Chatter.Rest.Hal.Converters;
 
@@ -11,6 +12,19 @@ namespace Chatter.Rest.Hal.Converters;
 /// </summary>
 public class LinkConverter : JsonConverter<Link>
 {
+	private readonly HalJsonOptions? _halJsonOptions;
+
+	/// <summary>
+	/// Initializes a new instance with no explicit options; uses <see cref="HalJsonOptions.Default"/> at write time.
+	/// </summary>
+	public LinkConverter() { }
+
+	/// <summary>
+	/// Initializes a new instance with the specified <see cref="HalJsonOptions"/>.
+	/// </summary>
+	/// <param name="options">The HAL JSON options to use during serialization.</param>
+	public LinkConverter(HalJsonOptions options) => _halJsonOptions = options;
+
 	/// <summary>
 	/// Reads a Link from JSON, handling single objects, arrays, and string shorthands.
 	/// </summary>
@@ -83,6 +97,7 @@ public class LinkConverter : JsonConverter<Link>
 
             var loc = ja.Deserialize<LinkObjectCollection>(options);
             if (loc != null) link.LinkObjects = loc;
+            link.IsArray = true;
             return link;
         }
 
@@ -115,10 +130,23 @@ public class LinkConverter : JsonConverter<Link>
 	/// <param name="value">The Link to serialize.</param>
 	/// <param name="options">Serializer options.</param>
 	public override void Write(Utf8JsonWriter writer, Link value, JsonSerializerOptions options)
-    {
-        writer.WriteStartObject();
-        writer.WritePropertyName(value.Rel);
-        JsonSerializer.Serialize(writer, value.LinkObjects, options);
-        writer.WriteEndObject();
-    }
+	{
+		writer.WriteStartObject();
+		writer.WritePropertyName(value.Rel);
+		bool forceArray = (_halJsonOptions ?? HalJsonOptions.Default).AlwaysUseArrayForLinks || value.IsArray;
+		if (!forceArray && value.LinkObjects.Count == 1)
+		{
+			JsonSerializer.Serialize(writer, value.LinkObjects.First(), options);
+		}
+		else
+		{
+			writer.WriteStartArray();
+			foreach (var lo in value.LinkObjects)
+			{
+				JsonSerializer.Serialize(writer, lo, options);
+			}
+			writer.WriteEndArray();
+		}
+		writer.WriteEndObject();
+	}
 }
