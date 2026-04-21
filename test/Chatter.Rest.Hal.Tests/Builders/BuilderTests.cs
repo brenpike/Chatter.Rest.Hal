@@ -294,4 +294,73 @@ public class BuilderTests
 		authorEmbedded.Should().NotBeNull();
 		authorEmbedded!.Resources.Should().HaveCount(1);
 	}
+
+	[Fact]
+	public void Builder_AsArray_SetsFlagOnBuiltLink()
+	{
+		// AsArray() called before AddLinkObject() must set IsArray=true on the built link.
+		var resource = ResourceBuilder.New()
+			.AddSelf().AddLinkObject("/orders")
+			.AddLink("orders").AsArray().AddLinkObject("/orders/1")
+			.Build();
+
+		var ordersLink = resource!.Links.FirstOrDefault(l => l.Rel == "orders");
+		ordersLink.Should().NotBeNull();
+		ordersLink!.IsArray.Should().BeTrue();
+	}
+
+	[Fact]
+	public void Builder_AsArray_AfterAddLinkObject_SetsFlagOnBuiltLink()
+	{
+		// AsArray() called after AddLinkObject() must also set IsArray=true on the built link.
+		var resource = ResourceBuilder.New()
+			.AddSelf().AddLinkObject("/orders")
+			.AddLink("orders").AddLinkObject("/orders/1").AsArray()
+			.Build();
+
+		var ordersLink = resource!.Links.FirstOrDefault(l => l.Rel == "orders");
+		ordersLink.Should().NotBeNull();
+		ordersLink!.IsArray.Should().BeTrue();
+	}
+
+	[Fact]
+	public void Builder_WithoutAsArray_IsArrayDefaultsFalse()
+	{
+		// Without calling AsArray(), the built link must have IsArray=false (the default).
+		var resource = ResourceBuilder.New()
+			.AddSelf().AddLinkObject("/orders")
+			.AddLink("orders").AddLinkObject("/orders/1")
+			.Build();
+
+		var ordersLink = resource!.Links.FirstOrDefault(l => l.Rel == "orders");
+		ordersLink.Should().NotBeNull();
+		ordersLink!.IsArray.Should().BeFalse();
+	}
+
+	[Fact]
+	public void Builder_AddSelf_AsArray_Works()
+	{
+		// AsArray() must work on the self link relation via AddSelf().
+		var resource = ResourceBuilder.New()
+			.AddSelf().AsArray().AddLinkObject("/products/1")
+			.Build();
+
+		var selfLink = resource!.Links.FirstOrDefault(l => l.Rel == "self");
+		selfLink.Should().NotBeNull();
+		selfLink!.IsArray.Should().BeTrue();
+	}
+
+	[Fact]
+	public void Builder_AddCuries_AsArray_Works()
+	{
+		// AsArray() must work on the curies link relation via AddCuries().
+		var resource = ResourceBuilder.New()
+			.AddSelf().AddLinkObject("/orders")
+			.AddCuries().AsArray().AddLinkObject("https://docs.acme.com/relations/{rel}", "doc")
+			.Build();
+
+		var curiesLink = resource!.Links.FirstOrDefault(l => l.Rel == "curies");
+		curiesLink.Should().NotBeNull();
+		curiesLink!.IsArray.Should().BeTrue();
+	}
 }
