@@ -36,4 +36,11 @@ public sealed record Link : IHalPart
 	/// Use this to add one or more actual link entries (href, templated, etc.).
 	/// </summary>
 	public LinkObjectCollection LinkObjects { get; set; } = new();
+
+	/// <summary>
+	/// When true, this link relation serializes as a JSON array regardless of count.
+	/// Use to guarantee a stable response shape when a relation may sometimes
+	/// contain one and sometimes multiple links.
+	/// </summary>
+	public bool IsArray { get; set; } = false;
 }

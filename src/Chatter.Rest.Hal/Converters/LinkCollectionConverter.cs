@@ -3,6 +3,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using Chatter.Rest.Hal;
 
 namespace Chatter.Rest.Hal.Converters;
 
@@ -11,6 +12,19 @@ namespace Chatter.Rest.Hal.Converters;
 /// </summary>
 public class LinkCollectionConverter : JsonConverter<LinkCollection>
 {
+	private readonly HalJsonOptions? _halJsonOptions;
+
+	/// <summary>
+	/// Initializes a new instance with no explicit options; uses <see cref="HalJsonOptions.Default"/> at write time.
+	/// </summary>
+	public LinkCollectionConverter() { }
+
+	/// <summary>
+	/// Initializes a new instance with the specified <see cref="HalJsonOptions"/>.
+	/// </summary>
+	/// <param name="options">The HAL JSON options to use during serialization.</param>
+	public LinkCollectionConverter(HalJsonOptions options) => _halJsonOptions = options;
+
 	/// <summary>
 	/// Reads a LinkCollection from JSON, parsing link relations and their associated link objects.
 	/// </summary>
@@ -81,6 +95,7 @@ public class LinkCollectionConverter : JsonConverter<LinkCollection>
 			{
 				var loc = ja.Deserialize<LinkObjectCollection>(options);
 				if (loc != null) link.LinkObjects = loc;
+				link.IsArray = true;
 			}
 
 			links.Add(link);
@@ -99,7 +114,8 @@ public class LinkCollectionConverter : JsonConverter<LinkCollection>
 		foreach (var link in links)
 		{
 			writer.WritePropertyName(link.Rel);
-			if (link.LinkObjects.Count == 1)
+			bool forceArray = (_halJsonOptions ?? HalJsonOptions.Default).AlwaysUseArrayForLinks || link.IsArray;
+			if (!forceArray && link.LinkObjects.Count == 1)
 			{
 				JsonSerializer.Serialize(writer, link.LinkObjects.First(), options);
 			}

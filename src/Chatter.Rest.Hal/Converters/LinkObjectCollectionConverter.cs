@@ -3,6 +3,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using Chatter.Rest.Hal;
 
 namespace Chatter.Rest.Hal.Converters;
 
@@ -11,6 +12,19 @@ namespace Chatter.Rest.Hal.Converters;
 /// </summary>
 public class LinkObjectCollectionConverter : JsonConverter<LinkObjectCollection>
 {
+	private readonly HalJsonOptions? _halJsonOptions;
+
+	/// <summary>
+	/// Initializes a new instance with no explicit options; uses <see cref="HalJsonOptions.Default"/> at write time.
+	/// </summary>
+	public LinkObjectCollectionConverter() { }
+
+	/// <summary>
+	/// Initializes a new instance with the specified <see cref="HalJsonOptions"/>.
+	/// </summary>
+	/// <param name="options">The HAL JSON options to use during serialization.</param>
+	public LinkObjectCollectionConverter(HalJsonOptions options) => _halJsonOptions = options;
+
 	/// <summary>
 	/// Reads a LinkObjectCollection from JSON, handling both single objects and arrays.
 	/// </summary>
@@ -83,7 +97,8 @@ public class LinkObjectCollectionConverter : JsonConverter<LinkObjectCollection>
 	/// <param name="options">Serializer options.</param>
 	public override void Write(Utf8JsonWriter writer, LinkObjectCollection linkObjects, JsonSerializerOptions options)
 	{
-		if (linkObjects.Count == 1)
+		bool forceArray = (_halJsonOptions ?? HalJsonOptions.Default).AlwaysUseArrayForLinks;
+		if (!forceArray && linkObjects.Count == 1)
 		{
 			JsonSerializer.Serialize(writer, linkObjects.First(), options);
 		}
