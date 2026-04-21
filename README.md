@@ -18,6 +18,7 @@
 - **Source Generators** - Code generation support via `Chatter.Rest.Hal.CodeGenerators` package
 - **Flexible Data Access** - Extension methods for querying links and embedded resources
 - **HAL Specification Compliant** - Full compliance with the [official HAL specification](https://datatracker.ietf.org/doc/html/draft-kelly-json-hal)
+- **Stable Link Array Representation** - Opt-in control over single-object vs. array serialization per relation or globally, resolving a common HAL API consistency issue
 
 ---
 
@@ -47,6 +48,10 @@
     - [Get all Link Objects of a Link by relation](#get-all-link-objects-of-a-link-by-relation)
     - [Get a Link Object of a Link by relation and Link Object name](#get-a-link-object-of-a-link-by-relation-and-link-object-name)
     - [Get a Link Object of a Link by relation only](#get-a-link-object-of-a-link-by-relation-only)
+  - [Controlling Link Array Representation](#controlling-link-array-representation)
+    - [The Problem](#the-problem)
+    - [Global Configuration](#global-configuration)
+    - [Per-Relation Configuration](#per-relation-configuration)
   - [Additional Resources](#additional-resources)
   - [License](#license)
   - [Contributing](#contributing)
@@ -571,6 +576,82 @@ var linkObj = resource!.GetLinkObjectOrDefault("self");
 ```
 
 If used on the resource from the example JSON above, this would return a Link Object with `{ "href": "/orders" }` since "self" is the only link object for that relation.
+
+---
+
+## Controlling Link Array Representation
+
+### The Problem
+
+The HAL specification states that servers **SHOULD NOT change** a relation between a single Link Object and an array across responses. However, by default, this library auto-selects the representation based on count:
+
+- 1 link object → `"self": { "href": "/orders" }` *(single object)*
+- 2+ link objects → `"self": [{ "href": "..." }, ...]` *(array)*
+
+This means a relation that currently returns one link could silently change its JSON shape as soon as a second link is added — breaking clients that hard-coded the single-object form.
+
+### Global Configuration
+
+To force **all** link relations to serialize as JSON arrays regardless of count, use `HalJsonOptions` with `AddHalConverters()`:
+
+```csharp
+using Chatter.Rest.Hal;
+using Chatter.Rest.Hal.Extensions;
+
+// ASP.NET Core
+services.AddControllers().AddJsonOptions(o =>
+    o.JsonSerializerOptions.AddHalConverters(
+        new HalJsonOptions { AlwaysUseArrayForLinks = true }));
+
+// Standalone (process-global startup mutation)
+HalJsonOptions.Default.AlwaysUseArrayForLinks = true;
+```
+
+With this configuration, a single link object now serializes as:
+
+```json
+{
+  "_links": {
+    "self": [{ "href": "/orders" }]
+  }
+}
+```
+
+> **Note:** `AddHalConverters()` registers converters that override the library's default `[JsonConverter]`-attribute-wired converters when the supplied `JsonSerializerOptions` are passed to `JsonSerializer`. Consumers that never call `AddHalConverters()` are unaffected. Calling it twice on the same instance is safe.
+
+### Per-Relation Configuration
+
+To force array representation for a **specific relation** only, use `AsArray()` in the builder chain or set `Link.IsArray` directly:
+
+**Via builder:**
+
+```csharp
+var resource = ResourceBuilder.WithState(new { total = 5 })
+    .AddLinks()
+        .AddLink("orders").AsArray()       // always emit as array
+            .AddLinkObject("/orders/1")
+        .AddSelf()                          // count-based (default behavior)
+            .AddLinkObject("/api/orders")
+    .Build();
+```
+
+**Via domain object:**
+
+```csharp
+var link = new Link("orders") { IsArray = true };
+link.LinkObjects.Add(new LinkObject("/orders/1"));
+```
+
+**Round-trip fidelity:** When deserializing a HAL response where a relation was expressed as a JSON array, the library automatically sets `IsArray = true` on the deserialized `Link`. Re-serializing that resource preserves the array form.
+
+### Precedence
+
+| `AlwaysUseArrayForLinks` (global) | `Link.IsArray` (per-relation) | Result |
+|---|---|---|
+| `false` (default) | `false` (default) | Count-based (existing behavior) |
+| `false` | `true` | Array |
+| `true` | `false` | Array |
+| `true` | `true` | Array |
 
 ---
 
