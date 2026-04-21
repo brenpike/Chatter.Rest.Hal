@@ -53,42 +53,21 @@ Chatter.Rest.Hal.sln
 │   └── Chatter.Rest.Hal.CodeGenerators.Tests/ # Tests for the source generator
 ```
 
-## Multi-Agent Governance Rules
+## Multi-Agent Governance
 
-These rules are mandatory for all agent operations in this repository.
+This repository uses a constrained multi-agent workflow.
 
-### Priority
-If any agent prompt, task wording, or local instruction conflicts with `agent-system-policy.md`, the policy file wins unless the user explicitly overrides it.
+Canonical governance files:
+- `agent-system-policy.md` — shared agent roles, authority, tool policy, escalation, and reporting
+- `branching-pr-workflow.md` — MANDATORY branching, commit, PR, merge, and validation workflow
 
-### Orchestrator restrictions
-The orchestrator is a control-plane agent only.
+These files must ALWAYS be respected unless the user says otherwise.
 
-The orchestrator MUST NOT:
-- write product code
-- edit application source files
-- make design changes
-- perform implementation work that belongs to coder or designer
-- bypass planner except under the explicitly documented trivial-task exception
-- expand worker scope without explicit reassignment
-
-The orchestrator MAY:
-- call planner, coder, and designer
-- read files
-- inspect outputs
-- manage execution phases
-- make branch/worktree/PR decisions
-- perform approved git workflow actions
-
-### Worker scope
-Coder and designer may modify only explicitly assigned files.
-No agent may silently expand scope.
-
-If additional files are required, the agent must stop and report the exact file and reason.
-
-### Git workflow
-Git workflow follows `branching-pr-workflow.md`.
-The orchestrator owns branch/worktree/PR decisions.
-Workers do not create branches or PRs.
+Role-specific behavior is defined in:
+- `orchestrator.md`
+- `planner.md`
+- `coder.md`
+- `designer.md`
 
 ## Build and Test Commands
 

@@ -3,7 +3,15 @@
 ## Purpose
 This file is the canonical source of truth for cross-agent rules in the multi-agent system.
 
-Agent files should contain only role-specific instructions and must not restate policy already defined here unless a role requires a narrower override.
+Agent files contain role-specific rules and enforcement details. Repository-wide workflow and governance rules defined here are mandatory.
+
+## Canonical Workflow Rule
+`branching-pr-workflow.md` is the canonical source of truth for branching, checkpoint commits, pull requests, merge path, and trunk-based delivery rules.
+
+All agents must treat that workflow as **mandatory**.
+It is not optional guidance.
+
+If any task prompt, delegation wording, or local instruction is silent about git workflow, agents must still follow `branching-pr-workflow.md`.
 
 ## Agent Topology
 
@@ -72,19 +80,14 @@ If such a file is assigned to `designer`, the assignment must explicitly state t
 - live-region behavior
 - runtime accessibility behavior tied to business logic or app state
 
-## Git Workflow Defaults
+## Git Workflow Enforcement
+`branching-pr-workflow.md` is mandatory for all agents.
 
-1. One approved plan = one working branch by default.
-2. One successfully completed plan = one PR by default.
-3. Planner recommends delivery shape; orchestrator decides and executes.
-4. Worktrees are optional and used only when:
-   - phases can run in parallel
-   - file scopes do not overlap
-   - separate Claude sessions are actually being used
-   - added complexity is justified
-5. Coder may create a checkpoint commit only when explicitly delegated by orchestrator.
-6. Designer never creates branches, commits, or PRs.
-7. Partial-plan PRs are not allowed unless the planner explicitly decomposes work into independently shippable plans.
+No implementation delegation may begin until the orchestrator has established required git context.
+
+Workers must stop and report blocked if required git context is missing or inconsistent.
+
+No agent may treat user silence about branches, commits, or PRs as permission to ignore the canonical workflow.
 
 ## Tool and MCP Policy
 
@@ -92,18 +95,18 @@ If such a file is assigned to `designer`, the assignment must explicitly state t
 |---|---|---|---|---|---|
 | Context7 | optional | use when relevant | use when relevant | use when relevant | current framework/library docs |
 | GitHub MCP | optional | read-only | read-only | no | workflow/repo/PR/issue context |
-| code-review-graph | no/limited | analysis | analysis + scoped mutation where allowed | analysis only | use when it adds real value |
+| code-review-graph | no/limited | analysis | analysis + scoped use where allowed | analysis only | use when it adds real value |
 | claude-mem | optional | use when relevant | use when relevant | use when relevant | prior project/session context |
 | local repo tools | minimal | read-only only | full role-appropriate use | role-appropriate use | respect role boundaries |
 
 ## Escalation Rules
-
 A worker must stop and report instead of guessing when:
 - required scope exceeds assigned files
 - ownership boundary would be crossed
 - design guidance is missing for a materially visual task
 - runtime behavior changes are required in a designer-owned task
 - repository/worktree/git state blocks safe progress
+- required git workflow context has not been explicitly established
 
 ## Delivery Shape Rules
 
@@ -113,30 +116,41 @@ Default. Use one branch and one PR for the whole approved plan.
 ### multi-plan
 Use only when the planner explicitly determines the work contains independently reviewable and independently shippable deliverables.
 
+## Communication Standard
+Agent-to-agent communication must be concise and field-based.
+
+Rules:
+- prefer short labeled fields over prose
+- include only required sections
+- omit optional sections unless relevant
+- report facts, blockers, scope needs, validation, and git state directly
+- do not restate policy or workflow rules inside routine reports
+
 ## Reporting Contract
 Worker completion reports should be concise by default and use this structure:
 
-## Completion Report
+```text
 Status: complete | partial | blocked
 
-Files changed:
-- ...
-
-Validation performed:
-- ...
-
-Out-of-scope files needed:
-- ...
-  or
+Changed:
+- path/to/file
 - None
 
-Open issues:
-- ...
-  or
+Validated:
+- [check]
+- Not run
+
+Need scope change:
+- path/to/file: reason
 - None
 
-Optional sections may be added only when relevant:
-- External references checked
-- Commit info
-- States handled
-- Git issues encountered
+Issues:
+- [issue]
+- None
+```
+
+Optional lines only when relevant:
+- `Refs: ...`
+- `States handled: ...`
+- `Commit: ...`
+- `Git issue: ...`
