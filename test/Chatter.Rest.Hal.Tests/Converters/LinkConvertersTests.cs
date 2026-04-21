@@ -13,7 +13,7 @@ namespace Chatter.Rest.Hal.Tests.Converters
             var links = JsonSerializer.Deserialize<Chatter.Rest.Hal.LinkCollection>(json);
 		    Assert.NotNull(links);
 		    Assert.Single(links);
-		    var link = links.First();
+		    var link = links!.First();
 		    Assert.Equal("self", link.Rel);
 		    Assert.Single(link.LinkObjects);
 		    Assert.Equal("/orders/123", link.LinkObjects.First().Href);
@@ -25,7 +25,7 @@ namespace Chatter.Rest.Hal.Tests.Converters
 			var links = JsonSerializer.Deserialize<Chatter.Rest.Hal.LinkCollection>(json);
 			Assert.NotNull(links);
 			Assert.Single(links);
-			var link = links.First();
+			var link = links!.First();
 			Assert.Equal("friends", link.Rel);
 			Assert.Equal(2, link.LinkObjects.Count);
 			Assert.Equal("/users/1", link.LinkObjects.First().Href);
@@ -37,7 +37,7 @@ namespace Chatter.Rest.Hal.Tests.Converters
 			var links = JsonSerializer.Deserialize<Chatter.Rest.Hal.LinkCollection>(json);
 			Assert.NotNull(links);
 			Assert.Single(links);
-			var link = links.First();
+			var link = links!.First();
 			Assert.Equal("next", link.Rel);
 			Assert.Empty(link.LinkObjects);
 		}
@@ -49,7 +49,7 @@ namespace Chatter.Rest.Hal.Tests.Converters
 			Assert.NotNull(links);
 			// should skip the empty key and only include the valid rel
 			Assert.Single(links);
-			Assert.Equal("valid", links.First().Rel);
+			Assert.Equal("valid", links!.First().Rel);
 		}
 		[Fact]
 		public void RoundTrip_Serialization_LinkCollection_Preserves_Data()

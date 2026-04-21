@@ -33,7 +33,7 @@ public class EmbeddedResourceBuilder : HalBuilder<EmbeddedResource>, IAddResourc
 	///<inheritdoc/>
 	public IEmbeddedResourceCreationStage AddResource(object? state) => _resourceCollectionBuilder.AddResource(state);
 
-	IEmbeddedResourceCreationStage IAddResourceStage.AddResources<T>(IEnumerable<T> resources, Action<T, IEmbeddedResourceCreationStage>? builder = null)
+	IEmbeddedResourceCreationStage IAddResourceStage.AddResources<T>(IEnumerable<T> resources, Action<T, IEmbeddedResourceCreationStage>? builder)
 		=> _resourceCollectionBuilder.AddResources(resources, builder);
 
 	/// <summary>

@@ -55,7 +55,7 @@ public class LinkConverter : JsonConverter<Link>
         // If the value is an object, ensure it contains an href (required by HAL) before deserializing.
         if (kvp.Value is JsonObject obj)
         {
-            if (obj["href"] == null || obj["href"].ToJsonString() == "null")
+            if (obj["href"] == null || obj["href"]?.ToJsonString() == "null")
             {
                 // Not a valid Link Object shape
                 return null;
@@ -75,7 +75,7 @@ public class LinkConverter : JsonConverter<Link>
                 {
                     return null;
                 }
-                if (itemObj["href"] == null || itemObj["href"].ToJsonString() == "null")
+                if (itemObj["href"] == null || itemObj["href"]?.ToJsonString() == "null")
                 {
                     return null;
                 }
