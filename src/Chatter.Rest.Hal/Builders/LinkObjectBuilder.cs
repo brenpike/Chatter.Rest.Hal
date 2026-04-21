@@ -102,6 +102,14 @@ public sealed class LinkObjectBuilder : HalBuilder<LinkObject>, ILinkObjectPrope
 	///<inheritdoc/>
 	IResourceLinkObjectPropertiesSelectionStage IResourceCuriesLinkCreationStage.AddLinkObject(string href, string name) => AddLinkObject(href, name);
 	///<inheritdoc/>
+	IResourceLinkCreationStage IResourceLinkCreationStage.AsArray() => (IResourceLinkCreationStage)AsArray();
+	///<inheritdoc/>
+	IEmbeddedLinkCreationStage IEmbeddedLinkCreationStage.AsArray() => (IEmbeddedLinkCreationStage)AsArray();
+	///<inheritdoc/>
+	IResourceCuriesLinkCreationStage IResourceCuriesLinkCreationStage.AsArray() => (IResourceCuriesLinkCreationStage)AsArray();
+	///<inheritdoc/>
+	IEmbeddedCuriesLinkCreationStage IEmbeddedCuriesLinkCreationStage.AsArray() => (IEmbeddedCuriesLinkCreationStage)AsArray();
+	///<inheritdoc/>
 	IResourceLinkCreationStage IAddLinkToResourceStage.AddLink(string rel) => AddLink(rel);
 	///<inheritdoc/>
 	IResourceLinkCreationStage IAddSelfLinkToResourceStage.AddSelf() => AddSelf();
@@ -117,6 +125,19 @@ public sealed class LinkObjectBuilder : HalBuilder<LinkObject>, ILinkObjectPrope
 	IEmbeddedLinkCreationStage IAddSelfLinkToEmbeddedStage.AddSelf() => AddSelf();
 	///<inheritdoc/>
 	IEmbeddedCuriesLinkCreationStage IAddCuriesLinkToEmbeddedStage.AddCuries() => AddCuries();
+
+	private ILinkObjectPropertiesSelectionStage AsArray()
+	{
+		(FindParent<Link>() as LinkBuilder)?.SetIsArray();
+		return this;
+	}
+
+	///<inheritdoc/>
+	IResourceLinkObjectPropertiesSelectionStage IResourceLinkObjectPropertiesSelectionStage.AsArray()
+		=> (IResourceLinkObjectPropertiesSelectionStage)AsArray();
+	///<inheritdoc/>
+	IEmbeddedLinkObjectPropertiesSelectionStage IEmbeddedLinkObjectPropertiesSelectionStage.AsArray()
+		=> (IEmbeddedLinkObjectPropertiesSelectionStage)AsArray();
 
 	///<inheritdoc/>
 	IResourceLinkObjectPropertiesSelectionStage IResourceLinkObjectPropertiesSelectionStage.Templated() => Templated();

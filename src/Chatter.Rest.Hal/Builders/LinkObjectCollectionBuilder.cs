@@ -38,6 +38,30 @@ public sealed class LinkObjectCollectionBuilder : HalBuilder<LinkObjectCollectio
 	IResourceLinkObjectPropertiesSelectionStage IResourceCuriesLinkCreationStage.AddLinkObject(string href, string name) => AddLinkObject(href, name);
 	///<inheritdoc/>
 	IEmbeddedLinkObjectPropertiesSelectionStage IEmbeddedCuriesLinkCreationStage.AddLinkObject(string href, string name) => AddLinkObject(href, name);
+	///<inheritdoc/>
+	IResourceLinkCreationStage IResourceLinkCreationStage.AsArray()
+	{
+		(FindParent<Link>() as LinkBuilder)?.SetIsArray();
+		return this;
+	}
+	///<inheritdoc/>
+	IEmbeddedLinkCreationStage IEmbeddedLinkCreationStage.AsArray()
+	{
+		(FindParent<Link>() as LinkBuilder)?.SetIsArray();
+		return this;
+	}
+	///<inheritdoc/>
+	IResourceCuriesLinkCreationStage IResourceCuriesLinkCreationStage.AsArray()
+	{
+		(FindParent<Link>() as LinkBuilder)?.SetIsArray();
+		return this;
+	}
+	///<inheritdoc/>
+	IEmbeddedCuriesLinkCreationStage IEmbeddedCuriesLinkCreationStage.AsArray()
+	{
+		(FindParent<Link>() as LinkBuilder)?.SetIsArray();
+		return this;
+	}
 
 	/// <summary>
 	/// Builds the link object collection from all added link objects.

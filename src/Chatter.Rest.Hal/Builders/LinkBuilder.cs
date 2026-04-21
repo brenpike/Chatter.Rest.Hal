@@ -21,6 +21,7 @@ public sealed class LinkBuilder : HalBuilder<Link>, ILinkCreationStage, ICuriesL
 
 	private readonly string _rel;
 	private readonly LinkObjectCollectionBuilder _linkObjects;
+	private bool _isArray = false;
 
 	private LinkBuilder(IBuildHalPart<LinkCollection> parent, string rel) : base(parent)
 	{
@@ -50,10 +51,18 @@ public sealed class LinkBuilder : HalBuilder<Link>, ILinkCreationStage, ICuriesL
 	/// <returns>A new link builder.</returns>
 	public static LinkBuilder Curies(IBuildHalPart<LinkCollection> parent) => new(parent, CuriesLink);
 
+	internal void SetIsArray() => _isArray = true;
+
 	///<inheritdoc/>
 	private ILinkObjectPropertiesSelectionStage AddLinkObject(string href) => _linkObjects.AddLinkObject(href);
 	///<inheritdoc/>
 	private ILinkObjectPropertiesSelectionStage AddLinkObject(string href, string name) => _linkObjects.AddLinkObject(href, name);
+
+	private ILinkCreationStage AsArray()
+	{
+		_isArray = true;
+		return this;
+	}
 
 	///<inheritdoc/>
 	IResourceLinkObjectPropertiesSelectionStage IResourceCuriesLinkCreationStage.AddLinkObject(string href, string name) => AddLinkObject(href, name);
@@ -63,6 +72,14 @@ public sealed class LinkBuilder : HalBuilder<Link>, ILinkCreationStage, ICuriesL
 	IResourceLinkObjectPropertiesSelectionStage IResourceLinkCreationStage.AddLinkObject(string href) => AddLinkObject(href);
 	///<inheritdoc/>
 	IEmbeddedLinkObjectPropertiesSelectionStage IEmbeddedLinkCreationStage.AddLinkObject(string href) => AddLinkObject(href);
+	///<inheritdoc/>
+	IResourceLinkCreationStage IResourceLinkCreationStage.AsArray() => (IResourceLinkCreationStage)AsArray();
+	///<inheritdoc/>
+	IEmbeddedLinkCreationStage IEmbeddedLinkCreationStage.AsArray() => (IEmbeddedLinkCreationStage)AsArray();
+	///<inheritdoc/>
+	IResourceCuriesLinkCreationStage IResourceCuriesLinkCreationStage.AsArray() => (IResourceCuriesLinkCreationStage)AsArray();
+	///<inheritdoc/>
+	IEmbeddedCuriesLinkCreationStage IEmbeddedCuriesLinkCreationStage.AsArray() => (IEmbeddedCuriesLinkCreationStage)AsArray();
 
 	/// <summary>
 	/// Builds the Link with its relation and link objects.
@@ -72,7 +89,8 @@ public sealed class LinkBuilder : HalBuilder<Link>, ILinkCreationStage, ICuriesL
 	{
 		return new Link(_rel)
 		{
-			LinkObjects = _linkObjects.BuildPart()
+			LinkObjects = _linkObjects.BuildPart(),
+			IsArray = _isArray
 		};
 	}
 }
