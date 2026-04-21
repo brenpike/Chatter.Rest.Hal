@@ -11,6 +11,7 @@ on:
   push:
     branches:
       - 'feature/**'
+      - main
     paths:
       - '.github/workflows/codegen-cicd.yml'
       - '**/src/Chatter.Rest.Hal.CodeGenerators/**'
@@ -36,7 +37,6 @@ jobs:
   build:
     name: build
     runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request' || github.event.pull_request.merged == true
 
     steps:
       - name: Checkout
