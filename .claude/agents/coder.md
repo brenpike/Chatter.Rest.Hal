@@ -28,7 +28,7 @@ skills:
 
 You implement code only within assigned file scope.
 
-Follow `agent-system-policy-v4.md` for shared rules.
+Follow `agent-system-policy.md` for shared rules.
 
 ## Core Responsibilities
 You own:

@@ -110,6 +110,40 @@ namespace Chatter.Rest.Hal.Tests
         }
 
         [Fact]
+        public void Embedded_Relation_Names_Are_Strings()
+        {
+            // HAL spec section 6.4: _embedded property names are link relation types (strings).
+            // Validates IANA names, full URIs, CURIE formats, and special-character names.
+            var json = @"{
+                ""_embedded"": {
+                    ""item"": { ""_links"": { ""self"": { ""href"": ""/items/1"" } } },
+                    ""https://example.com/rels/order"": { ""_links"": { ""self"": { ""href"": ""/orders/1"" } } },
+                    ""ex:widgets"": { ""_links"": { ""self"": { ""href"": ""/widgets/1"" } } },
+                    ""rel-with-hyphens"": { ""_links"": { ""self"": { ""href"": ""/hyphens/1"" } } },
+                    ""rel_with_underscores"": { ""_links"": { ""self"": { ""href"": ""/underscores/1"" } } }
+                }
+            }";
+
+            var resource = JsonSerializer.Deserialize<Resource>(json);
+
+            resource.Should().NotBeNull();
+            resource!.Embedded.Should().HaveCount(5);
+            resource.Embedded.Select(e => e.Name).Should().BeEquivalentTo(new[]
+            {
+                "item",
+                "https://example.com/rels/order",
+                "ex:widgets",
+                "rel-with-hyphens",
+                "rel_with_underscores"
+            });
+            // Each embedded entry should contain a resource with a self link
+            foreach (var embedded in resource.Embedded)
+            {
+                embedded.Resources.Should().HaveCount(1);
+            }
+        }
+
+        [Fact]
         public void Embedded_Resources_May_Be_Partial_Representations()
         {
             // HAL Spec Section 4.1.2 states that embedded resources MAY be partial representations.

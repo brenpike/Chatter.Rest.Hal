@@ -219,7 +219,7 @@ CURIEs are established via the `curies` reserved link relation — an array of n
 - ✅ `HalLinkAttributesValidationTests.Link_Relation_Types_Are_Strings`
 
 ### 6.4 `_embedded` property names are link relation types (strings)
-- ❌ No equivalent validation test for embedded relation name validity.
+- ✅ `HalEmbeddedTests.Embedded_Relation_Names_Are_Strings` — validates IANA names, full URIs, CURIEs, and special-character relation names as embedded keys
 
 ---
 
@@ -229,7 +229,7 @@ The fluent builder must produce Resource Objects that conform to the spec.
 
 ### 7.1 Builder produces a valid HAL resource
 - ✅ `Tests.Link`, `Tests.LinkObject`, and integration tests in `Tests.cs`
-- ⚠️ `BuilderTests.test` — only one test exists; builder coverage is thin.
+- ✅ Builder coverage expanded: `Builder_Sets_Templated_True_For_URI_Template`, `Builder_Constructs_Valid_CURIE_Structure`, `Builder_Staged_Interfaces_Enforce_Valid_Construction_Order`, `Builder_RoundTrip_BuiltResource_SerializesAndDeserializesCorrectly`
 
 ### 7.2 Builder correctly sets `templated` when a URI template is used
 - ✅ `BuilderTests.Builder_Sets_Templated_True_For_URI_Template` — verifies builder sets `templated: true` for URI template href
@@ -238,11 +238,11 @@ The fluent builder must produce Resource Objects that conform to the spec.
 - ✅ `BuilderTests.Builder_Constructs_Valid_CURIE_Structure` — verifies builder can construct resources with valid CURIE definitions
 
 ### 7.4 Builder enforces staged construction (invalid transitions)
-- ❌ No tests verify that invalid builder state transitions are caught at compile time or runtime.
+- ✅ `BuilderTests.Builder_Staged_Interfaces_Enforce_Valid_Construction_Order` — verifies via reflection that `IResourceCreationStage` does not expose `AddLinkObject` and that `IResourceLinkCreationStage` does; documents compile-time enforcement
 
 ### 7.5 Builder round-trip: built resource serializes to valid HAL JSON
-- ✅ Partial coverage via integration tests in `Tests.cs`
-- ❌ No explicit builder → serialize → deserialize → assert round-trip test.
+- ✅ `BuilderTests.Builder_RoundTrip_BuiltResource_SerializesAndDeserializesCorrectly` — builds a resource with state, links, and embedded; serializes and deserializes; asserts all components are preserved
+- ⚠️ Known limitation: chaining `.AddLinkObject()` off another `.AddLinkObject()` silently drops the second object (unregistered builder); multi-object relations should be tested via deserialization fixtures
 
 ---
 
@@ -281,10 +281,11 @@ The fluent builder must produce Resource Objects that conform to the spec.
 - ✅ `CodeGeneratorTests.Generator_IsIdempotent_AfterMultipleCompiles`
 
 ### 9.4 Generator handles classes without `[HalResponse]` (no output)
-- ❌ No test verifies that classes lacking the attribute are not modified.
+- ✅ `CodeGeneratorTests.Class_Without_HalResponse_Attribute_Is_Not_Modified` — verifies `PlainClass` (no attribute) has no generated `Links` or `Embedded` properties
 
 ### 9.5 Generator handles edge cases: generic classes, nested classes, abstract classes
-- ❌ No tests for these edge cases.
+- ✅ `CodeGeneratorTests.Abstract_Class_With_HalResponse_Gets_Generated_Properties` — verifies abstract partial classes receive generated `Links` and `Embedded` properties
+- ❌ Generic classes not supported (emitter omits type parameters, causing compile errors); nested classes not supported (emitter does not wrap in outer class)
 
 ---
 
@@ -295,19 +296,19 @@ The fluent builder must produce Resource Objects that conform to the spec.
 | Resource Object | 5 | 5 | 0 | 0 |
 | `_links` | 7 | 7 | 0 | 0 |
 | Link Objects | 11 | 11 | 0 | 0 |
-| `_embedded` | 8 | 7 | 0 | 1 |
+| `_embedded` | 8 | 8 | 0 | 0 |
 | CURIEs | 5 | 5 | 0 | 0 |
 | Normative Rules | 4 | 4 | 0 | 0 |
-| Builder API | 5 | 3 | 2 | 0 |
+| Builder API | 5 | 4 | 1 | 0 |
 | Extension Methods | 5 | 5 | 0 | 0 |
-| Source Generator | 5 | 3 | 0 | 2 |
-| **Total** | **55** | **50** | **2** | **3** |
+| Source Generator | 5 | 4 | 1 | 0 |
+| **Total** | **55** | **53** | **2** | **0** |
 
 ---
 
 ## 11. Priority Gap List
 
-15 of 20 gaps have been addressed. Remaining gaps ordered by spec compliance risk (highest first):
+All 20 gaps have been addressed or classified. 18 are fully covered; 2 are partially covered (builder round-trip and source generator edge cases).
 
 1. ✅ **COMPLETED** — **[CURIE expansion]** Now tested via `HalCuriesAndTemplatedTests.Curie_Short_Form_Expands_To_Full_Uri` and `LinkCollectionExtensionsTests.ExpandCurieRelation_Should_Return_Full_Uri_When_Curie_Exists`. The `ExpandCurieRelation` extension method was also implemented.
 2. ✅ **COMPLETED** — **[Root object validation]** Now tested via 5 new tests in `HalDeserializationRobustnessTests` covering array, string, number, boolean, and null roots.
@@ -324,8 +325,8 @@ The fluent builder must produce Resource Objects that conform to the spec.
 13. ✅ **COMPLETED** — **[CURIE template `{rel}` token]** Now tested via `HalCuriesAndTemplatedTests.Curie_Template_Contains_Rel_Token`.
 14. ✅ **COMPLETED** — **[Media type constant]** Now tested via `HalMediaTypeTests.MediaType_Constant_Is_Correct`.
 15. ✅ **COMPLETED** — **[Link relation type validation]** Now tested via `HalLinkAttributesValidationTests.Link_Relation_Types_Are_Strings`.
-16. **[Embedded relation name validation]** No equivalent validation test for embedded relation name validity.
-17. **[Builder state transitions]** No tests verify that invalid builder state transitions are caught at compile time or runtime.
-18. **[Builder round-trip]** No explicit builder → serialize → deserialize → assert round-trip test.
-19. **[Source generator: classes without attribute]** No test verifies that classes lacking `[HalResponse]` are not modified.
-20. **[Source generator: edge cases]** Generic, nested, and abstract classes with `[HalResponse]` not tested.
+16. ✅ **COMPLETED** — **[Embedded relation name validation]** Now tested via `HalEmbeddedTests.Embedded_Relation_Names_Are_Strings`.
+17. ✅ **COMPLETED** — **[Builder state transitions]** Now tested via `BuilderTests.Builder_Staged_Interfaces_Enforce_Valid_Construction_Order`; compile-time enforcement documented via reflection assertions.
+18. ⚠️ **PARTIALLY COMPLETED** — **[Builder round-trip]** Now tested via `BuilderTests.Builder_RoundTrip_BuiltResource_SerializesAndDeserializesCorrectly`. Known limitation: `LinkObjectBuilder.AddLinkObject()` chaining drops the second object (not registered in parent collection). Multi-object relation round-trip cannot be tested through the builder alone.
+19. ✅ **COMPLETED** — **[Source generator: classes without attribute]** Now tested via `CodeGeneratorTests.Class_Without_HalResponse_Attribute_Is_Not_Modified`.
+20. ⚠️ **PARTIALLY COMPLETED** — **[Source generator: edge cases]** Abstract classes now tested via `CodeGeneratorTests.Abstract_Class_With_HalResponse_Gets_Generated_Properties`. Generic and nested classes are known emitter limitations (not supported).
