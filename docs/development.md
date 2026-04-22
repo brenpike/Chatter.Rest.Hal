@@ -1,76 +1,141 @@
-Development — Local setup, tests, and code generation
+# Development Guide
 
-Purpose
+Local setup, build commands, test conventions, and CI/CD parity for Chatter.Rest.Hal.
 
-This document explains the developer workflows used in this repository: how to set up a local environment, run builds and tests, and run the code generator(s). It's written for new contributors who want to iterate on code and verify changes locally.
+---
 
-Prerequisites
+## 1. Prerequisites
 
-- Install the .NET SDK version referenced by global.json in the repository root. Use the SDK that matches that file to avoid compatibility issues.
-- A modern code editor or IDE (Visual Studio, VS Code, Rider) with C# tooling is recommended.
-- Git for cloning and branching.
+- **.NET 8.0 SDK** (`8.0.x`) — the version used in CI workflows
+- **Language:** C# 10.0 (set per project via `<LangVersion>10.0</LangVersion>`)
+- No external tools beyond the .NET SDK are required
 
-Repository layout (high-level)
+There is no `global.json` in this repository. The SDK version is pinned only in CI. Use any `8.0.x` SDK locally.
 
-- src/ — main source projects
-- test/ — unit and integration tests
-- docs/ — repository documentation (this file)
-- generator or tools/ (if present) — code-generation tool projects
+---
 
-Note: exact directory names may vary; search the repo for project names or for a generator-related project if you are unsure.
+## 2. Solution Structure
 
-Common development workflows
+```
+Chatter.Rest.Hal.sln
+├── src/
+│   ├── Chatter.Rest.Hal/Chatter.Rest.Hal.csproj
+│   ├── Chatter.Rest.Hal.Core/Chatter.Rest.Hal.Core.csproj
+│   └── Chatter.Rest.Hal.CodeGenerators/Chatter.Rest.Hal.CodeGenerators.csproj
+└── test/
+    ├── Chatter.Rest.Hal.Tests/Chatter.Rest.Hal.Tests.csproj
+    └── Chatter.Rest.Hal.CodeGenerators.Tests/Chatter.Rest.Hal.CodeGenerators.Tests.csproj
+```
 
-1) Build and run tests
+**Target frameworks:**
 
-Outcome: you will verify that the solution builds and that all tests pass locally.
-What to do (outcome-focused):
-- Restore dependencies and build the solution using your .NET tooling.
-- Execute the test suites (unit tests first; integration tests as needed).
-- Fix any failing tests or open an issue if a failing test represents an unrelated CI/regression problem.
+- `src/` projects multi-target `net8.0;netstandard2.0`
+- `test/` projects target `net8.0` only
 
-What to expect:
-- A clean build and passing tests should match CI results. If tests fail locally but pass in CI, confirm SDK versions and environmental differences.
+---
 
-2) Running the code generator (high-level)
+## 3. Build Commands
 
-Outcome: regenerate generated artifacts used by the project (models, clients, or other assets produced by a generator).
+```bash
+# Restore dependencies
+dotnet restore
 
-How to proceed (conceptual steps):
-- Identify the generator project in the repository (commonly found under a tools/ or src/ directory). The project name or README often indicates it is the generator.
-- Build the generator project with the same .NET SDK used for the main solution.
-- Run the generator with the expected input files (e.g., schema, templates, or configuration). The generator usually accepts input path(s) and an output directory. When in doubt, open the generator project's README or source code to confirm expected arguments.
-- Inspect the generated output and add the regenerated files to your branch if your change requires updated generated code.
+# Build (Debug)
+dotnet build
 
-Notes and best practices:
-- Prefer regenerating outputs locally and including the results in the same PR when changing inputs that affect generated files. This keeps CI reproducible and reviewers able to verify the final state.
-- If generated code is large, consider including only the meaningful diffs or explain why generated output is excluded.
+# Build (Release, skip restore)
+dotnet build -c Release --no-restore
+```
 
-3) Debugging and iterative development
+---
 
-Outcome: quickly iterate on a change with fast feedback.
+## 4. Test Commands
 
-What to do:
-- Use your IDE debugger to step through code and tests.
-- Add focused unit tests to reproduce bugs before implementing fixes.
-- Keep iterations small; run relevant tests frequently rather than the entire suite on every change.
+```bash
+# Run core library tests
+dotnet test test/Chatter.Rest.Hal.Tests/Chatter.Rest.Hal.Tests.csproj
 
-Troubleshooting tips
+# Run code generator tests
+dotnet test test/Chatter.Rest.Hal.CodeGenerators.Tests/Chatter.Rest.Hal.CodeGenerators.Tests.csproj
 
-- SDK mismatch: If build/test failures indicate SDK differences, confirm the version in global.json and install that SDK.
-- Missing tools: If the generator requires an external tool or NuGet package, the generator project's README should list them. Install or restore as instructed.
-- Environmental differences: CI may run with different environment variables or OS constraints. When behavior diverges, capture logs and open an issue with reproduction steps.
+# Run all tests
+dotnet test
+```
 
-What to include in a development PR
+CI runs tests with `-c Release --no-build` after a Release build step. To replicate CI exactly:
 
-- A short summary of the change and why it was made.
-- Steps you followed to validate the change locally (build, test, generate outputs).
-- Any files that were regenerated as part of the change, or explicit instructions to regenerate them.
-- Notes on compatibility or versioning if the change affects public APIs or generated artifacts.
+```bash
+dotnet build -c Release --no-restore
+dotnet test test/Chatter.Rest.Hal.Tests/Chatter.Rest.Hal.Tests.csproj -c Release --no-build
+dotnet test test/Chatter.Rest.Hal.CodeGenerators.Tests/Chatter.Rest.Hal.CodeGenerators.Tests.csproj -c Release --no-build
+```
 
-Further reading and reference
+---
 
-- See CONTRIBUTING.md for repository-level contribution expectations and PR guidance.
-- The repository's README may hold additional high-level info.
+## 5. NuGet Packaging
 
-If something in these docs is unclear or missing, please open an issue titled "docs: clarify development workflow" and describe what you'd like to see.
+```bash
+dotnet pack src/Chatter.Rest.Hal/Chatter.Rest.Hal.csproj -c Release -o publish/nuget
+dotnet pack src/Chatter.Rest.Hal.CodeGenerators/Chatter.Rest.Hal.CodeGenerators.csproj -c Release -o publish/nuget
+```
+
+Output packages land in `publish/nuget/`.
+
+---
+
+## 6. CI/CD Parity
+
+Two workflows live in `.github/workflows/`:
+
+| Workflow | Scope |
+|---|---|
+| `hal-cicd.yml` | `src/Chatter.Rest.Hal/`, `test/Chatter.Rest.Hal.Tests/` |
+| `codegen-cicd.yml` | `src/Chatter.Rest.Hal.CodeGenerators/`, `test/Chatter.Rest.Hal.CodeGenerators.Tests/` |
+
+**Both workflows:**
+
+- Trigger on pushes to `feature/**` branches (path-scoped to their respective `src/` and `test/` directories) and on pushes to `main`
+- Also trigger on pull requests targeting `main` (path-scoped)
+- Use `dotnet restore --locked-mode` — requires `packages.lock.json` to be present and current
+- Build with `-c Release --no-restore`
+- Test with `-c Release --no-build`
+- Deploy to NuGet.org only when `github.ref == 'refs/heads/main'` (after a successful PR merge) via the `NUGET_API_KEY_CHATTER_HAL` secret
+
+**Lock file troubleshooting:** If `dotnet restore --locked-mode` fails locally with lock file errors, delete `packages.lock.json` and run `dotnet restore` to regenerate it. Commit the regenerated file.
+
+---
+
+## 7. Source Generator: No Manual Invocation
+
+The Roslyn source generator (`Chatter.Rest.Hal.CodeGenerators`) runs automatically during `dotnet build`. No explicit invocation is required.
+
+To inspect generated output after a build:
+
+```
+obj/Debug/net8.0/generated/Chatter.Rest.Hal.CodeGenerators/Chatter.Rest.Hal.CodeGenerators.HalResponseGenerator/
+```
+
+---
+
+## 8. Code Style
+
+`.editorconfig` enforces:
+
+- **Line endings:** CRLF
+- **Indentation:** tabs
+- **Braces:** Allman style (`csharp_new_line_before_open_brace=all`)
+- **Namespaces:** file-scoped (silent preference)
+
+All projects have `<Nullable>enable</Nullable>`. The `netstandard2.0` target of converter files produces pre-existing `CS8604`/`CS8603` nullable warnings — these are baseline noise and do not affect the `net8.0` build. Do not treat them as regressions.
+
+---
+
+## 9. Test Conventions
+
+- **Framework:** xunit 2.4.x
+- **Assertions:** FluentAssertions 6.x (preferred); xunit `Assert` also used
+- **Mocking:** Moq 4.x (core library tests only)
+- **Coverage:** coverlet
+- **Test naming:** `Method_Scenario_Expected` — e.g., `Curies_Are_Parsed_As_Array_Of_LinkObjects`
+- **JSON fixtures:** `test/Chatter.Rest.Hal.Tests/Json/` — loaded via `TestHelpers.LoadResourceFromFixture()`
+- **Shared helpers:** `TestHelpers` provides factory methods (`CreateLink`, `CreateLinkObject`, `CreateResourceWithLink`) and JSON assertion utilities
