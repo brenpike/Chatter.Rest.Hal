@@ -194,7 +194,8 @@ Note: `writer.WriteRawValue` requires `System.Text.Json` 6+. The filter for `"Li
 - **Impact:** Medium
 - **Effort:** Low
 - **Category:** allocation / collection
-- **Status:** - [ ] pending
+- **Status:** - [x] complete
+- **Implementation Note:** Added public read-only `this[int index]` indexer to LinkObjectCollection, LinkCollection, ResourceCollection, EmbeddedResourceCollection (delegating to backing Collection<T>). Replaced .First() with [0] in all 5 converter call sites. Removed unused using System.Linq from 4 of 5 converters. Committed in perf/remaining-fixes.
 
 ### Problem
 `.First()` on `Collection<T>`-backed types calls `IEnumerable<T>.GetEnumerator()` which boxes the struct enumerator. Happens on every single-element link/resource write -- the most common HAL serialization case per the spec.
@@ -222,7 +223,8 @@ All backing collection types already wrap `Collection<T>` which supports `[int i
 - **Impact:** Medium
 - **Effort:** Low
 - **Category:** allocation
-- **Status:** - [ ] pending
+- **Status:** - [x] complete
+- **Implementation Note:** Resource.Links and Resource.Embedded getters changed from `return _impl ?? new T()` to `_impl = _creator() ?? new T(); return _impl` — fallback collection allocated once and cached. Committed in perf/remaining-fixes.
 
 ### Problem
 `return _linksImpl ?? new LinkCollection()` allocates a new empty collection on every getter access when `_linksCreator()` returned null. `_linksImpl` stays null so subsequent accesses each allocate.
@@ -262,7 +264,8 @@ Apply same fix to `Embedded` getter (`_embeddedImpl` / `EmbeddedResourceCollecti
 - **Impact:** Medium
 - **Effort:** Low
 - **Category:** json
-- **Status:** - [ ] pending
+- **Status:** - [x] complete
+- **Implementation Note:** TryGetBooleanAsTrue and TryGetString in LinkObjectConverter replaced try/catch + GetValue<T>() with `node is JsonValue jv && jv.TryGetValue<T>(out var value)` pattern. No #if guard needed — TryGetValue<T> available on netstandard2.0 via System.Text.Json 6.x. Committed in perf/remaining-fixes.
 
 ### Problem
 `TryGetBooleanAsTrue` and `TryGetString` use try/catch for control flow when `GetValue<T>()` throws on type mismatch. Exception handling is expensive -- allocates stack trace, unwinds frames. Called per property per `LinkObject` on deserialization hot path.
@@ -301,7 +304,8 @@ private static string? TryGetString(JsonNode? node)
 - **Impact:** Medium
 - **Effort:** Low
 - **Category:** generator
-- **Status:** - [ ] pending
+- **Status:** - [x] complete
+- **Implementation Note:** HalResponseGenerator.cs switched from CreateSyntaxProvider to ForAttributeWithMetadataName("Chatter.Rest.Hal.HalResponseAttribute"). Microsoft.CodeAnalysis.CSharp.Workspaces bumped 4.1.0 → 4.3.1. Parser.cs deleted (all methods became dead code). Committed in perf/remaining-fixes.
 
 ### Problem
 `CreateSyntaxProvider` with manual syntax filter + semantic model query runs semantic analysis on every `AttributeSyntax` in the compilation on every keystroke in the IDE. `ForAttributeWithMetadataName` (available since Microsoft.CodeAnalysis.CSharp 4.3.1) uses Roslyn's internal attribute cache and is significantly more efficient -- it avoids re-running semantic analysis on unchanged files.
@@ -335,7 +339,8 @@ Requires bumping `Microsoft.CodeAnalysis.CSharp` / `Microsoft.CodeAnalysis.CShar
 - **Impact:** Medium
 - **Effort:** Low
 - **Category:** generator
-- **Status:** - [ ] pending
+- **Status:** - [x] complete
+- **Implementation Note:** Introduced HalClassInfo readonly struct as typed intermediate result. Dedup/sort LINQ chain moved from Emitter.Emit into a .Select() cached transform in HalResponseGenerator. Emitter.Emit now receives pre-processed ImmutableArray<HalClassInfo>. EnumerableExtensions.cs deleted (NotNull<T> became dead code). Committed in perf/remaining-fixes.
 
 ### Problem
 The LINQ chain `.NotNull().Select().GroupBy().Select().OrderBy().ThenBy().ToArray()` runs inside `RegisterSourceOutput`, which Roslyn cannot cache. This runs on every generation pass even when inputs have not changed.
@@ -377,7 +382,8 @@ Use `ImmutableArray<T>` as the return type from the `.Select(...)` transform -- 
 - **Impact:** Medium
 - **Effort:** Low
 - **Category:** allocation
-- **Status:** - [ ] pending
+- **Status:** - [x] complete
+- **Implementation Note:** Added internal object? CachedState property to Resource — lazily resolves state via _stateCreator()?.Deserialize<object>() without try/catch. ResourceConverter.Write now uses value.CachedState instead of value.StateObject. Public State<T>() retains try/catch for consumer safety. Committed in perf/remaining-fixes.
 
 ### Problem
 `StateObject` (internal getter used by `ResourceConverter.Write`) calls `State<object>()` which wraps deserialization in a try/catch block. This try/catch executes on every resource serialization even after state is cached, because the getter calls the method rather than accessing `_stateObject` directly.
@@ -405,7 +411,8 @@ Then update `ResourceConverter.Write` to use `value.CachedState` instead of `val
 - **Impact:** Low
 - **Effort:** Low
 - **Category:** allocation
-- **Status:** - [ ] pending
+- **Status:** - [x] complete
+- **Implementation Note:** AddHalConverters duplicate guard replaced with a for-loop checking options.Converters[i] is LinkCollectionConverter. Removed now-unused using System.Linq from JsonSerializerOptionsExtensions.cs. Committed in perf/remaining-fixes.
 
 ### Problem
 `options.Converters.OfType<LinkCollectionConverter>().Any()` allocates a LINQ enumerator to check for duplicate converters. Called at startup/configuration time -- not a hot path, but easy to improve.
@@ -433,7 +440,8 @@ if (!alreadyAdded) { /* add converters */ }
 - **Impact:** Low
 - **Effort:** Medium
 - **Category:** collection
-- **Status:** - [ ] pending
+- **Status:** - [x] complete
+- **Implementation Note:** Added private Dictionary<string, Link> _index (StringComparer.Ordinal) to LinkCollection and Dictionary<string, EmbeddedResource> _index to EmbeddedResourceCollection. Index maintained on Add/Remove/Clear. Exposed TryGetByRel(string, out Link?) and TryGetByName(string, out EmbeddedResource?) for O(1) lookup. Extension methods (GetLinkOrDefault, GetEmbeddedResource) retain SingleOrDefault semantics — throws on duplicate rels per existing tests. Committed in perf/remaining-fixes.
 
 ### Problem
 `links.SingleOrDefault(l => l.Rel.Equals(relation))` and equivalent do a linear O(n) scan with LINQ allocation. For HATEOAS-heavy responses with 20+ link relations, this is O(n) per lookup. The `LinkCollection` and `EmbeddedResourceCollection` types wrap `Collection<T>` and have no index.
