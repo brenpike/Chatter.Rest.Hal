@@ -1,7 +1,7 @@
 ---
 name: coder
 description: Implement code, fix bugs, refactor safely, and validate behavior within explicitly assigned file scope.
-model: claude-sonnet-4-6
+model: claude-opus-4-6
 tools:
   - Read
   - Write
