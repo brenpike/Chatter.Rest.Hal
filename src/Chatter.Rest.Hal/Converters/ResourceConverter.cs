@@ -56,11 +56,11 @@ public class ResourceConverter : JsonConverter<Resource>
 	{
 		writer.WriteStartObject();
 
-		if (value.StateObject != null)
+		if (value.CachedState != null)
 		{
 			var linksName = options.PropertyNamingPolicy?.ConvertName(nameof(Resource.Links)) ?? nameof(Resource.Links);
 			var embeddedName = options.PropertyNamingPolicy?.ConvertName(nameof(Resource.Embedded)) ?? nameof(Resource.Embedded);
-			var utf8Bytes = JsonSerializer.SerializeToUtf8Bytes(value.StateObject, options);
+			var utf8Bytes = JsonSerializer.SerializeToUtf8Bytes(value.CachedState, options);
 			using var doc = JsonDocument.Parse(utf8Bytes);
 			foreach (var prop in doc.RootElement.EnumerateObject())
 			{

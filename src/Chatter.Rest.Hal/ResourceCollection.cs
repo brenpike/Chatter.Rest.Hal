@@ -15,6 +15,13 @@ public sealed record ResourceCollection : ICollection<Resource>, IHalPart
 	private readonly Collection<Resource> _resources = new();
 
 	/// <summary>
+	/// Gets the resource at the specified index.
+	/// </summary>
+	/// <param name="index">The zero-based index of the resource to get.</param>
+	/// <returns>The resource at the specified index.</returns>
+	public Resource this[int index] => _resources[index];
+
+	/// <summary>
 	/// Gets the number of resources in the collection.
 	/// </summary>
 	public int Count => _resources.Count;

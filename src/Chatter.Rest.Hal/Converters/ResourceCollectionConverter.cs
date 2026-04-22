@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
@@ -65,7 +64,7 @@ public class ResourceCollectionConverter : JsonConverter<ResourceCollection>
 	{
 		if (resources.Count == 1)
 		{
-			JsonSerializer.Serialize(writer, resources.First(), options);
+			JsonSerializer.Serialize(writer, resources[0], options);
 		}
 		else
 		{

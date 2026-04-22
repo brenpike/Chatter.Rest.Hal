@@ -56,6 +56,16 @@ public sealed record Resource : IHalPart
 		set => _stateObject = value;
 	}
 
+	internal object? CachedState
+	{
+		get
+		{
+			if (_stateObject == null)
+				_stateObject = _stateCreator()?.Deserialize<object>();
+			return _stateObject;
+		}
+	}
+
 	/// <summary>
 	/// Gets or sets the Links collection for this Resource. The collection contains
 	/// link relations and their associated link objects. The getter lazily creates
@@ -67,9 +77,9 @@ public sealed record Resource : IHalPart
 		{
 			if (_linksImpl == null)
 			{
-				_linksImpl = _linksCreator();
+				_linksImpl = _linksCreator() ?? new LinkCollection();
 			}
-			return _linksImpl ?? new LinkCollection();
+			return _linksImpl;
 		}
 		set => _linksImpl = value;
 	}
@@ -84,9 +94,9 @@ public sealed record Resource : IHalPart
 		{
 			if (_embeddedImpl == null)
 			{
-				_embeddedImpl = _embeddedCreator();
+				_embeddedImpl = _embeddedCreator() ?? new EmbeddedResourceCollection();
 			}
-			return _embeddedImpl ?? new EmbeddedResourceCollection();
+			return _embeddedImpl;
 		}
 		set => _embeddedImpl = value;
 	}

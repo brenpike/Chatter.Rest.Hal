@@ -15,6 +15,13 @@ public sealed record LinkObjectCollection : ICollection<LinkObject>,  IHalPart
 	private readonly Collection<LinkObject> _linkObjects = new();
 
 	/// <summary>
+	/// Gets the link object at the specified index.
+	/// </summary>
+	/// <param name="index">The zero-based index of the link object to get.</param>
+	/// <returns>The link object at the specified index.</returns>
+	public LinkObject this[int index] => _linkObjects[index];
+
+	/// <summary>
 	/// Gets the number of link objects in the collection.
 	/// </summary>
 	public int Count => _linkObjects.Count;

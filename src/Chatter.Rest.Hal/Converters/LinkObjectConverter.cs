@@ -67,23 +67,11 @@ public class LinkObjectConverter : JsonConverter<LinkObject>
 	/// <returns>true if the value is boolean true; otherwise, null.</returns>
 	private static bool? TryGetBooleanAsTrue(JsonNode? node)
     {
-        if (node == null)
-        {
-            return null;
-        }
-
         // Per HAL spec: templated should only be true if the value is boolean true
         // Any other value (including boolean false, strings, numbers, objects, arrays) should be treated as false (null)
-        try
-        {
-            var value = node.GetValue<bool>();
+        if (node is JsonValue jv && jv.TryGetValue<bool>(out var value))
             return value ? true : null;
-        }
-        catch
-        {
-            // Not a valid boolean - treat as false (null)
-            return null;
-        }
+        return null;
     }
 
 	/// <summary>
@@ -93,21 +81,10 @@ public class LinkObjectConverter : JsonConverter<LinkObject>
 	/// <returns>The string value, or null if the node is not a valid string.</returns>
 	private static string? TryGetString(JsonNode? node)
     {
-        if (node == null)
-        {
-            return null;
-        }
-
         // Only accept actual string values; reject numbers, booleans, objects, arrays
-        try
-        {
-            return node.GetValue<string>();
-        }
-        catch
-        {
-            // Not a valid string - return null
-            return null;
-        }
+        if (node is JsonValue jv && jv.TryGetValue<string>(out var value))
+            return value;
+        return null;
     }
 
 	/// <summary>
