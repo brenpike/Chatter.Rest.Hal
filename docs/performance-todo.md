@@ -27,7 +27,8 @@ Static-analysis-identified performance improvements for the Chatter.Rest.Hal pac
 - **Impact:** High
 - **Effort:** Low
 - **Category:** allocation
-- **Status:** - [ ] pending
+- **Status:** - [x] complete
+- **Implementation Note:** Added 8 `static readonly JsonEncodedText` fields (href, templated, type, deprecation, name, title, profile, hreflang). All `WritePropertyName` calls in Write now use the pre-encoded fields. Committed in `perf/high-impact-fixes`.
 
 ### Problem
 `Write` method calls `nameof(linkObject.Href).ToLower()`, `nameof(linkObject.Templated).ToLower()`, etc. for up to 8 properties on every `LinkObject` serialization. `string.ToLower()` allocates a new string each time. Property names are compile-time constants. In an API returning a HAL document with 50 link objects, this is 400 unnecessary string allocations per response.
@@ -55,7 +56,8 @@ writer.WritePropertyName(HrefProperty); // zero-allocation
 - **Impact:** High
 - **Effort:** Low
 - **Category:** json
-- **Status:** - [ ] pending
+- **Status:** - [x] complete
+- **Implementation Note:** All `node[nameof(...)]` lookups replaced with single lowercase string key lookups, result cached in local variable. Applied to all 8 properties in the Read method. Committed in `perf/high-impact-fixes`.
 
 ### Problem
 `Read` method looks up the same `"href"` key twice -- once for the null check, once to get the value. Case-insensitive lookup on `JsonNode` is slower than a direct lowercase key match. Redundant traversal on the hot deserialization path.
@@ -84,7 +86,8 @@ Apply same pattern to all other property lookups in this method.
 - **Impact:** High
 - **Effort:** Low
 - **Category:** json / allocation
-- **Status:** - [ ] pending
+- **Status:** - [x] complete
+- **Implementation Note:** Added `IsJsonNull(JsonNode?)` private static helper to both LinkConverter.cs and LinkCollectionConverter.cs. Uses `GetValueKind() == JsonValueKind.Null` on net8.0 (via `#if NET8_0_OR_GREATER`) and falls back to `ToJsonString() == "null"` on netstandard2.0 (STJ 6.x NuGet does not expose GetValueKind). Committed in `perf/high-impact-fixes`.
 
 ### Problem
 `kvp.Value.ToJsonString() == "null"` serializes the entire JSON node to a new string just to compare against the 4-character literal `"null"`. Called for every link relation and every link object during deserialization. Unnecessary string allocation on the hot path.
@@ -108,7 +111,8 @@ Note: `GetValueKind()` is available on `JsonValue` in System.Text.Json 6+. Both 
 - **Impact:** High
 - **Effort:** Medium
 - **Category:** json / allocation
-- **Status:** - [ ] pending
+- **Status:** - [x] complete
+- **Implementation Note:** `jsonObjectCreator` lambda replaced with selective property iteration. Iterates `JsonObject` source properties, skips `_links`/`_embedded`, deep-clones only state values. Uses `JsonNode.DeepClone()` on net8.0 (`#if NET8_0_OR_GREATER`) and `Deserialize<JsonNode>()` per-value on netstandard2.0. Committed in `perf/high-impact-fixes`.
 
 ### Problem
 `jsonObjectCreator` lambda deserializes the full `JsonNode` (deep clone of entire document including `_links` and `_embedded` subtrees) then removes two keys. For a resource with large embedded collections, this clones everything just to strip two entries.
@@ -148,7 +152,8 @@ Note: `JsonNode.DeepClone()` is available on .NET 8. For `netstandard2.0` TFM, u
 - **Impact:** High
 - **Effort:** Medium
 - **Category:** json / allocation
-- **Status:** - [ ] pending
+- **Status:** - [x] complete
+- **Implementation Note:** `SerializeToNode` DOM replaced with `JsonDocument.Parse(SerializeToUtf8Bytes(...))`. `JsonDocument` uses pooled memory and is read-only. `prop.WriteTo(writer)` writes name+value together. Also fixed pre-existing bug: `Links`/`Embedded` property filter now uses `options.PropertyNamingPolicy?.ConvertName(...)` to correctly handle CamelCase and other naming policies. Committed in `perf/high-impact-fixes`.
 
 ### Problem
 `Write` serializes `StateObject` to an intermediate `JsonNode` DOM, then immediately iterates the DOM to re-write each property to the `Utf8JsonWriter`. This is a serialize-then-deserialize-then-reserialize anti-pattern. Allocates a full in-memory DOM for the state object on every resource write.
