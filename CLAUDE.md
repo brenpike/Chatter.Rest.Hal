@@ -9,49 +9,26 @@ Chatter.Rest.Hal is a .NET/C# implementation of the HAL (Hypertext Application L
 **License:** MIT
 **Author:** Brennan Pike
 
-## HAL Specification Summary
+## Documentation Index
 
-HAL establishes conventions for expressing hypermedia controls (links) in JSON. Media type: `application/hal+json`.
-
-### Resource Object
-The root of every HAL document. Contains:
-- Arbitrary JSON properties representing resource state
-- `_links` (optional) — object whose keys are link relation types and values are a `LinkObject` or array of `LinkObject`
-- `_embedded` (optional) — object whose keys are link relation types and values are a `Resource` or array of `Resource`
-
-### Link Object Properties
-| Property | Required | Description |
-|---|---|---|
-| `href` | Yes | URI or URI Template (RFC 6570) |
-| `templated` | No | `true` when `href` is a URI Template |
-| `type` | No | Media type hint for the target resource |
-| `deprecation` | No | URL providing deprecation info |
-| `name` | No | Secondary key when multiple links share the same relation |
-| `profile` | No | URI hinting at the target resource's profile |
-| `title` | No | Human-readable label |
-| `hreflang` | No | Language of the target resource |
-
-### CURIEs
-Compact URI relations established via the reserved `curies` link relation — an array of named `LinkObject` entries whose `href` is a URI Template containing the `{rel}` token. Allows shortening `https://docs.acme.com/relations/widgets` to `acme:widgets`.
-
-### Normative Rules
-- Root object MUST be a Resource Object
-- Each Resource Object SHOULD contain a `self` link
-- Servers SHOULD NOT change a relation between a single `LinkObject` and an array across responses
-- Custom link relation types SHOULD be URIs that provide documentation when dereferenced
+| Doc | Contents |
+|---|---|
+| [docs/architecture.md](docs/architecture.md) | Domain model, builder internals, converters, source generator pipeline |
+| [docs/api.md](docs/api.md) | Full fluent builder API reference and extension method signatures |
+| [docs/serialization.md](docs/serialization.md) | Converter wiring, HalJsonOptions, force-array, deserialization internals |
+| [docs/usage.md](docs/usage.md) | Copy-paste examples for building, serializing, deserializing |
+| [docs/development.md](docs/development.md) | Build/test/pack commands, code style, test conventions, CI/CD |
+| [docs/HAL_TEST_PLAN.md](docs/HAL_TEST_PLAN.md) | Spec-to-test mapping; consult when adding tests or evaluating spec compliance |
 
 ## Solution Structure
 
-```
-Chatter.Rest.Hal.sln
-├── src/
-│   ├── Chatter.Rest.Hal/                     # Core library (NuGet: Chatter.Rest.Hal)
-│   ├── Chatter.Rest.Hal.Core/                # Shared types (e.g., HalResponseAttribute)
-│   └── Chatter.Rest.Hal.CodeGenerators/      # Roslyn source generator (NuGet: Chatter.Rest.Hal.CodeGenerators)
-├── test/
-│   ├── Chatter.Rest.Hal.Tests/               # Tests for the core library
-│   └── Chatter.Rest.Hal.CodeGenerators.Tests/ # Tests for the source generator
-```
+| Project | NuGet Package |
+|---|---|
+| `src/Chatter.Rest.Hal/` | `Chatter.Rest.Hal` |
+| `src/Chatter.Rest.Hal.CodeGenerators/` | `Chatter.Rest.Hal.CodeGenerators` |
+| `src/Chatter.Rest.Hal.Core/` | Shared types; no standalone package |
+| `test/Chatter.Rest.Hal.Tests/` | — |
+| `test/Chatter.Rest.Hal.CodeGenerators.Tests/` | — |
 
 ## Multi-Agent Governance
 
@@ -71,116 +48,19 @@ Role-specific behavior is defined in:
 
 ## Build and Test Commands
 
-```bash
-# Restore dependencies
-dotnet restore
-
-# Build the entire solution
-dotnet build
-
-# Build in Release mode
-dotnet build -c Release --no-restore
-
-# Run core library tests
-dotnet test test/Chatter.Rest.Hal.Tests/Chatter.Rest.Hal.Tests.csproj
-
-# Run code generator tests
-dotnet test test/Chatter.Rest.Hal.CodeGenerators.Tests/Chatter.Rest.Hal.CodeGenerators.Tests.csproj
-
-# Run all tests
-dotnet test
-
-# Create NuGet packages
-dotnet pack src/Chatter.Rest.Hal/Chatter.Rest.Hal.csproj -c Release -o publish/nuget
-dotnet pack src/Chatter.Rest.Hal.CodeGenerators/Chatter.Rest.Hal.CodeGenerators.csproj -c Release -o publish/nuget
-```
-
-## Target Frameworks
-
-- **Core library and CodeGenerators:** Multi-target `net8.0` and `netstandard2.0`
-- **Chatter.Rest.Hal.Core:** Multi-target `net8.0` and `netstandard2.0`
-- **Test projects:** `net8.0` only
-- **Language version:** C# 10.0
-- **Nullable reference types:** Enabled across all projects
+See [docs/development.md](docs/development.md) for all build, test, and pack commands.
 
 ## Architecture
 
-### Core Domain Types (Chatter.Rest.Hal)
-
-All domain types are `sealed record` types implementing the `IHalPart` marker interface:
-
-| Type | Description |
-|---|---|
-| `Resource` | Root HAL document; contains state, Links, and Embedded collections |
-| `Link` | A link relation (rel) with a collection of `LinkObject` entries |
-| `LinkObject` | A single hyperlink with href, templated, type, title, name, etc. |
-| `EmbeddedResource` | A named embedded resource containing a `ResourceCollection` |
-| `LinkCollection` | Collection of `Link` (serialized as `_links`) |
-| `EmbeddedResourceCollection` | Collection of `EmbeddedResource` (serialized as `_embedded`) |
-| `LinkObjectCollection` | Collection of `LinkObject` within a single `Link` |
-| `ResourceCollection` | Collection of `Resource` within an `EmbeddedResource` |
-
-### Fluent Builder API (Chatter.Rest.Hal/Builders/)
-
-The builder uses a staged interface pattern to guide construction:
-
-- **Entry point:** `ResourceBuilder.WithState(obj)` or `ResourceBuilder.New()`
-- **Stages:** Interfaces in `Builders/Stages/` enforce valid builder transitions (e.g., `IResourceCreationStage`, `ILinkCreationStage`, `IAddResourceStage`)
-- **Sub-builders:** `LinkCollectionBuilder`, `EmbeddedResourceCollectionBuilder`, `LinkObjectBuilder`
-- **Termination:** `.Build()` walks up to the root `HalBuilder<Resource>` and calls `BuildPart()`
-
-### JSON Serialization (Chatter.Rest.Hal/Converters/)
-
-Custom `System.Text.Json` converters handle HAL-specific serialization:
-
-- `ResourceConverter` -- Reads/writes the top-level resource, separating state from `_links`/`_embedded`
-- `LinkCollectionConverter`, `LinkConverter`, `LinkObjectConverter`, `LinkObjectCollectionConverter`
-- `EmbeddedResourceCollectionConverter`, `EmbeddedResourceConverter`
-- `ResourceCollectionConverter`
-
-Each domain type is annotated with `[JsonConverter(typeof(...))]` to wire up its converter.
-
-### Extension Methods (Chatter.Rest.Hal/Extensions/)
-
-Query helpers for navigating deserialized HAL resources:
-
-- `ResourceExtensions` -- `GetEmbeddedResources<T>()`, `GetLinkOrDefault()`, `GetLinkObjectOrDefault()`, etc.
-- `LinkCollectionExtensions` -- Link lookup by relation
-- `EmbeddedResourceCollectionExtensions` -- Embedded resource lookup by name
-- `LinkObjectCollectionExtensions` -- LinkObject lookup by name
-- `ResourceCollectionExtensions` -- Cast resource collections via `.As<T>()`
-
-### Source Generator (Chatter.Rest.Hal.CodeGenerators)
-
-An incremental Roslyn source generator that processes classes decorated with `[HalResponse]`:
-
-- `HalResponseGenerator` -- The `IIncrementalGenerator` entry point
-- `Parser` -- Identifies syntax/semantic targets (classes with `[HalResponse]` attribute)
-- `Emitter` -- Generates a partial class adding `Links` and `Embedded` properties with `[JsonPropertyName]` attributes
-
-### Shared Types (Chatter.Rest.Hal.Core)
-
-- `HalResponseAttribute` -- The attribute consumed by the source generator; lives in a separate package so consumer projects only need a reference to this (not the generator assembly at runtime)
+See [docs/architecture.md](docs/architecture.md) for domain model, builder internals, converters, and source generator pipeline.
 
 ## Testing Conventions
 
-- **Framework:** xunit 2.4.x
-- **Assertions:** FluentAssertions 6.x (preferred) and xunit `Assert` (both are used)
-- **Mocking:** Moq 4.x (available in core tests)
-- **Coverage:** coverlet (msbuild in core tests, collector in codegen tests)
-- **Test naming:** Descriptive `Method_Scenario_Expected` style (e.g., `Curies_Are_Parsed_As_Array_Of_LinkObjects`)
-- **JSON fixtures:** Test JSON files live in `test/Chatter.Rest.Hal.Tests/Json/` and are loaded via `TestHelpers.LoadResourceFromFixture()`
-- **Shared helpers:** `TestHelpers` class provides factory methods (`CreateLink`, `CreateLinkObject`, `CreateResourceWithLink`) and JSON assertion utilities
+See [docs/development.md](docs/development.md) for test framework, assertions, naming conventions, and fixture patterns.
 
 ## Code Style and Conventions
 
-Defined in `.editorconfig`:
-
-- **Line endings:** CRLF
-- **Indentation:** Tabs
-- **Namespaces:** File-scoped (silent preference)
-- **Expression-bodied members:** Allowed on single line (operators, constructors, methods)
-- **Braces:** Allman style (`csharp_new_line_before_open_brace=all`)
+See [docs/development.md](docs/development.md) for editorconfig rules (line endings, indentation, braces).
 
 Additional conventions observed in the codebase:
 
@@ -199,20 +79,12 @@ Additional conventions observed in the codebase:
 
 ## CI/CD
 
-Two GitHub Actions workflows in `.github/workflows/`:
-
-1. **hal-cicd.yml** -- Builds, tests, and publishes the core `Chatter.Rest.Hal` NuGet package
-2. **codegen-cicd.yml** -- Builds, tests, and publishes the `Chatter.Rest.Hal.CodeGenerators` NuGet package
-
-Both workflows:
-- Trigger on pushes to `feature/**` branches (scoped to their respective `src/` paths) and merged PRs to `main`
-- Use .NET 8.0.x SDK
-- Deploy to NuGet.org on merged PRs using the `NUGET_API_KEY_CHATTER_HAL` secret
+See [docs/development.md](docs/development.md) for CI/CD workflow details.
 
 ## Package Versions
 
-- `Chatter.Rest.Hal` -- v0.9.2
-- `Chatter.Rest.Hal.CodeGenerators` -- v0.2.5
+- `Chatter.Rest.Hal` — v0.9.2
+- `Chatter.Rest.Hal.CodeGenerators` — v0.2.5
 
 ## Codebase Exploration Guidance
 
