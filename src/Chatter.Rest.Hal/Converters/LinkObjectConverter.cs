@@ -10,6 +10,15 @@ namespace Chatter.Rest.Hal.Converters;
 /// </summary>
 public class LinkObjectConverter : JsonConverter<LinkObject>
 {
+	private static readonly JsonEncodedText HrefProperty = JsonEncodedText.Encode("href");
+	private static readonly JsonEncodedText TemplatedProperty = JsonEncodedText.Encode("templated");
+	private static readonly JsonEncodedText TypeProperty = JsonEncodedText.Encode("type");
+	private static readonly JsonEncodedText DeprecationProperty = JsonEncodedText.Encode("deprecation");
+	private static readonly JsonEncodedText NameProperty = JsonEncodedText.Encode("name");
+	private static readonly JsonEncodedText TitleProperty = JsonEncodedText.Encode("title");
+	private static readonly JsonEncodedText ProfileProperty = JsonEncodedText.Encode("profile");
+	private static readonly JsonEncodedText HreflangProperty = JsonEncodedText.Encode("hreflang");
+
 	/// <summary>
 	/// Reads a LinkObject from JSON, validating required href and parsing optional properties.
 	/// </summary>
@@ -26,13 +35,14 @@ public class LinkObjectConverter : JsonConverter<LinkObject>
             return null;
         }
 
-        if (node[nameof(LinkObject.Href)] is null)
+        var hrefNode = node["href"];
+        if (hrefNode is null)
         {
             // Href is required for a valid LinkObject. Be tolerant and return null for malformed input.
             return null;
         }
 
-        var href = node[nameof(LinkObject.Href)]?.GetValue<string>();
+        var href = hrefNode.GetValue<string>();
         if (string.IsNullOrWhiteSpace(href))
         {
             return null;
@@ -40,13 +50,13 @@ public class LinkObjectConverter : JsonConverter<LinkObject>
 
         return new LinkObject(href)
         {
-            Templated = TryGetBooleanAsTrue(node[nameof(LinkObject.Templated)]),
-            Type = TryGetString(node[nameof(LinkObject.Type)]),
-            Deprecation = TryGetString(node[nameof(LinkObject.Deprecation)]),
-            Name = TryGetString(node[nameof(LinkObject.Name)]),
-            Title = TryGetString(node[nameof(LinkObject.Title)]),
-            Profile = TryGetString(node[nameof(LinkObject.Profile)]),
-            Hreflang = TryGetString(node[nameof(LinkObject.Hreflang)])
+            Templated = TryGetBooleanAsTrue(node["templated"]),
+            Type = TryGetString(node["type"]),
+            Deprecation = TryGetString(node["deprecation"]),
+            Name = TryGetString(node["name"]),
+            Title = TryGetString(node["title"]),
+            Profile = TryGetString(node["profile"]),
+            Hreflang = TryGetString(node["hreflang"])
         };
     }
 
@@ -112,49 +122,49 @@ public class LinkObjectConverter : JsonConverter<LinkObject>
 
         if (!string.IsNullOrWhiteSpace(linkObject.Href))
         {
-            writer.WritePropertyName(nameof(linkObject.Href).ToLower()); //TODO: make this respect json options for casing, etc.
+            writer.WritePropertyName(HrefProperty);
             writer.WriteStringValue(linkObject.Href);
         }
 
         if (linkObject.Templated.HasValue)
         {
-            writer.WritePropertyName(nameof(linkObject.Templated).ToLower());
+            writer.WritePropertyName(TemplatedProperty);
             writer.WriteBooleanValue(linkObject.Templated.Value);
         }
 
         if (!string.IsNullOrWhiteSpace(linkObject.Type))
         {
-            writer.WritePropertyName(nameof(linkObject.Type).ToLower());
+            writer.WritePropertyName(TypeProperty);
             writer.WriteStringValue(linkObject.Type);
         }
 
         if (!string.IsNullOrWhiteSpace(linkObject.Deprecation))
         {
-            writer.WritePropertyName(nameof(linkObject.Deprecation).ToLower());
+            writer.WritePropertyName(DeprecationProperty);
             writer.WriteStringValue(linkObject.Deprecation);
         }
 
         if (!string.IsNullOrWhiteSpace(linkObject.Name))
         {
-            writer.WritePropertyName(nameof(linkObject.Name).ToLower());
+            writer.WritePropertyName(NameProperty);
             writer.WriteStringValue(linkObject.Name);
         }
 
         if (!string.IsNullOrWhiteSpace(linkObject.Title))
         {
-            writer.WritePropertyName(nameof(linkObject.Title).ToLower());
+            writer.WritePropertyName(TitleProperty);
             writer.WriteStringValue(linkObject.Title);
         }
 
         if (!string.IsNullOrWhiteSpace(linkObject.Profile))
         {
-            writer.WritePropertyName(nameof(linkObject.Profile).ToLower());
+            writer.WritePropertyName(ProfileProperty);
             writer.WriteStringValue(linkObject.Profile);
         }
 
         if (!string.IsNullOrWhiteSpace(linkObject.Hreflang))
         {
-            writer.WritePropertyName(nameof(linkObject.Hreflang).ToLower());
+            writer.WritePropertyName(HreflangProperty);
             writer.WriteStringValue(linkObject.Hreflang);
         }
 

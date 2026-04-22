@@ -29,10 +29,18 @@ public class ResourceConverter : JsonConverter<Resource>
 
 		JsonObject? jsonObjectCreator()
 		{
-			var cloneObject = node?.Deserialize<JsonNode>()?.AsObject();
-			cloneObject?.Remove("_links");
-			cloneObject?.Remove("_embedded");
-			return cloneObject;
+			if (node is not JsonObject sourceObj) return null;
+			var result = new JsonObject();
+			foreach (var kvp in sourceObj)
+			{
+				if (kvp.Key == "_links" || kvp.Key == "_embedded") continue;
+#if NET8_0_OR_GREATER
+				result.Add(kvp.Key, kvp.Value?.DeepClone());
+#else
+				result.Add(kvp.Key, kvp.Value?.Deserialize<JsonNode>());
+#endif
+			}
+			return result;
 		};
 
 		return new Resource(node, jsonObjectCreator, linkCollectionCreator, embeddedCollectionCreator);
@@ -50,29 +58,18 @@ public class ResourceConverter : JsonConverter<Resource>
 
 		if (value.StateObject != null)
 		{
-			var node = JsonSerializer.SerializeToNode(value.StateObject, options);//JsonNode.Parse(JsonSerializer.Serialize(value.StateObject, options));
-			if (node != null)
+			var linksName = options.PropertyNamingPolicy?.ConvertName(nameof(Resource.Links)) ?? nameof(Resource.Links);
+			var embeddedName = options.PropertyNamingPolicy?.ConvertName(nameof(Resource.Embedded)) ?? nameof(Resource.Embedded);
+			var utf8Bytes = JsonSerializer.SerializeToUtf8Bytes(value.StateObject, options);
+			using var doc = JsonDocument.Parse(utf8Bytes);
+			foreach (var prop in doc.RootElement.EnumerateObject())
 			{
-				foreach (var item in node.AsObject())
+				if (prop.Name == linksName || prop.Name == embeddedName)
+					continue;
+
+				if (prop.Value.ValueKind != JsonValueKind.Null || options.DefaultIgnoreCondition != JsonIgnoreCondition.WhenWritingNull)
 				{
-					if (item.Key.Equals(nameof(Resource.Links)))
-						continue;
-
-					if (item.Key.Equals(nameof(Resource.Embedded)))
-						continue;
-
-					if (item.Value is not null || options.DefaultIgnoreCondition != JsonIgnoreCondition.WhenWritingNull)
-					{
-						writer.WritePropertyName(item.Key);
-						if (item.Value != null)
-						{
-							item.Value.WriteTo(writer, options);
-						}
-						else
-						{
-							writer.WriteNullValue();
-						}
-					}
+					prop.WriteTo(writer);
 				}
 			}
 		}
