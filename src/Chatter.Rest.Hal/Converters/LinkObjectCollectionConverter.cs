@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
@@ -100,7 +99,7 @@ public class LinkObjectCollectionConverter : JsonConverter<LinkObjectCollection>
 		bool forceArray = (_halJsonOptions ?? HalJsonOptions.Default).AlwaysUseArrayForLinks;
 		if (!forceArray && linkObjects.Count == 1)
 		{
-			JsonSerializer.Serialize(writer, linkObjects.First(), options);
+			JsonSerializer.Serialize(writer, linkObjects[0], options);
 		}
 		else
 		{

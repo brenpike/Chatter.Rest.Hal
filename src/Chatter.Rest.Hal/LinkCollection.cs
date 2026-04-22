@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Text.Json.Serialization;
@@ -13,6 +14,14 @@ namespace Chatter.Rest.Hal;
 public sealed record LinkCollection : ICollection<Link>, IHalPart
 {
 	private readonly Collection<Link> _links = new();
+	private readonly Dictionary<string, Link> _index = new(StringComparer.Ordinal);
+
+	/// <summary>
+	/// Gets the link at the specified index.
+	/// </summary>
+	/// <param name="index">The zero-based index of the link to get.</param>
+	/// <returns>The link at the specified index.</returns>
+	public Link this[int index] => _links[index];
 
 	/// <summary>
 	/// Gets the number of links in the collection.
@@ -28,12 +37,20 @@ public sealed record LinkCollection : ICollection<Link>, IHalPart
 	/// Adds a link to the collection.
 	/// </summary>
 	/// <param name="item">The link to add.</param>
-	public void Add(Link item) => _links.Add(item);
+	public void Add(Link item)
+	{
+		_links.Add(item);
+		_index[item.Rel] = item;
+	}
 
 	/// <summary>
 	/// Removes all links from the collection.
 	/// </summary>
-	public void Clear() => _links.Clear();
+	public void Clear()
+	{
+		_links.Clear();
+		_index.Clear();
+	}
 
 	/// <summary>
 	/// Determines whether the collection contains a specific link.
@@ -60,7 +77,22 @@ public sealed record LinkCollection : ICollection<Link>, IHalPart
 	/// </summary>
 	/// <param name="item">The link to remove.</param>
 	/// <returns>true if the item was successfully removed; otherwise, false.</returns>
-	public bool Remove(Link item) => _links.Remove(item);
+	public bool Remove(Link item)
+	{
+		var removed = _links.Remove(item);
+		if (removed)
+			_index.Remove(item.Rel);
+		return removed;
+	}
+
+	/// <summary>
+	/// Attempts to retrieve a link by its relation name using O(1) dictionary lookup.
+	/// </summary>
+	/// <param name="rel">The link relation to find.</param>
+	/// <param name="link">When this method returns, contains the link if found; otherwise, null.</param>
+	/// <returns>true if a link with the specified relation was found; otherwise, false.</returns>
+	public bool TryGetByRel(string rel, out Link? link)
+		=> _index.TryGetValue(rel, out link);
 
 	/// <summary>
 	/// Returns an enumerator that iterates through the collection.

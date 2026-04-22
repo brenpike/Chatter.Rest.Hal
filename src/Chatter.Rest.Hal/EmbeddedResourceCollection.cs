@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Text.Json.Serialization;
@@ -13,6 +14,14 @@ namespace Chatter.Rest.Hal;
 public sealed record EmbeddedResourceCollection : ICollection<EmbeddedResource>, IHalPart
 {
 	private readonly Collection<EmbeddedResource> _embedded = new();
+	private readonly Dictionary<string, EmbeddedResource> _index = new(StringComparer.Ordinal);
+
+	/// <summary>
+	/// Gets the embedded resource at the specified index.
+	/// </summary>
+	/// <param name="index">The zero-based index of the embedded resource to get.</param>
+	/// <returns>The embedded resource at the specified index.</returns>
+	public EmbeddedResource this[int index] => _embedded[index];
 
 	/// <summary>
 	/// Gets the number of embedded resources in the collection.
@@ -28,12 +37,20 @@ public sealed record EmbeddedResourceCollection : ICollection<EmbeddedResource>,
 	/// Adds an embedded resource to the collection.
 	/// </summary>
 	/// <param name="item">The embedded resource to add.</param>
-	public void Add(EmbeddedResource item) => _embedded.Add(item);
+	public void Add(EmbeddedResource item)
+	{
+		_embedded.Add(item);
+		_index[item.Name] = item;
+	}
 
 	/// <summary>
 	/// Removes all embedded resources from the collection.
 	/// </summary>
-	public void Clear() => _embedded.Clear();
+	public void Clear()
+	{
+		_embedded.Clear();
+		_index.Clear();
+	}
 
 	/// <summary>
 	/// Determines whether the collection contains a specific embedded resource.
@@ -60,7 +77,22 @@ public sealed record EmbeddedResourceCollection : ICollection<EmbeddedResource>,
 	/// </summary>
 	/// <param name="item">The embedded resource to remove.</param>
 	/// <returns>true if the item was successfully removed; otherwise, false.</returns>
-	public bool Remove(EmbeddedResource item) => _embedded.Remove(item);
+	public bool Remove(EmbeddedResource item)
+	{
+		var removed = _embedded.Remove(item);
+		if (removed)
+			_index.Remove(item.Name);
+		return removed;
+	}
+
+	/// <summary>
+	/// Attempts to retrieve an embedded resource by its name using O(1) dictionary lookup.
+	/// </summary>
+	/// <param name="name">The embedded resource name to find.</param>
+	/// <param name="embedded">When this method returns, contains the embedded resource if found; otherwise, null.</param>
+	/// <returns>true if an embedded resource with the specified name was found; otherwise, false.</returns>
+	public bool TryGetByName(string name, out EmbeddedResource? embedded)
+		=> _index.TryGetValue(name, out embedded);
 
 	/// <summary>
 	/// Returns an enumerator that iterates through the collection.

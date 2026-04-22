@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
@@ -90,7 +89,7 @@ public class EmbeddedResourceCollectionConverter : JsonConverter<EmbeddedResourc
             // flagged as a collection, in which case it should be written as an array even if only one element)
             if (embeddedvalue.Resources.Count == 1 && !embeddedvalue.ForceWriteAsCollection)
             {
-                JsonSerializer.Serialize(writer, embeddedvalue.Resources.First(), options);
+                JsonSerializer.Serialize(writer, embeddedvalue.Resources[0], options);
             }
             else
             {

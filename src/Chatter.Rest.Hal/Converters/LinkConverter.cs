@@ -136,7 +136,7 @@ public class LinkConverter : JsonConverter<Link>
 		bool forceArray = (_halJsonOptions ?? HalJsonOptions.Default).AlwaysUseArrayForLinks || value.IsArray;
 		if (!forceArray && value.LinkObjects.Count == 1)
 		{
-			JsonSerializer.Serialize(writer, value.LinkObjects.First(), options);
+			JsonSerializer.Serialize(writer, value.LinkObjects[0], options);
 		}
 		else
 		{

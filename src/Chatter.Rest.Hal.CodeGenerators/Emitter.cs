@@ -1,36 +1,53 @@
-﻿using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Linq;
 using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Chatter.Rest.Hal.CodeGenerators;
 
+internal readonly struct HalClassInfo : IEquatable<HalClassInfo>
+{
+	internal string Name { get; }
+	internal string? Namespace { get; }
+
+	internal HalClassInfo(string name, string? ns)
+	{
+		Name = name;
+		Namespace = ns;
+	}
+
+	public bool Equals(HalClassInfo other) =>
+		Name == other.Name && Namespace == other.Namespace;
+
+	public override bool Equals(object? obj) =>
+		obj is HalClassInfo other && Equals(other);
+
+	public override int GetHashCode()
+	{
+		unchecked
+		{
+			return (Name.GetHashCode() * 397) ^ (Namespace?.GetHashCode() ?? 0);
+		}
+	}
+}
+
 internal class Emitter
 {
 	internal static void Emit(SourceProductionContext context,
-		ImmutableArray<ClassDeclarationSyntax?> halResponseClasses)
+		ImmutableArray<HalClassInfo> halResponseClasses)
 	{
 		if (halResponseClasses.IsDefaultOrEmpty)
 		{
 			return;
 		}
 
-		var classes = halResponseClasses.NotNull()
-			.Select(c => new { Type = c, Name = c.Identifier.Text, Namespace = GetNamespaceFrom(c) ?? string.Empty })
-			.GroupBy(x => (x.Namespace, x.Name))
-			.Select(g => g.First())
-			.OrderBy(x => x.Namespace, StringComparer.Ordinal)
-			.ThenBy(x => x.Name, StringComparer.Ordinal)
-			.ToArray();
-		foreach (var entry in classes)
+		foreach (var entry in halResponseClasses)
 		{
-			AddSource(context, entry.Type, entry.Name, string.IsNullOrEmpty(entry.Namespace) ? null : entry.Namespace);
+			AddSource(context, entry.Name, string.IsNullOrEmpty(entry.Namespace) ? null : entry.Namespace);
 		}
 	}
 
-	private static void AddSource(SourceProductionContext context, ClassDeclarationSyntax type, string name, string? ns)
+	private static void AddSource(SourceProductionContext context, string name, string? ns)
 	{
 		var code = GenerateCode(name, ns);
 		var typeNamespace = ns is null ? string.Empty : $"{ns}.";
@@ -67,10 +84,10 @@ internal class Emitter
         {
             sb.AppendLine("}");
         }
-        return sb.ToString();
+        return sb.ToString();
     }
 
-	private static string? GetNamespaceFrom(SyntaxNode s) =>
+	internal static string? GetNamespaceFrom(SyntaxNode s) =>
 		s.Parent switch
 		{
 			FileScopedNamespaceDeclarationSyntax fileScopedNamespace => fileScopedNamespace.Name.ToString(),

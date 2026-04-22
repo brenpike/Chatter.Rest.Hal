@@ -1,4 +1,3 @@
-using System.Linq;
 using System.Text.Json;
 using Chatter.Rest.Hal.Converters;
 
@@ -27,7 +26,12 @@ public static class JsonSerializerOptionsExtensions
 		this JsonSerializerOptions options,
 		HalJsonOptions? halOptions = null)
 	{
-		if (options.Converters.OfType<LinkCollectionConverter>().Any())
+		var alreadyAdded = false;
+		for (int i = 0; i < options.Converters.Count; i++)
+		{
+			if (options.Converters[i] is LinkCollectionConverter) { alreadyAdded = true; break; }
+		}
+		if (alreadyAdded)
 			return options;
 
 		var resolved = halOptions ?? HalJsonOptions.Default;

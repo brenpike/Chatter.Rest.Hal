@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 
 namespace Chatter.Rest.Hal;
 
@@ -13,8 +14,8 @@ public static class LinkCollectionExtensions
 	/// <param name="links">The link collection to query.</param>
 	/// <param name="relation">The link relation to find.</param>
 	/// <returns>The link, or null if not found.</returns>
-	public static Link? GetLinkOrDefault(this LinkCollection links, string relation)
-		=> links?.SingleOrDefault(l => l.Rel.Equals(relation));
+	public static Link? GetLinkOrDefault(this LinkCollection? links, string relation)
+		=> links?.SingleOrDefault(l => l.Rel?.Equals(relation, StringComparison.Ordinal) == true);
 
 	/// <summary>
 	/// Gets the collection of link objects for the specified link relation.
