@@ -9,15 +9,9 @@
       "Bash(dotnet run *)",
       "Bash(dotnet restore *)",
       "Bash(xargs -I {} sh -c 'echo \"=== {} ===\" && head -20 {}')",
-      "mcp__code-review-graph__get_minimal_context_tool",
       "Bash(dotnet script *)",
-      "mcp__code-review-graph__refactor_tool",
-      "mcp__code-review-graph__list_graph_stats_tool",
-      "mcp__code-review-graph__get_architecture_overview_tool",
       "Bash(python *)",
-      "mcp__code-review-graph__query_graph_tool",
       "Bash(grep -r \"//.*TODO\\\\|//.*HACK\\\\|//.*FIXME\\\\|//.*XXX\" --include=\"*.cs\" src/)",
-      "mcp__code-review-graph__semantic_search_nodes_tool",
       "Bash(awk '{print $5, $7, $9, $11}')",
       "Bash(sed -n '177,180p' docs/HAL_TEST_PLAN.md)",
       "Bash(sed -n '191,193p' docs/HAL_TEST_PLAN.md)",
@@ -25,19 +19,25 @@
       "Bash(sed -n '217,219p' docs/HAL_TEST_PLAN.md)",
       "Bash(sed -n '304p' docs/HAL_TEST_PLAN.md)",
       "Bash(git pull *)",
-      "Bash(code-review-graph build *)",
-      "Bash(code-review-graph mcp *)",
       "Bash(git checkout *)",
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
       "Bash(git push *)",
-      "Bash(gh pr *)"
+      "Bash(gh pr *)",
+      "Bash(gh issue *)",
+      "Bash(gh api *)",
+      "Bash(dotnet msbuild *)",
+      "Bash(xargs grep *)",
+      "Bash(grep -v \"^Builders$\\\\|^Converters$\\\\|^Extensions$\")",
+      "Bash(powershell -ExecutionPolicy Bypass -File \"C:/Users/brenp/.claude/plans/write-plan.ps1\")",
+      "Bash(echo \"exit: $?\")",
+      "Bash(git commit *)",
+      "Bash(npx @modelcontextprotocol/inspector --cli node ~/.claude/plugins/cache/thedotmack/claude-mem/12.3.0/index.js)",
+      "Bash(git *)"
     ]
   },
   "enabledMcpjsonServers": [
-    "code-review-graph",
-    "context7",
-    "github"
+    "context7"
   ],
   "outputStyle": "default",
   "spinnerTipsEnabled": false

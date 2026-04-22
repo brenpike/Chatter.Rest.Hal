@@ -15,15 +15,10 @@ tools:
   - Skill
 mcpServers:
   - context7
-  - github
-  - code-review-graph
   - claude-mem
 memory: project
 skills:
   - mem-search
-  - debug-issue
-  - review-changes
-  - refactor-safely
 ---
 
 You implement code only within assigned file scope.
@@ -81,8 +76,6 @@ Do not assume the absence of branch instructions means they are optional.
 
 ## Tool Use
 - Use Context7 when external framework, library, platform, or API behavior matters.
-- Use GitHub MCP for read-only historical or workflow context when relevant.
-- Use code-review-graph when it improves blast-radius analysis, test discovery, or scoped refactoring.
 - Use mem-search when prior project/session context materially affects implementation.
 
 ## Implementation Standard

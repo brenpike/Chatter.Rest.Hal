@@ -15,13 +15,10 @@ tools:
   - Skill
 mcpServers:
   - context7
-  - code-review-graph
   - claude-mem
 memory: project
 skills:
   - mem-search
-  - explore-codebase
-  - review-changes
 ---
 
 You handle presentational work only within assigned file scope.
@@ -93,8 +90,6 @@ Always account for:
 
 ## Tool Use
 - Use Context7 when external component, platform, framework, or design-system behavior matters.
-- Use code-review-graph for structural UI context only.
-- Do not use graph mutation/refactor tools.
 - Use mem-search when prior design decisions materially affect the task.
 
 ## Verification

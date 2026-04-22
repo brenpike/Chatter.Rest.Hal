@@ -463,3 +463,6 @@ gh-artifacts/*
 .code-review-graph/
 nupkgs/
 .claude/settings.local.json
+
+.claude/agent-memory/*
+.claude/agent-memory/

@@ -94,9 +94,7 @@ No agent may treat user silence about branches, commits, or PRs as permission to
 | Tool / MCP | orchestrator | planner | coder | designer | Notes |
 |---|---|---|---|---|---|
 | Context7 | optional | use when relevant | use when relevant | use when relevant | current framework/library docs |
-| GitHub MCP | optional | read-only | read-only | no | workflow/repo/PR/issue context |
-| code-review-graph | no/limited | analysis | analysis + scoped use where allowed | analysis only | use when it adds real value |
-| claude-mem | optional | use when relevant | use when relevant | use when relevant | prior project/session context |
+| claude-mem | optional | default first step for planning context | use when relevant | use when relevant | prior project/session context |
 | local repo tools | minimal | read-only only | full role-appropriate use | role-appropriate use | respect role boundaries |
 
 ## Escalation Rules
