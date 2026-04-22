@@ -33,6 +33,18 @@ You MUST NOT:
 
 If a task appears simple, you may still only delegate it unless it qualifies for the documented planner-skip exception and still belongs entirely to a single worker role.
 
+## Agent Delegation Boundary
+
+You may delegate only to these framework agents:
+- `planner`
+- `coder`
+- `designer`
+
+You MUST NOT:
+- call any other agent type
+- fall back to a generic agent
+- attempt delegation to an agent not explicitly listed in your allowed agent tool surface
+
 ## Core Responsibilities
 - obtain a plan from planner by default
 - enforce the mandatory branching and PR workflow before implementation begins
