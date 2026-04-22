@@ -42,6 +42,16 @@ Owns presentational UI/UX work within assigned file scope.
 | Checkpoint commit | own | no | delegated only | no |
 | PR submission | own | no | no | no |
 
+## Allowed Agent Set
+
+Only the follow agent types are allowed:
+- `orchestrator`
+- `planner`
+- `coder`
+- `designer`
+
+No agent may call, request, delegate to, or assume the existence of any other agent type.
+
 ## File Ownership Rules
 
 ### Explicit scope
