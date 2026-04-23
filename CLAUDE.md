@@ -83,8 +83,16 @@ See [docs/development.md](docs/development.md) for CI/CD workflow details.
 
 ## Package Versions
 
-- `Chatter.Rest.Hal` — v0.9.2
-- `Chatter.Rest.Hal.CodeGenerators` — v0.2.5
+- `Chatter.Rest.Hal` — v1.0.0
+- `Chatter.Rest.Hal.CodeGenerators` — v0.3.0
+
+## Memory Usage
+
+- Use `claude-mem` first when prior context, earlier decisions, constraints, risks, or continuity may materially improve accuracy, efficiency, or consistency.
+- Treat memory as a continuity and token-efficiency aid, not as a substitute for current repo inspection, validation, or other required verification.
+- Reuse still-valid prior context when helpful, but continue normally if no relevant memory is found.
+- If `mem-search` or another memory tool fails, retry at most once if the failure appears transient, then fall back to normal tools and available context.
+- Memory-tool failure alone must not block execution.
 
 ## Codebase Exploration Guidance
 
