@@ -87,7 +87,7 @@ See [docs/development.md](docs/development.md) for CI/CD workflow details.
 
 ## Package Versions
 
-- `Chatter.Rest.Hal` — v1.0.0
+- `Chatter.Rest.Hal` — v1.0.1
 - `Chatter.Rest.Hal.CodeGenerators` — v0.3.0
 - `Chatter.Rest.UriTemplates` — v0.1.0
 
