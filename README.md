@@ -129,7 +129,6 @@ dotnet add package Chatter.Rest.Hal.CodeGenerators
 
 ## What is HAL?
 
-
 **HAL** stands for **Hypertext Application Language**, a simple, standardized format for designing REST APIs that are easy to explore, understand, and consume. It enables self-documenting APIs where hypermedia controls and resource relationships are discoverable through the API itself.
 
 According to [Mike Kelly, the HAL specification creator](https://stateless.group/hal_specification.html):
@@ -332,12 +331,13 @@ var resource = ResourceBuilder.WithState(new { currentlyProcessing = 14, shipped
                         "templated": true
                     }
                 }
-            },
-            // ... (remaining orders omitted for brevity)
+            }
         ]
     }
 }
 ```
+
+> The output above shows two of the six orders. Remaining orders follow the same structure.
 
 ---
 
