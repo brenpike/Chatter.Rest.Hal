@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -49,7 +50,11 @@ public class LinkConverter : JsonConverter<Link>
             return null;
         }
 
-        var kvp = jsonObject.First();
+        var kvp = jsonObject.FirstOrDefault();
+        if (kvp.Equals(default(KeyValuePair<string, JsonNode?>)))
+        {
+            return null;
+        }
 
         // If rel is missing or invalid, return null rather than throwing to be tolerant of malformed input.
         if (string.IsNullOrWhiteSpace(kvp.Key))
@@ -113,7 +118,7 @@ public class LinkConverter : JsonConverter<Link>
                     return link;
                 }
             }
-            catch
+            catch (Exception)
             {
                 // fallthrough to return null
             }

@@ -73,7 +73,7 @@ public class LinkObjectCollectionConverter : JsonConverter<LinkObjectCollection>
 					linkObjects.Add(new LinkObject(href));
 				}
 			}
-			catch
+			catch (Exception)
 			{
 				// ignore non-string values
 			}

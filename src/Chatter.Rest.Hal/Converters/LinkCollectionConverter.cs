@@ -84,7 +84,7 @@ public class LinkCollectionConverter : JsonConverter<LinkCollection>
 				var href = jv.GetValue<string?>();
 				if (!string.IsNullOrWhiteSpace(href)) link.LinkObjects.Add(new LinkObject(href));
 			}
-			else if (kvp.Value is JsonObject val)
+			if (kvp.Value is JsonObject val)
 			{
 				var lo = val.Deserialize<LinkObject>(options);
 				if (lo != null) link.LinkObjects.Add(lo);

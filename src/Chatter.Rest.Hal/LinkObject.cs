@@ -14,12 +14,12 @@ public sealed record LinkObject : IHalPart
 	/// Initializes a new instance of the <see cref="LinkObject"/> record with the specified href.
 	/// </summary>
 	/// <param name="href">The URI or URI Template for the link. Must not be null or whitespace.</param>
-	/// <exception cref="ArgumentNullException">Thrown when <paramref name="href"/> is null or whitespace.</exception>
+	/// <exception cref="ArgumentException">Thrown when <paramref name="href"/> is null or whitespace.</exception>
 	public LinkObject(string href)
 	{
 		if (string.IsNullOrWhiteSpace(href))
 		{
-			throw new ArgumentNullException(nameof(href));
+			throw new ArgumentException("Value cannot be null or whitespace.", nameof(href));
 		}
 		Href = href;
 	}

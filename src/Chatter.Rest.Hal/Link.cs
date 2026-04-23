@@ -16,12 +16,12 @@ public sealed record Link : IHalPart
 	/// Initializes a new instance of the <see cref="Link"/> record with the specified relation.
 	/// </summary>
 	/// <param name="rel">The link relation (rel). Must be a non-empty string.</param>
-	/// <exception cref="System.ArgumentNullException">Thrown when <paramref name="rel"/> is null or whitespace.</exception>
+	/// <exception cref="System.ArgumentException">Thrown when <paramref name="rel"/> is null or whitespace.</exception>
 	public Link(string rel)
 	{
 		if (string.IsNullOrWhiteSpace(rel))
 		{
-			throw new ArgumentNullException(nameof(rel));
+			throw new ArgumentException("Value cannot be null or whitespace.", nameof(rel));
 		}
 		Rel = rel;
 	}
