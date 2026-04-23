@@ -79,7 +79,7 @@ jobs:
       name: Production
 
     env:
-      NUGET_AUTH_TOKEN: ${{ secrets.NUGET_API_KEY_CHATTER_HAL_URITEMPLATE }}
+      NUGET_AUTH_TOKEN: ${{ secrets.NUGET_API_KEY_CHATTER_URITEMPLATE }}
       NUGET_URL: https://api.nuget.org/v3/index.json
 
     permissions:
