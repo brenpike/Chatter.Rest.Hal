@@ -12,7 +12,7 @@ namespace Chatter.Rest.Hal.Tests.Builders;
 public class BuilderTests
 {
 	[Fact]
-	public void test()
+	public void Should_BuildResourceWithEmbeddedOrders_When_UsingAddResources()
 	{
 		var orders = new List<Order>()
 		{
