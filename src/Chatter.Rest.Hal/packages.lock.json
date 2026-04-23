@@ -81,8 +81,15 @@
         "dependencies": {
           "System.Runtime.CompilerServices.Unsafe": "4.5.3"
         }
+      },
+      "chatter.rest.hal.uritemplates": {
+        "type": "Project"
       }
     },
-    "net8.0": {}
+    "net8.0": {
+      "chatter.rest.hal.uritemplates": {
+        "type": "Project"
+      }
+    }
   }
 }

@@ -25,4 +25,8 @@
   <ItemGroup>
     <PackageReference Include="System.Text.Json" Version="6.*" Condition="'$(TargetFramework)' == 'netstandard2.0'" />
   </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Chatter.Rest.Hal.UriTemplates\Chatter.Rest.Hal.UriTemplates.csproj" />
+  </ItemGroup>
 </Project>
