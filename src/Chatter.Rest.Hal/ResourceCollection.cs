@@ -9,6 +9,11 @@ namespace Chatter.Rest.Hal;
 /// <summary>
 /// Represents a collection of resources within an embedded resource entry.
 /// </summary>
+/// <remarks>
+/// No string-keyed O(1) lookup index is provided because resource items have no natural
+/// string key that is guaranteed unique. Use the integer indexer or LINQ to query by position
+/// or predicate.
+/// </remarks>
 [JsonConverter(typeof(ResourceCollectionConverter))]
 public sealed record ResourceCollection : ICollection<Resource>, IHalPart
 {

@@ -10,6 +10,10 @@ public abstract class HalBuilder<THalPart> : IBuildResource, IBuildHalPart<THalP
 	/// Initializes a new instance of the <see cref="HalBuilder{THalPart}"/> class.
 	/// </summary>
 	/// <param name="parent">The parent builder, or null if this is the root builder.</param>
+	/// <remarks>
+	/// This constructor is intentionally public to allow external subclassing for custom
+	/// builder implementations that extend the HAL builder hierarchy.
+	/// </remarks>
 	public HalBuilder(IBuildHalPart<IHalPart>? parent) => Parent = parent;
 
 	/// <summary>

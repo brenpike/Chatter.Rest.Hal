@@ -14,6 +14,12 @@ public static class LinkCollectionExtensions
 	/// <param name="links">The link collection to query.</param>
 	/// <param name="relation">The link relation to find.</param>
 	/// <returns>The link, or null if not found.</returns>
+	/// <remarks>
+	/// This method uses <see cref="System.Linq.Enumerable.SingleOrDefault{TSource}(System.Collections.Generic.IEnumerable{TSource}, System.Func{TSource, bool})"/>
+	/// to preserve the duplicate-throw contract: it throws <see cref="InvalidOperationException"/>
+	/// if multiple links share the same relation. Callers needing O(1) lookup without the
+	/// duplicate-throw contract should use <see cref="LinkCollection.TryGetByRel"/> directly.
+	/// </remarks>
 	public static Link? GetLinkOrDefault(this LinkCollection? links, string relation)
 		=> links?.SingleOrDefault(l => l.Rel?.Equals(relation, StringComparison.Ordinal) == true);
 

@@ -9,6 +9,11 @@ namespace Chatter.Rest.Hal;
 /// <summary>
 /// Represents a collection of link objects within a single link relation.
 /// </summary>
+/// <remarks>
+/// No O(1) string-keyed lookup index is provided. Link objects may share names or have none,
+/// making a string-keyed index semantically ambiguous. Use the integer indexer or LINQ to
+/// query by position or predicate.
+/// </remarks>
 [JsonConverter(typeof(LinkObjectCollectionConverter))]
 public sealed record LinkObjectCollection : ICollection<LinkObject>, IHalPart
 {
