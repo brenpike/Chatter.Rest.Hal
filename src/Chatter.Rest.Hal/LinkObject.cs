@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 using Chatter.Rest.Hal.Converters;
 
 namespace Chatter.Rest.Hal;
@@ -151,4 +154,84 @@ public sealed record LinkObject : IHalPart
 	/// the target resource(as defined by [RFC5988]).
 	/// </remarks>
 	public string? Hreflang { get; set; }
+
+	/// <summary>
+	/// Parses RFC 6570 Level 1 template variable names from <see cref="Href"/>.
+	/// </summary>
+	/// <returns>
+	/// An ordered, distinct list of variable names found in <c>{variable}</c> tokens.
+	/// Returns an empty list when <see cref="Href"/> contains no template variables
+	/// or when <see cref="Templated"/> is not <c>true</c>.
+	/// </returns>
+	/// <remarks>
+	/// Only RFC 6570 Level 1 simple string expansion is supported.
+	/// Operator-prefixed expressions (<c>{+var}</c>, <c>{#var}</c>, etc.) are not matched.
+	/// </remarks>
+	public IReadOnlyList<string> GetTemplateVariables()
+	{
+		if (Templated != true)
+		{
+			return Array.Empty<string>();
+		}
+
+		var matches = Regex.Matches(Href, @"\{([A-Za-z0-9_]+)\}");
+		var variables = new List<string>();
+		var seen = new HashSet<string>(StringComparer.Ordinal);
+
+		foreach (Match match in matches)
+		{
+			var name = match.Groups[1].Value;
+			if (seen.Add(name))
+			{
+				variables.Add(name);
+			}
+		}
+
+		return variables;
+	}
+
+	/// <summary>
+	/// Performs RFC 6570 Level 1 simple string expansion on the <see cref="Href"/> URI template.
+	/// </summary>
+	/// <param name="variables">
+	/// A dictionary mapping variable names to their substitution values.
+	/// Keys are case-sensitive and must match template variable names exactly.
+	/// </param>
+	/// <returns>
+	/// The resolved URI with matched variables substituted. Unresolved variables
+	/// (present in the template but absent from <paramref name="variables"/>) are
+	/// left as-is (e.g., <c>{id}</c> remains <c>{id}</c>). When <see cref="Templated"/>
+	/// is not <c>true</c> or <see cref="Href"/> is null or empty, returns <see cref="Href"/> unchanged.
+	/// </returns>
+	/// <exception cref="ArgumentNullException">
+	/// Thrown when <paramref name="variables"/> is null.
+	/// </exception>
+	/// <remarks>
+	/// <para>
+	/// This method implements the tolerant reader pattern: unresolved variables are preserved
+	/// rather than throwing, allowing partial expansion when only some variables are known.
+	/// </para>
+	/// <para>
+	/// Only RFC 6570 Level 1 simple string expansion is supported. Operator-prefixed
+	/// expressions (<c>{+var}</c>, <c>{#var}</c>, etc.) are left unchanged.
+	/// </para>
+	/// </remarks>
+	public string Expand(IDictionary<string, string> variables)
+	{
+		if (variables == null)
+		{
+			throw new ArgumentNullException(nameof(variables));
+		}
+
+		if (Templated != true || string.IsNullOrEmpty(Href))
+		{
+			return Href;
+		}
+
+		return Regex.Replace(Href, @"\{([A-Za-z0-9_]+)\}", match =>
+		{
+			var name = match.Groups[1].Value;
+			return variables.TryGetValue(name, out var value) ? value : match.Value;
+		});
+	}
 }
