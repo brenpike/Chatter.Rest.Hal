@@ -268,7 +268,68 @@ public interface IEmbeddedLinkObjectPropertiesSelectionStage :
 
 ---
 
-## 9. `Resource` Runtime API
+## 9. `LinkObject` Methods
+
+Namespace: `Chatter.Rest.Hal`
+
+`LinkObject` is a sealed record representing a single HAL link. In addition to its
+[properties](#4-iresourcelinkobjectpropertiesselectionstage) (`Href`, `Templated`,
+`Type`, etc.), it exposes two methods for working with RFC 6570 URI Templates.
+
+### `GetTemplateVariables()`
+
+```csharp
+public IReadOnlyList<string> GetTemplateVariables();
+```
+
+Parses RFC 6570 **Level 1** `{variable}` tokens from `Href` and returns an ordered,
+distinct list of variable names.
+
+- Returns an empty list when `Templated` is not `true`.
+- Returns an empty list when `Href` contains no Level 1 variables.
+- Operator-prefixed expressions (`{+var}`, `{#var}`, `{?query}`, etc.) are **not**
+  matched — only simple `{name}` tokens.
+
+### `Expand(IDictionary<string, string> variables)`
+
+```csharp
+public string Expand(IDictionary<string, string> variables);
+```
+
+Performs RFC 6570 Level 1 simple string expansion on the `Href` URI template.
+
+- Substitutes each `{variable}` whose key exists in the dictionary.
+- **Tolerant reader:** unresolved variables (present in the template but absent from
+  the dictionary) are left as-is, allowing partial expansion.
+- Returns `Href` unchanged when `Templated` is not `true`.
+- Throws `ArgumentNullException` when `variables` is `null`.
+
+### Usage example
+
+```csharp
+var link = new LinkObject("/orders/{id}") { Templated = true };
+
+// Get variable names
+IReadOnlyList<string> vars = link.GetTemplateVariables(); // ["id"]
+
+// Expand to a resolved URI
+string uri = link.Expand(new Dictionary<string, string> { ["id"] = "42" });
+// uri == "/orders/42"
+
+// Partial expansion — unresolved variables are preserved
+var partial = new LinkObject("/search/{term}/page/{page}") { Templated = true };
+string result = partial.Expand(new Dictionary<string, string> { ["term"] = "hal" });
+// result == "/search/hal/page/{page}"
+
+// Non-templated links return Href unchanged
+var plain = new LinkObject("/about");
+string href = plain.Expand(new Dictionary<string, string> { ["id"] = "99" });
+// href == "/about"
+```
+
+---
+
+## 10. `Resource` Runtime API
 
 Namespace: `Chatter.Rest.Hal`
 
@@ -300,7 +361,7 @@ public sealed record Resource : IHalPart
 
 ---
 
-## 10. `ResourceExtensions`
+## 11. `ResourceExtensions`
 
 Namespace: `Chatter.Rest.Hal`
 
@@ -332,7 +393,7 @@ public static class ResourceExtensions
 
 ---
 
-## 11. `LinkCollectionExtensions`
+## 12. `LinkCollectionExtensions`
 
 Namespace: `Chatter.Rest.Hal`
 
@@ -364,7 +425,7 @@ public static class LinkCollectionExtensions
 
 ---
 
-## 12. `LinkObjectCollectionExtensions` and `ResourceCollectionExtensions`
+## 13. `LinkObjectCollectionExtensions` and `ResourceCollectionExtensions`
 
 Namespace: `Chatter.Rest.Hal`
 
@@ -385,7 +446,7 @@ public static class ResourceCollectionExtensions
 
 ---
 
-## 13. `EmbeddedResourceCollectionExtensions`
+## 14. `EmbeddedResourceCollectionExtensions`
 
 Namespace: `Chatter.Rest.Hal`
 
@@ -408,7 +469,7 @@ public static class EmbeddedResourceCollectionExtensions
 
 ---
 
-## 14. Serialization API
+## 15. Serialization API
 
 ### `HalJsonOptions`
 
@@ -463,7 +524,7 @@ HalJsonOptions.Default.AlwaysUseArrayForLinks = true;
 
 ---
 
-## 15. Source Generator: `[HalResponse]`
+## 16. Source Generator: `[HalResponse]`
 
 ### Attribute
 

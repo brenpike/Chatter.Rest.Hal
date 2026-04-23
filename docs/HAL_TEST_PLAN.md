@@ -147,6 +147,26 @@ A Link Object represents a hyperlink. It MUST have an `href`; all other properti
 ### 3.11 Unknown Link Object properties are ignored (tolerant reader)
 - ✅ `HalLinkAttributesValidationTests.LinkObject_With_Unknown_Properties_Are_Ignored` — verifies unknown properties in Link Object do not cause errors
 
+### 3.12 URI Template expansion (RFC 6570 Level 1)
+> `LinkObject` provides helpers to extract template variables and expand Level 1 URI Templates per RFC 6570. Operator-prefixed expressions (Level 2+) are intentionally left unexpanded.
+
+- ✅ `LinkObjectTemplateExpansionTests.GetTemplateVariables_SingleVariable_ReturnsList`
+- ✅ `LinkObjectTemplateExpansionTests.GetTemplateVariables_MultipleVariables_ReturnsList`
+- ✅ `LinkObjectTemplateExpansionTests.GetTemplateVariables_DuplicateVariables_ReturnsDistinct`
+- ✅ `LinkObjectTemplateExpansionTests.GetTemplateVariables_NoVariables_ReturnsEmpty`
+- ✅ `LinkObjectTemplateExpansionTests.GetTemplateVariables_NotTemplated_ReturnsEmpty`
+- ✅ `LinkObjectTemplateExpansionTests.GetTemplateVariables_TemplatedNull_ReturnsEmpty`
+- ✅ `LinkObjectTemplateExpansionTests.GetTemplateVariables_OperatorPrefixed_NotMatched`
+- ✅ `LinkObjectTemplateExpansionTests.Expand_SingleVariable_Substituted`
+- ✅ `LinkObjectTemplateExpansionTests.Expand_MultipleVariables_AllSubstituted`
+- ✅ `LinkObjectTemplateExpansionTests.Expand_UnresolvedVariable_LeftAsIs`
+- ✅ `LinkObjectTemplateExpansionTests.Expand_EmptyDictionary_HrefUnchanged`
+- ✅ `LinkObjectTemplateExpansionTests.Expand_NotTemplated_ReturnsHrefUnchanged`
+- ✅ `LinkObjectTemplateExpansionTests.Expand_TemplatedNull_ReturnsHrefUnchanged`
+- ✅ `LinkObjectTemplateExpansionTests.Expand_NullVariables_ThrowsArgumentNullException`
+- ✅ `LinkObjectTemplateExpansionTests.Expand_OperatorPrefixed_LeftUnchanged`
+- ✅ `LinkObjectTemplateExpansionTests.Expand_MixedLevel1AndOperator_OnlyLevel1Expanded`
+
 ---
 
 ## 4. `_embedded`
@@ -308,14 +328,14 @@ The fluent builder must produce Resource Objects that conform to the spec.
 |---|---|---|---|---|
 | Resource Object | 5 | 5 | 0 | 0 |
 | `_links` | 7 | 6 | 0 | 1 |
-| Link Objects | 11 | 11 | 0 | 0 |
+| Link Objects | 12 | 12 | 0 | 0 |
 | `_embedded` | 8 | 8 | 0 | 0 |
 | CURIEs | 5 | 5 | 0 | 0 |
 | Normative Rules | 4 | 4 | 0 | 0 |
 | Builder API | 6 | 6 | 0 | 0 |
 | Extension Methods | 5 | 5 | 0 | 0 |
 | Source Generator | 5 | 4 | 0 | 1 |
-| **Total** | **56** | **54** | **0** | **2** |
+| **Total** | **57** | **55** | **0** | **2** |
 
 ---
 
