@@ -18,6 +18,7 @@
 - **Source Generators**: Code generation support via `Chatter.Rest.Hal.CodeGenerators` package
 - **Flexible Data Access**: Extension methods for querying links and embedded resources
 - **HAL Specification Compliant**: Full compliance with the [official HAL specification](https://datatracker.ietf.org/doc/html/draft-kelly-json-hal)
+- **URI Template Expansion**: Built-in RFC 6570 Levels 1-3 URI template parsing and expansion via the `Chatter.Rest.UriTemplates` package
 - **Stable Link Array Representation**: Opt-in control over single-object vs. array serialization per relation or globally, resolving a common HAL API consistency issue
 
 ---

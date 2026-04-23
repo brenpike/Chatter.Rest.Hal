@@ -425,3 +425,15 @@ Chatter.Rest.Hal.sln
 **`Chatter.Rest.Hal.Core`** — ships only `HalResponseAttribute`. Exists as a separate package so consumer projects can reference the attribute at runtime without taking a dependency on the Roslyn analyzer assembly.
 
 **`Chatter.Rest.Hal.CodeGenerators`** — the Roslyn incremental source generator. References `Chatter.Rest.Hal.Core` to access `HalResponseAttribute` during compilation. Consumers add it as a build-time-only reference (`PrivateAssets="all"`), meaning it does not appear in the consumer's published output or transitive dependency graph.
+
+---
+
+## Section 6 — UriTemplates Engine
+
+The `Chatter.Rest.UriTemplates` project implements RFC 6570 URI Template expansion for Levels 1 through 3. It ships as a standalone NuGet package (`Chatter.Rest.UriTemplates`) with no external dependencies.
+
+The core library project-references `Chatter.Rest.UriTemplates`. `LinkObject.Expand()` and `LinkObject.GetTemplateVariables()` delegate to `UriTemplate` for template parsing and expansion, upgrading the HAL library from Level 1-only support to full Levels 1-3 coverage.
+
+Level 4 modifiers (prefix `:N` and explode `*`) are explicitly deferred and throw `NotSupportedException` at parse time.
+
+For the complete type design, operator reference, encoding rules, and integration details, see [docs/uri-templates/architecture.md](uri-templates/architecture.md).

@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using Chatter.Rest.Hal.Converters;
+using Chatter.Rest.UriTemplates;
 
 namespace Chatter.Rest.Hal;
 
@@ -151,4 +153,40 @@ public sealed record LinkObject : IHalPart
 	/// the target resource(as defined by [RFC5988]).
 	/// </remarks>
 	public string? Hreflang { get; set; }
+
+	/// <summary>
+	/// Returns all variable names referenced in the URI template, in order of appearance, deduplicated.
+	/// Returns an empty list when <see cref="Templated"/> is not true or <see cref="Href"/> is empty.
+	/// </summary>
+	public IReadOnlyList<string> GetTemplateVariables() =>
+		Templated == true && !string.IsNullOrEmpty(Href)
+			? new UriTemplate(Href).GetVariables()
+			: Array.Empty<string>();
+
+	/// <summary>
+	/// Expands the URI template using the provided variable dictionary.
+	/// Returns <see cref="Href"/> unchanged when <see cref="Templated"/> is not true.
+	/// </summary>
+	/// <exception cref="ArgumentNullException">Thrown when <paramref name="variables"/> is null.</exception>
+	public string Expand(IDictionary<string, string> variables)
+	{
+		if (variables is null) throw new ArgumentNullException(nameof(variables));
+		if (Templated != true || string.IsNullOrEmpty(Href)) return Href;
+		return new UriTemplate(Href).Expand(variables);
+	}
+
+	/// <summary>
+	/// Expands the URI template using the provided key-value pairs.
+	/// Returns <see cref="Href"/> unchanged when <see cref="Templated"/> is not true.
+	/// </summary>
+	/// <exception cref="ArgumentNullException">Thrown when <paramref name="variables"/> is null.</exception>
+	public string Expand(params (string Key, string Value)[] variables)
+	{
+		if (variables is null) throw new ArgumentNullException(nameof(variables));
+		var dict = new Dictionary<string, string>();
+		foreach (var (key, value) in variables)
+			if (!dict.ContainsKey(key))
+				dict[key] = value;
+		return Expand(dict);
+	}
 }

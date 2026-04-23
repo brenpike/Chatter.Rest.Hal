@@ -1,4 +1,4 @@
-# Chatter.Rest.Hal.UriTemplates — RFC 6570 Test Plan
+# Chatter.Rest.UriTemplates — RFC 6570 Test Plan
 
 Spec: https://datatracker.ietf.org/doc/html/rfc6570  
 Canonical test suite: https://github.com/uri-templates/uritemplate-test

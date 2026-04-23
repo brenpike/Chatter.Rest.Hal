@@ -463,7 +463,42 @@ HalJsonOptions.Default.AlwaysUseArrayForLinks = true;
 
 ---
 
-## 15. Source Generator: `[HalResponse]`
+## 15. `LinkObject` Template Methods
+
+These methods on `LinkObject` delegate to the `Chatter.Rest.UriTemplates` engine for RFC 6570 URI template expansion.
+
+```csharp
+public sealed record LinkObject : IHalPart
+{
+    // Returns all variable names from the Href template, deduplicated, in order of
+    // first appearance. Returns an empty list when Templated is false or Href is empty.
+    public IReadOnlyList<string> GetTemplateVariables();
+
+    // Expands the URI template with the provided variables. Returns Href unchanged
+    // when Templated is not true. Throws ArgumentNullException for null variables.
+    public string Expand(IDictionary<string, string> variables);
+
+    // Tuple convenience overload. Delegates to the IDictionary overload.
+    public string Expand(params (string Key, string Value)[] variables);
+}
+```
+
+**Example:**
+
+```csharp
+var link = resource!.GetLinkObjectOrDefault("search");
+var vars = link!.GetTemplateVariables();       // ["q", "lang"]
+var uri  = link!.Expand(("q", "dotnet"), ("lang", "en"));
+                                               // "/search?q=dotnet&lang=en"
+```
+
+### Standalone `UriTemplate` Class
+
+The `UriTemplate` class in `Chatter.Rest.UriTemplates` can be used independently of the HAL library for RFC 6570 Levels 1-3 template expansion. See [docs/uri-templates/usage.md](uri-templates/usage.md) for the full API reference and operator examples.
+
+---
+
+## 16. Source Generator: `[HalResponse]`
 
 ### Attribute
 
