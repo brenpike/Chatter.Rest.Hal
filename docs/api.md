@@ -304,6 +304,18 @@ Performs RFC 6570 Level 1 simple string expansion on the `Href` URI template.
 - Returns `Href` unchanged when `Templated` is not `true`.
 - Throws `ArgumentNullException` when `variables` is `null`.
 
+### `Expand(params (string Key, string Value)[] variables)`
+
+```csharp
+public string Expand(params (string Key, string Value)[] variables);
+```
+
+Ergonomic overload that accepts key-value tuples instead of a dictionary. Delegates
+to `Expand(IDictionary<string, string>)`.
+
+- Same expansion, tolerant-reader, and guard behavior as the dictionary overload.
+- Preferred for call sites where the variables are known at compile time.
+
 ### Usage example
 
 ```csharp
@@ -312,18 +324,25 @@ var link = new LinkObject("/orders/{id}") { Templated = true };
 // Get variable names
 IReadOnlyList<string> vars = link.GetTemplateVariables(); // ["id"]
 
-// Expand to a resolved URI
-string uri = link.Expand(new Dictionary<string, string> { ["id"] = "42" });
+// params tuple syntax (preferred)
+string uri = link.Expand(("id", "42"));
 // uri == "/orders/42"
+
+// multiple variables
+string uri2 = link.Expand(("orderId", "9001"), ("itemId", "3"));
+
+// dictionary syntax (for dynamic/runtime variable sets)
+var dict = new Dictionary<string, string> { ["id"] = "42" };
+string uri3 = link.Expand(dict);
 
 // Partial expansion — unresolved variables are preserved
 var partial = new LinkObject("/search/{term}/page/{page}") { Templated = true };
-string result = partial.Expand(new Dictionary<string, string> { ["term"] = "hal" });
+string result = partial.Expand(("term", "hal"));
 // result == "/search/hal/page/{page}"
 
 // Non-templated links return Href unchanged
 var plain = new LinkObject("/about");
-string href = plain.Expand(new Dictionary<string, string> { ["id"] = "99" });
+string href = plain.Expand(("id", "99"));
 // href == "/about"
 ```
 

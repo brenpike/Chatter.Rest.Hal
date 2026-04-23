@@ -234,4 +234,29 @@ public sealed record LinkObject : IHalPart
 			return variables.TryGetValue(name, out var value) ? value : match.Value;
 		});
 	}
+
+	/// <summary>
+	/// Performs RFC 6570 Level 1 simple string expansion using the provided key-value pairs.
+	/// </summary>
+	/// <param name="variables">
+	/// Variable name and value pairs to substitute into the URI template.
+	/// Each element's <c>Key</c> is the variable name; <c>Value</c> is the substitution value.
+	/// </param>
+	/// <returns>
+	/// The resolved URI with matched variables substituted. When <see cref="Templated"/>
+	/// is not <c>true</c> or <see cref="Href"/> is null or empty, returns <see cref="Href"/> unchanged.
+	/// </returns>
+	/// <exception cref="ArgumentNullException">
+	/// Thrown when <paramref name="variables"/> is null.
+	/// </exception>
+	/// <remarks>
+	/// This overload delegates to <see cref="Expand(IDictionary{string,string})"/>.
+	/// Unresolved variables are preserved (tolerant reader pattern).
+	/// Only RFC 6570 Level 1 simple string expansion is supported.
+	/// </remarks>
+	public string Expand(params (string Key, string Value)[] variables)
+	{
+		if (variables is null) throw new ArgumentNullException(nameof(variables));
+		return Expand(variables.ToDictionary(kv => kv.Key, kv => kv.Value));
+	}
 }

@@ -146,7 +146,7 @@ public class LinkObjectTemplateExpansionTests
 	{
 		var lo = new LinkObject("/items/{id}") { Templated = true };
 
-		Action act = () => lo.Expand(null!);
+		Action act = () => lo.Expand((IDictionary<string, string>)null!);
 
 		act.Should().Throw<ArgumentNullException>();
 	}
@@ -177,5 +177,55 @@ public class LinkObjectTemplateExpansionTests
 		});
 
 		result.Should().Be("/items/42{?expand}");
+	}
+
+	[Fact]
+	public void Expand_ParamsTuple_SingleVariable_Substituted()
+	{
+		var lo = new LinkObject("/orders/{id}") { Templated = true };
+
+		var result = lo.Expand(("id", "9001"));
+
+		result.Should().Be("/orders/9001");
+	}
+
+	[Fact]
+	public void Expand_ParamsTuple_MultipleVariables_AllSubstituted()
+	{
+		var lo = new LinkObject("/orders/{orderId}/items/{itemId}") { Templated = true };
+
+		var result = lo.Expand(("orderId", "9001"), ("itemId", "3"));
+
+		result.Should().Be("/orders/9001/items/3");
+	}
+
+	[Fact]
+	public void Expand_ParamsTuple_EmptyParams_HrefUnchanged()
+	{
+		var lo = new LinkObject("/orders/{id}") { Templated = true };
+
+		var result = lo.Expand();
+
+		result.Should().Be("/orders/{id}");
+	}
+
+	[Fact]
+	public void Expand_ParamsTuple_UnresolvedVariable_LeftAsIs()
+	{
+		var lo = new LinkObject("/orders/{orderId}/items/{itemId}") { Templated = true };
+
+		var result = lo.Expand(("orderId", "9001"));
+
+		result.Should().Be("/orders/9001/items/{itemId}");
+	}
+
+	[Fact]
+	public void Expand_ParamsTuple_NotTemplated_ReturnsHrefUnchanged()
+	{
+		var lo = new LinkObject("/orders/{id}") { Templated = false };
+
+		var result = lo.Expand(("id", "9001"));
+
+		result.Should().Be("/orders/{id}");
 	}
 }

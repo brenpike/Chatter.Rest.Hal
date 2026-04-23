@@ -166,6 +166,11 @@ A Link Object represents a hyperlink. It MUST have an `href`; all other properti
 - ✅ `LinkObjectTemplateExpansionTests.Expand_NullVariables_ThrowsArgumentNullException`
 - ✅ `LinkObjectTemplateExpansionTests.Expand_OperatorPrefixed_LeftUnchanged`
 - ✅ `LinkObjectTemplateExpansionTests.Expand_MixedLevel1AndOperator_OnlyLevel1Expanded`
+- ✅ `LinkObjectTemplateExpansionTests.Expand_ParamsTuple_SingleVariable_Substituted`
+- ✅ `LinkObjectTemplateExpansionTests.Expand_ParamsTuple_MultipleVariables_AllSubstituted`
+- ✅ `LinkObjectTemplateExpansionTests.Expand_ParamsTuple_EmptyParams_HrefUnchanged`
+- ✅ `LinkObjectTemplateExpansionTests.Expand_ParamsTuple_UnresolvedVariable_LeftAsIs`
+- ✅ `LinkObjectTemplateExpansionTests.Expand_ParamsTuple_NotTemplated_ReturnsHrefUnchanged`
 
 ---
 
