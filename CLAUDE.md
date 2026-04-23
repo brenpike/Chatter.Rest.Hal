@@ -19,6 +19,8 @@ Chatter.Rest.Hal is a .NET/C# implementation of the HAL (Hypertext Application L
 | [docs/usage.md](docs/usage.md) | Copy-paste examples for building, serializing, deserializing |
 | [docs/development.md](docs/development.md) | Build/test/pack commands, code style, test conventions, CI/CD |
 | [docs/HAL_TEST_PLAN.md](docs/HAL_TEST_PLAN.md) | Spec-to-test mapping; consult when adding tests or evaluating spec compliance |
+| [docs/uri-templates/usage.md](docs/uri-templates/usage.md) | URI template expansion practical usage guide |
+| [docs/uri-templates/architecture.md](docs/uri-templates/architecture.md) | URI template engine design, operator reference, encoding rules |
 
 ## Solution Structure
 
@@ -27,8 +29,10 @@ Chatter.Rest.Hal is a .NET/C# implementation of the HAL (Hypertext Application L
 | `src/Chatter.Rest.Hal/` | `Chatter.Rest.Hal` |
 | `src/Chatter.Rest.Hal.CodeGenerators/` | `Chatter.Rest.Hal.CodeGenerators` |
 | `src/Chatter.Rest.Hal.Core/` | Shared types; no standalone package |
+| `src/Chatter.Rest.Hal.UriTemplates/` | `Chatter.Rest.Hal.UriTemplates` |
 | `test/Chatter.Rest.Hal.Tests/` | — |
 | `test/Chatter.Rest.Hal.CodeGenerators.Tests/` | — |
+| `test/Chatter.Rest.Hal.UriTemplates.Tests/` | — |
 
 ## Multi-Agent Governance
 
@@ -85,6 +89,7 @@ See [docs/development.md](docs/development.md) for CI/CD workflow details.
 
 - `Chatter.Rest.Hal` — v1.0.0
 - `Chatter.Rest.Hal.CodeGenerators` — v0.3.0
+- `Chatter.Rest.Hal.UriTemplates` — v0.1.0
 
 ## Memory Usage
 

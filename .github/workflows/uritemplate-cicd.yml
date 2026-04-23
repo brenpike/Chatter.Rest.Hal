@@ -1,0 +1,101 @@
+name: UriTemplates CI/CD
+
+on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'The reason for running the workflow'
+        required: true
+        default: 'Manual build from GitHub UI'
+
+  push:
+    branches:
+      - 'feature/**'
+      - main
+    paths:
+      - '**/src/Chatter.Rest.Hal.UriTemplates/**'
+      - '.github/workflows/uritemplate-cicd.yml'
+      - '**/test/Chatter.Rest.Hal.UriTemplates.Tests/**'
+
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '**/src/Chatter.Rest.Hal.UriTemplates/**'
+      - '.github/workflows/uritemplate-cicd.yml'
+      - '**/test/Chatter.Rest.Hal.UriTemplates.Tests/**'
+
+env:
+  dotnet-version: '8.0.x'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: ${{ env.dotnet-version }}
+          cache: true
+          cache-dependency-path: |
+            **/packages.lock.json
+
+      - name: Restore
+        run: dotnet restore --locked-mode
+
+      - name: Build
+        run: dotnet build -c Release --no-restore
+
+      - name: Test
+        run: dotnet test '/home/runner/work/Chatter.Rest.Hal/Chatter.Rest.Hal/test/Chatter.Rest.Hal.UriTemplates.Tests/Chatter.Rest.Hal.UriTemplates.Tests.csproj' -c Release --no-build
+
+      - name: Pack
+        run: dotnet pack '/home/runner/work/Chatter.Rest.Hal/Chatter.Rest.Hal/src/Chatter.Rest.Hal.UriTemplates/Chatter.Rest.Hal.UriTemplates.csproj' -c Release --no-build -o publish/nuget
+
+      - name: Upload NuGet
+        uses: actions/upload-artifact@v6
+        with:
+          name: nuget-uritemplate
+          path: /home/runner/work/Chatter.Rest.Hal/Chatter.Rest.Hal/publish/nuget/**
+          retention-days: 5
+          if-no-files-found: error
+
+  deploy:
+    name: deploy
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' # main branch is protected, so this will only be true after successsful PR merge
+
+    environment:
+      name: Production
+
+    env:
+      NUGET_AUTH_TOKEN: ${{ secrets.NUGET_API_KEY_CHATTER_HAL_URITEMPLATE }}
+      NUGET_URL: https://api.nuget.org/v3/index.json
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Download NuGet
+        uses: actions/download-artifact@v6
+        with:
+          name: nuget-uritemplate
+          path: ./dist/nuget
+
+      - name: Push NuGet packages
+        shell: bash
+        run: |
+          dotnet nuget push "./dist/nuget/*.nupkg" \
+            -k '${{ env.NUGET_AUTH_TOKEN }}' \
+            -s '${{ env.NUGET_URL }}' \
+            --skip-duplicate
