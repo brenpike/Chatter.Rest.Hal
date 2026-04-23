@@ -27,6 +27,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Chatter.Rest.Hal.UriTemplates\Chatter.Rest.Hal.UriTemplates.csproj" />
+    <ProjectReference Include="..\Chatter.Rest.UriTemplates\Chatter.Rest.UriTemplates.csproj" />
   </ItemGroup>
 </Project>

@@ -1,4 +1,4 @@
-namespace Chatter.Rest.Hal.UriTemplates;
+namespace Chatter.Rest.UriTemplates;
 
 internal sealed record UriTemplateExpression(
     UriTemplateOperator Operator,

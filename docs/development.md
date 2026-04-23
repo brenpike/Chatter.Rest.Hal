@@ -22,11 +22,11 @@ Chatter.Rest.Hal.sln
 │   ├── Chatter.Rest.Hal/Chatter.Rest.Hal.csproj
 │   ├── Chatter.Rest.Hal.Core/Chatter.Rest.Hal.Core.csproj
 │   ├── Chatter.Rest.Hal.CodeGenerators/Chatter.Rest.Hal.CodeGenerators.csproj
-│   └── Chatter.Rest.Hal.UriTemplates/Chatter.Rest.Hal.UriTemplates.csproj
+│   └── Chatter.Rest.UriTemplates/Chatter.Rest.UriTemplates.csproj
 └── test/
     ├── Chatter.Rest.Hal.Tests/Chatter.Rest.Hal.Tests.csproj
     ├── Chatter.Rest.Hal.CodeGenerators.Tests/Chatter.Rest.Hal.CodeGenerators.Tests.csproj
-    └── Chatter.Rest.Hal.UriTemplates.Tests/Chatter.Rest.Hal.UriTemplates.Tests.csproj
+    └── Chatter.Rest.UriTemplates.Tests/Chatter.Rest.UriTemplates.Tests.csproj
 ```
 
 **Target frameworks:**
@@ -61,7 +61,7 @@ dotnet test test/Chatter.Rest.Hal.Tests/Chatter.Rest.Hal.Tests.csproj
 dotnet test test/Chatter.Rest.Hal.CodeGenerators.Tests/Chatter.Rest.Hal.CodeGenerators.Tests.csproj
 
 # Run URI template tests
-dotnet test test/Chatter.Rest.Hal.UriTemplates.Tests/Chatter.Rest.Hal.UriTemplates.Tests.csproj
+dotnet test test/Chatter.Rest.UriTemplates.Tests/Chatter.Rest.UriTemplates.Tests.csproj
 
 # Run all tests
 dotnet test
@@ -96,7 +96,7 @@ Two workflows live in `.github/workflows/`:
 |---|---|
 | `hal-cicd.yml` | `src/Chatter.Rest.Hal/`, `test/Chatter.Rest.Hal.Tests/` |
 | `codegen-cicd.yml` | `src/Chatter.Rest.Hal.CodeGenerators/`, `test/Chatter.Rest.Hal.CodeGenerators.Tests/` |
-| `uritemplate-cicd.yml` | `src/Chatter.Rest.Hal.UriTemplates/`, `test/Chatter.Rest.Hal.UriTemplates.Tests/` |
+| `uritemplate-cicd.yml` | `src/Chatter.Rest.UriTemplates/`, `test/Chatter.Rest.UriTemplates.Tests/` |
 
 **Both workflows:**
 

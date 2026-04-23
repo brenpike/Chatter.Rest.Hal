@@ -9,7 +9,7 @@
     <Authors>Brennan Pike</Authors>
     <Owners>Brennan Pike</Owners>
     <Description>RFC 6570 URI Template expansion for Chatter.Rest.Hal</Description>
-    <PackageId>Chatter.Rest.Hal.UriTemplates</PackageId>
+    <PackageId>Chatter.Rest.UriTemplates</PackageId>
     <RepositoryUrl>https://github.com/brenpike/Chatter.Rest.Hal</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>.net;Chatter;REST;HAL;URI Templates;RFC 6570</PackageTags>

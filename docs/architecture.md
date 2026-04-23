@@ -430,9 +430,9 @@ Chatter.Rest.Hal.sln
 
 ## Section 6 — UriTemplates Engine
 
-The `Chatter.Rest.Hal.UriTemplates` project implements RFC 6570 URI Template expansion for Levels 1 through 3. It ships as a standalone NuGet package (`Chatter.Rest.Hal.UriTemplates`) with no external dependencies.
+The `Chatter.Rest.UriTemplates` project implements RFC 6570 URI Template expansion for Levels 1 through 3. It ships as a standalone NuGet package (`Chatter.Rest.UriTemplates`) with no external dependencies.
 
-The core library project-references `Chatter.Rest.Hal.UriTemplates`. `LinkObject.Expand()` and `LinkObject.GetTemplateVariables()` delegate to `UriTemplate` for template parsing and expansion, upgrading the HAL library from Level 1-only support to full Levels 1-3 coverage.
+The core library project-references `Chatter.Rest.UriTemplates`. `LinkObject.Expand()` and `LinkObject.GetTemplateVariables()` delegate to `UriTemplate` for template parsing and expansion, upgrading the HAL library from Level 1-only support to full Levels 1-3 coverage.
 
 Level 4 modifiers (prefix `:N` and explode `*`) are explicitly deferred and throw `NotSupportedException` at parse time.
 

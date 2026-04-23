@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using Chatter.Rest.Hal.Converters;
-using Chatter.Rest.Hal.UriTemplates;
+using Chatter.Rest.UriTemplates;
 
 namespace Chatter.Rest.Hal;
 

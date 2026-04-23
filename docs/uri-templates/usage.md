@@ -1,12 +1,12 @@
 # URI Templates Usage Guide
 
-Practical usage guide for `Chatter.Rest.Hal.UriTemplates`.
+Practical usage guide for `Chatter.Rest.UriTemplates`.
 
 ---
 
 ## 1. Overview
 
-`Chatter.Rest.Hal.UriTemplates` is a standalone RFC 6570 URI Template expansion library for .NET. It supports **Levels 1 through 3** of the RFC 6570 specification, covering simple string expansion, reserved/fragment expansion, and all Level 3 operators (label, path segment, path-style parameter, form-style query, and form-style query continuation).
+`Chatter.Rest.UriTemplates` is a standalone RFC 6570 URI Template expansion library for .NET. It supports **Levels 1 through 3** of the RFC 6570 specification, covering simple string expansion, reserved/fragment expansion, and all Level 3 operators (label, path segment, path-style parameter, form-style query, and form-style query continuation).
 
 **Level 4** (prefix modifiers `:N` and explode `*`) is **not supported**. See [Level 4 Not Supported](#9-level-4-not-supported) for details.
 
@@ -17,13 +17,13 @@ Practical usage guide for `Chatter.Rest.Hal.UriTemplates`.
 ## 2. Installation
 
 ```bash
-dotnet add package Chatter.Rest.Hal.UriTemplates
+dotnet add package Chatter.Rest.UriTemplates
 ```
 
 **Namespace:**
 
 ```csharp
-using Chatter.Rest.Hal.UriTemplates;
+using Chatter.Rest.UriTemplates;
 ```
 
 The package targets `netstandard2.0` and `net8.0` with no external dependencies.
@@ -33,7 +33,7 @@ The package targets `netstandard2.0` and `net8.0` with no external dependencies.
 ## 3. Quick Start
 
 ```csharp
-using Chatter.Rest.Hal.UriTemplates;
+using Chatter.Rest.UriTemplates;
 
 var template = new UriTemplate("/orders{?status,page}");
 

@@ -465,7 +465,7 @@ HalJsonOptions.Default.AlwaysUseArrayForLinks = true;
 
 ## 15. `LinkObject` Template Methods
 
-These methods on `LinkObject` delegate to the `Chatter.Rest.Hal.UriTemplates` engine for RFC 6570 URI template expansion.
+These methods on `LinkObject` delegate to the `Chatter.Rest.UriTemplates` engine for RFC 6570 URI template expansion.
 
 ```csharp
 public sealed record LinkObject : IHalPart
@@ -494,7 +494,7 @@ var uri  = link!.Expand(("q", "dotnet"), ("lang", "en"));
 
 ### Standalone `UriTemplate` Class
 
-The `UriTemplate` class in `Chatter.Rest.Hal.UriTemplates` can be used independently of the HAL library for RFC 6570 Levels 1-3 template expansion. See [docs/uri-templates/usage.md](uri-templates/usage.md) for the full API reference and operator examples.
+The `UriTemplate` class in `Chatter.Rest.UriTemplates` can be used independently of the HAL library for RFC 6570 Levels 1-3 template expansion. See [docs/uri-templates/usage.md](uri-templates/usage.md) for the full API reference and operator examples.
 
 ---
 

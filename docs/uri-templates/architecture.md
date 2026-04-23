@@ -1,4 +1,4 @@
-# Chatter.Rest.Hal.UriTemplates — Architecture & Requirements
+# Chatter.Rest.UriTemplates — Architecture & Requirements
 
 Spec: https://datatracker.ietf.org/doc/html/rfc6570
 
@@ -6,7 +6,7 @@ Spec: https://datatracker.ietf.org/doc/html/rfc6570
 
 ## Overview
 
-New project `src/Chatter.Rest.Hal.UriTemplates/` implementing RFC 6570 URI Template expansion for Levels 1–3. Ships as its own NuGet package (`Chatter.Rest.Hal.UriTemplates`). `Chatter.Rest.Hal` project-references it; `LinkObject.GetTemplateVariables()` and `Expand()` delegate to the new engine.
+New project `src/Chatter.Rest.UriTemplates/` implementing RFC 6570 URI Template expansion for Levels 1–3. Ships as its own NuGet package (`Chatter.Rest.UriTemplates`). `Chatter.Rest.Hal` project-references it; `LinkObject.GetTemplateVariables()` and `Expand()` delegate to the new engine.
 
 Level 4 (value modifiers — prefix `:N` and explode `*`) is explicitly deferred. See [Level 4 TODO](#level-4-todo).
 
@@ -28,8 +28,8 @@ Level 4 (value modifiers — prefix `:N` and explode `*`) is explicitly deferred
 
 - No external NuGet dependencies
 - Target `netstandard2.0` and `net8.0` (matching the rest of the solution)
-- `Chatter.Rest.Hal` project-references `Chatter.Rest.Hal.UriTemplates`
-- Package ID: `Chatter.Rest.Hal.UriTemplates`
+- `Chatter.Rest.Hal` project-references `Chatter.Rest.UriTemplates`
+- Package ID: `Chatter.Rest.UriTemplates`
 
 ### Out of Scope
 
@@ -46,8 +46,8 @@ Level 4 (value modifiers — prefix `:N` and explode `*`) is explicitly deferred
 
 ```
 src/
-  Chatter.Rest.Hal.UriTemplates/
-    Chatter.Rest.Hal.UriTemplates.csproj
+  Chatter.Rest.UriTemplates/
+    Chatter.Rest.UriTemplates.csproj
     UriTemplate.cs               ← public entry point
     UriTemplateOperator.cs       ← operator enum
     UriTemplateExpression.cs     ← one parsed {expression}
@@ -55,8 +55,8 @@ src/
     UriTemplateExpander.cs       ← applies per-operator expansion rules
 
 test/
-  Chatter.Rest.Hal.UriTemplates.Tests/
-    Chatter.Rest.Hal.UriTemplates.Tests.csproj
+  Chatter.Rest.UriTemplates.Tests/
+    Chatter.Rest.UriTemplates.Tests.csproj
     UriTemplateLevel1Tests.cs
     UriTemplateLevel2Tests.cs
     UriTemplateLevel3Tests.cs

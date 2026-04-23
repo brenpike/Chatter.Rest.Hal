@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace Chatter.Rest.Hal.UriTemplates;
+namespace Chatter.Rest.UriTemplates;
 
 internal static class UriTemplateExpander
 {

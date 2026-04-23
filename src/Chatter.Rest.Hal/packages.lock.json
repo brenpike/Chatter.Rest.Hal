@@ -82,12 +82,12 @@
           "System.Runtime.CompilerServices.Unsafe": "4.5.3"
         }
       },
-      "chatter.rest.hal.uritemplates": {
+      "chatter.rest.uritemplates": {
         "type": "Project"
       }
     },
     "net8.0": {
-      "chatter.rest.hal.uritemplates": {
+      "chatter.rest.uritemplates": {
         "type": "Project"
       }
     }

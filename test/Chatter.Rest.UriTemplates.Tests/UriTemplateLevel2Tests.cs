@@ -1,7 +1,7 @@
 using FluentAssertions;
 using Xunit;
 
-namespace Chatter.Rest.Hal.UriTemplates.Tests
+namespace Chatter.Rest.UriTemplates.Tests
 {
 	public class UriTemplateLevel2Tests
 	{

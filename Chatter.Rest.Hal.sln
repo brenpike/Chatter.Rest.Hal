@@ -20,9 +20,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Chatter.Rest.Hal.CodeGenera
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Chatter.Rest.Hal.Core", "src\Chatter.Rest.Hal.Core\Chatter.Rest.Hal.Core.csproj", "{B3A5963B-B924-4789-9C57-3978F2421EA4}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Chatter.Rest.Hal.UriTemplates", "src\Chatter.Rest.Hal.UriTemplates\Chatter.Rest.Hal.UriTemplates.csproj", "{F7A8E3B1-2C4D-4E6F-9A1B-3D5E7F8A9B0C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Chatter.Rest.UriTemplates", "src\Chatter.Rest.UriTemplates\Chatter.Rest.UriTemplates.csproj", "{F7A8E3B1-2C4D-4E6F-9A1B-3D5E7F8A9B0C}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Chatter.Rest.Hal.UriTemplates.Tests", "test\Chatter.Rest.Hal.UriTemplates.Tests\Chatter.Rest.Hal.UriTemplates.Tests.csproj", "{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Chatter.Rest.UriTemplates.Tests", "test\Chatter.Rest.UriTemplates.Tests\Chatter.Rest.UriTemplates.Tests.csproj", "{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{0E221BC3-7B08-4D7F-99AA-ED8076485AF3}"
 EndProject
