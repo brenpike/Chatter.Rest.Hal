@@ -247,7 +247,7 @@ public class ResourceExtensionsTests
 	{
 		var lo = new LinkObject("/orders/1") { Name = "name" };
 		var loc = new LinkObjectCollection() { lo };
-		var l = new Link("self") { LinkObjects =  loc };
+		var l = new Link("self") { LinkObjects = loc };
 		var resource = new Resource() { Links = new LinkCollection() { l } };
 		var linkObjCol = resource!.GetLinkObjects("self");
 

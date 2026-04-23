@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Chatter.Rest.Hal.Converters;
 
-namespace Chatter.Rest.Hal.Extensions;
+namespace Chatter.Rest.Hal;
 
 /// <summary>
 /// Extension methods for configuring HAL JSON serialization via <see cref="JsonSerializerOptions"/>.

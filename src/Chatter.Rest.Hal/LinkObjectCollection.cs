@@ -10,7 +10,7 @@ namespace Chatter.Rest.Hal;
 /// Represents a collection of link objects within a single link relation.
 /// </summary>
 [JsonConverter(typeof(LinkObjectCollectionConverter))]
-public sealed record LinkObjectCollection : ICollection<LinkObject>,  IHalPart
+public sealed record LinkObjectCollection : ICollection<LinkObject>, IHalPart
 {
 	private readonly Collection<LinkObject> _linkObjects = new();
 

@@ -2,14 +2,12 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
-using Chatter.Rest.Hal;
-
 namespace Chatter.Rest.Hal.Converters;
 
 /// <summary>
 /// JSON converter for serializing and deserializing link collections (_links).
 /// </summary>
-public class LinkCollectionConverter : JsonConverter<LinkCollection>
+public sealed class LinkCollectionConverter : JsonConverter<LinkCollection>
 {
 	private readonly HalJsonOptions? _halJsonOptions;
 
@@ -72,12 +70,14 @@ public class LinkCollectionConverter : JsonConverter<LinkCollection>
 			{
 				continue;
 			}
-			var link = new Link(kvp.Key);
+
+			var link = new Link(kvp.Key);
 			// If the value is literally null ("rel": null) leave LinkObjects empty and add the link.
 			if (kvp.Value == null || ConverterHelpers.IsJsonNull(kvp.Value))
 			{
 				links.Add(link);
-				continue;			}
+				continue;
+			}
 			// Support string shorthand ("rel": "/orders/123")
 			if (kvp.Value is JsonValue jv)
 			{

@@ -8,7 +8,7 @@ namespace Chatter.Rest.Hal.Builders;
 /// <summary>
 /// Builder for constructing embedded resources within a HAL document.
 /// </summary>
-public class EmbeddedResourceBuilder : HalBuilder<EmbeddedResource>, IAddResourceStage
+public sealed class EmbeddedResourceBuilder : HalBuilder<EmbeddedResource>, IAddResourceStage
 {
 	private readonly string _name;
 	private readonly ResourceCollectionBuilder _resourceCollectionBuilder;

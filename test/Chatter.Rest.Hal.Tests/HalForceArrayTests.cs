@@ -1,6 +1,5 @@
 using System.Linq;
 using System.Text.Json;
-using Chatter.Rest.Hal.Extensions;
 using FluentAssertions;
 using Xunit;
 

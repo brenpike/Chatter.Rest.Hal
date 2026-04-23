@@ -4,20 +4,20 @@ using Xunit;
 
 namespace Chatter.Rest.Hal.Tests.Converters
 {
-    public class LinkConvertersTests
-    {
-        [Fact]
-        public void Deserialize_Single_Link_Object_Should_Parse()
-        {
-            var json = "{\"self\": { \"href\": \"/orders/123\" } }";
-            var links = JsonSerializer.Deserialize<Chatter.Rest.Hal.LinkCollection>(json);
-		    Assert.NotNull(links);
-		    Assert.Single(links);
-		    var link = links!.First();
-		    Assert.Equal("self", link.Rel);
-		    Assert.Single(link.LinkObjects);
-		    Assert.Equal("/orders/123", link.LinkObjects.First().Href);
-        }
+	public class LinkConvertersTests
+	{
+		[Fact]
+		public void Deserialize_Single_Link_Object_Should_Parse()
+		{
+			var json = "{\"self\": { \"href\": \"/orders/123\" } }";
+			var links = JsonSerializer.Deserialize<Chatter.Rest.Hal.LinkCollection>(json);
+			Assert.NotNull(links);
+			Assert.Single(links);
+			var link = links!.First();
+			Assert.Equal("self", link.Rel);
+			Assert.Single(link.LinkObjects);
+			Assert.Equal("/orders/123", link.LinkObjects.First().Href);
+		}
 		[Fact]
 		public void Deserialize_Link_As_Array_Should_Parse_Multiple()
 		{
@@ -55,11 +55,11 @@ namespace Chatter.Rest.Hal.Tests.Converters
 		public void RoundTrip_Serialization_LinkCollection_Preserves_Data()
 		{
 			var loc = new Chatter.Rest.Hal.LinkObjectCollection
-			{				new Chatter.Rest.Hal.LinkObject("/a/1"),
+			{               new Chatter.Rest.Hal.LinkObject("/a/1"),
 					new Chatter.Rest.Hal.LinkObject("/a/2")
 			};
 			var links = new Chatter.Rest.Hal.LinkCollection()
-			{				new Chatter.Rest.Hal.Link("self") { LinkObjects = loc },
+			{               new Chatter.Rest.Hal.Link("self") { LinkObjects = loc },
 				new Chatter.Rest.Hal.Link("next")
 			};
 			var serial = JsonSerializer.Serialize(links);

@@ -163,6 +163,7 @@ public sealed record Resource : IHalPart
 		}
 		catch (Exception)
 		{
-			return null;		}
+			return null;
+		}
 	}
 }

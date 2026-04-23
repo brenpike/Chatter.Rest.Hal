@@ -7,7 +7,7 @@ namespace Chatter.Rest.Hal.Builders;
 /// <summary>
 /// Builder for constructing embedded resource collections within a HAL resource.
 /// </summary>
-public class EmbeddedResourceCollectionBuilder : HalBuilder<EmbeddedResourceCollection>, IAddEmbeddedResourceToResourceStage
+public sealed class EmbeddedResourceCollectionBuilder : HalBuilder<EmbeddedResourceCollection>, IAddEmbeddedResourceToResourceStage
 {
 	private readonly IList<EmbeddedResourceBuilder> _embeddedBuilders = new List<EmbeddedResourceBuilder>();
 

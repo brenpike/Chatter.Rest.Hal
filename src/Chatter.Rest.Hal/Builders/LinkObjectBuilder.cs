@@ -206,10 +206,6 @@ public sealed class LinkObjectBuilder : HalBuilder<LinkObject>, ILinkObjectPrope
 	}
 
 	///<inheritdoc/>
-	/// <summary>
-	/// Builds the LinkObject with all configured properties.
-	/// </summary>
-	/// <returns>The constructed LinkObject.</returns>
 	public override LinkObject BuildPart()
 	{
 		return new LinkObject(_href)
