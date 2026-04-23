@@ -1,4 +1,4 @@
-# 🔗 Chatter.Rest.Hal
+# Chatter.Rest.Hal
 
 > A comprehensive .NET/C# implementation of the HAL (Hypertext Application Language) specification for building and consuming RESTful APIs
 
@@ -11,20 +11,20 @@
 
 ## Features
 
-- **Fluent Builder API** - Intuitive, chainable methods for constructing HAL resources
-- **Multiple Deserialization Options** - Support for strongly-typed objects, Resource objects, and source-generated types
-- **Embedded Resources** - Easily work with nested HAL resources
-- **Link Management** - Comprehensive link handling with curies, templates, and metadata
-- **Source Generators** - Code generation support via `Chatter.Rest.Hal.CodeGenerators` package
-- **Flexible Data Access** - Extension methods for querying links and embedded resources
-- **HAL Specification Compliant** - Full compliance with the [official HAL specification](https://datatracker.ietf.org/doc/html/draft-kelly-json-hal)
-- **Stable Link Array Representation** - Opt-in control over single-object vs. array serialization per relation or globally, resolving a common HAL API consistency issue
+- **Fluent Builder API**: Intuitive, chainable methods for constructing HAL resources
+- **Multiple Deserialization Options**: Support for strongly-typed objects, Resource objects, and source-generated types
+- **Embedded Resources**: Easily work with nested HAL resources
+- **Link Management**: Comprehensive link handling with curies, templates, and metadata
+- **Source Generators**: Code generation support via `Chatter.Rest.Hal.CodeGenerators` package
+- **Flexible Data Access**: Extension methods for querying links and embedded resources
+- **HAL Specification Compliant**: Full compliance with the [official HAL specification](https://datatracker.ietf.org/doc/html/draft-kelly-json-hal)
+- **Stable Link Array Representation**: Opt-in control over single-object vs. array serialization per relation or globally, resolving a common HAL API consistency issue
 
 ---
 
 ## Table of Contents
 
-- [🔗 Chatter.Rest.Hal](#-chatterresthal)
+- [Chatter.Rest.Hal](#chatterresthal)
   - [Features](#features)
   - [Table of Contents](#table-of-contents)
   - [Quick Start](#quick-start)
@@ -130,7 +130,7 @@ dotnet add package Chatter.Rest.Hal.CodeGenerators
 ## What is HAL?
 
 
-**HAL** stands for **Hypertext Application Language** — a simple, standardized format for designing REST APIs that are easy to explore, understand, and consume. It enables self-documenting APIs where hypermedia controls and resource relationships are discoverable through the API itself.
+**HAL** stands for **Hypertext Application Language**, a simple, standardized format for designing REST APIs that are easy to explore, understand, and consume. It enables self-documenting APIs where hypermedia controls and resource relationships are discoverable through the API itself.
 
 According to [Mike Kelly, the HAL specification creator](https://stateless.group/hal_specification.html):
 
@@ -145,7 +145,6 @@ According to [Mike Kelly, the HAL specification creator](https://stateless.group
 ---
 
 ## Building a HAL Resource
-
 
 ### Example JSON
 
@@ -334,82 +333,7 @@ var resource = ResourceBuilder.WithState(new { currentlyProcessing = 14, shipped
                     }
                 }
             },
-            {
-                "total": 30,
-                "currency": "EUR",
-                "status": "customs",
-                "id": "4441db6d-54c1-4298-a040-c6f31c7eafc8",
-                "_links": {
-                    "self": {
-                        "href": "/orders/4441db6d-54c1-4298-a040-c6f31c7eafc8"
-                    },
-                    "ea:basket": {
-                        "href": "/baskets/{basketId}",
-                        "templated": true
-                    },
-                    "ea:customer": {
-                        "href": "/customers/{custId}",
-                        "templated": true
-                    }
-                }
-            },
-            {
-                "total": 40,
-                "currency": "USD",
-                "status": "shipped",
-                "id": "533d4c68-01b9-4260-9331-af35bcaf1bda",
-                "_links": {
-                    "self": {
-                        "href": "/orders/533d4c68-01b9-4260-9331-af35bcaf1bda"
-                    },
-                    "ea:basket": {
-                        "href": "/baskets/{basketId}",
-                        "templated": true
-                    },
-                    "ea:customer": {
-                        "href": "/customers/{custId}",
-                        "templated": true
-                    }
-                }
-            },
-            {
-                "total": 50,
-                "currency": "USD",
-                "status": "complete",
-                "id": "bfd43505-ce9b-4eff-8f91-e75912f9510f",
-                "_links": {
-                    "self": {
-                        "href": "/orders/bfd43505-ce9b-4eff-8f91-e75912f9510f"
-                    },
-                    "ea:basket": {
-                        "href": "/baskets/{basketId}",
-                        "templated": true
-                    },
-                    "ea:customer": {
-                        "href": "/customers/{custId}",
-                        "templated": true
-                    }
-                }
-            },
-            {
-                "total": 69,
-                "currency": "CAD",
-                "status": "nice",
-                "id": "40711d60-0f85-4435-b7a8-cf4f5df4c551",
-                "_links": {
-                    "self": {
-                        "href": "/orders/40711d60-0f85-4435-b7a8-cf4f5df4c551"
-                    },
-                    "ea:basket": {
-                        "href": "/baskets/{basketId}",
-                        "templated": true
-                    },
-                    "ea:customer": {
-                        "href": "/customers/{custId}",
-                        "templated": true
-                    }
-                }
-            }
+            // ... (remaining orders omitted for brevity)
         ]
     }
 }
@@ -418,7 +342,6 @@ var resource = ResourceBuilder.WithState(new { currentlyProcessing = 14, shipped
 ---
 
 ## Deserializing a HAL Resource
-
 
 ### Strongly Typed Object
 
@@ -524,8 +447,7 @@ See the [HalResponseAttribute documentation](https://github.com/brenpike/Chatter
 
 ## Accessing data in a HAL Resource
 
-
-Once you've received a `application/hal+json` response from your API, the library provides convenient extension methods to navigate links and access embedded resources. The following examples show how to use the [Resource object](https://github.com/brenpike/Chatter.Rest.Hal/blob/main/src/Chatter.Rest.Hal/Resource.cs) extension methods.
+Once you've received an `application/hal+json` response from your API, the library provides convenient extension methods to navigate links and access embedded resources. The following examples show how to use the [Resource object](https://github.com/brenpike/Chatter.Rest.Hal/blob/main/src/Chatter.Rest.Hal/Resource.cs) extension methods.
 
 ### Get strongly typed embedded resources
 
@@ -588,7 +510,7 @@ The HAL specification states that servers **SHOULD NOT change** a relation betwe
 - 1 link object → `"self": { "href": "/orders" }` *(single object)*
 - 2+ link objects → `"self": [{ "href": "..." }, ...]` *(array)*
 
-This means a relation that currently returns one link could silently change its JSON shape as soon as a second link is added — breaking clients that hard-coded the single-object form.
+This means a relation that currently returns one link could silently change its JSON shape as soon as a second link is added, breaking clients that hard-coded the single-object form.
 
 ### Global Configuration
 
@@ -670,8 +592,8 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit issues, fork the repository, and create pull requests for any improvements.
+Contributions are welcome. To get started, open an issue to discuss the change you have in mind, then fork the repository and submit a pull request against `main`. Please include tests for any new behavior.
 
-For more information, visit the [GitHub Repository](https://github.com/brenpike/Chatter.Rest.Hal).
+For questions, bug reports, or feature requests, visit the [GitHub Repository](https://github.com/brenpike/Chatter.Rest.Hal).
 
 ---
