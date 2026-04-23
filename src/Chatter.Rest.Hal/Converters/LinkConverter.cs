@@ -66,7 +66,7 @@ public class LinkConverter : JsonConverter<Link>
         Link link = new Link(rel);
 
         // If value is null (e.g. "rel": null) create an empty Link with no LinkObjects.
-        if (kvp.Value == null || IsJsonNull(kvp.Value))
+        if (kvp.Value == null || ConverterHelpers.IsJsonNull(kvp.Value))
         {
             return link;
         }
@@ -74,7 +74,7 @@ public class LinkConverter : JsonConverter<Link>
         // If the value is an object, ensure it contains an href (required by HAL) before deserializing.
         if (kvp.Value is JsonObject obj)
         {
-            if (obj["href"] == null || IsJsonNull(obj["href"]))
+            if (obj["href"] == null || ConverterHelpers.IsJsonNull(obj["href"]))
             {
                 // Not a valid Link Object shape
                 return null;
@@ -94,7 +94,7 @@ public class LinkConverter : JsonConverter<Link>
                 {
                     return null;
                 }
-                if (itemObj["href"] == null || IsJsonNull(itemObj["href"]))
+                if (itemObj["href"] == null || ConverterHelpers.IsJsonNull(itemObj["href"]))
                 {
                     return null;
                 }
@@ -155,13 +155,4 @@ public class LinkConverter : JsonConverter<Link>
 		writer.WriteEndObject();
 	}
 
-	private static bool IsJsonNull(JsonNode? node)
-	{
-		if (node is not JsonValue jv) return false;
-#if NET8_0_OR_GREATER
-		return jv.GetValueKind() == JsonValueKind.Null;
-#else
-		return jv.ToJsonString() == "null";
-#endif
-	}
 }

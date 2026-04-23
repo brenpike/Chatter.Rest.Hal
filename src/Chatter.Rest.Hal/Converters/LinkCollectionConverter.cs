@@ -74,7 +74,7 @@ public class LinkCollectionConverter : JsonConverter<LinkCollection>
 			}
 			var link = new Link(kvp.Key);
 			// If the value is literally null ("rel": null) leave LinkObjects empty and add the link.
-			if (kvp.Value == null || IsJsonNull(kvp.Value))
+			if (kvp.Value == null || ConverterHelpers.IsJsonNull(kvp.Value))
 			{
 				links.Add(link);
 				continue;			}
@@ -131,13 +131,4 @@ public class LinkCollectionConverter : JsonConverter<LinkCollection>
 		writer.WriteEndObject();
 	}
 
-	private static bool IsJsonNull(JsonNode? node)
-	{
-		if (node is not JsonValue jv) return false;
-#if NET8_0_OR_GREATER
-		return jv.GetValueKind() == JsonValueKind.Null;
-#else
-		return jv.ToJsonString() == "null";
-#endif
-	}
 }
