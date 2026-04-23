@@ -105,7 +105,7 @@ public class Tests
 	}
 
 	[Fact]
-	public void Link()
+	public void Should_PreserveMultipleLinkObjects_When_LinkIsRoundTripped()
 	{
 		var l = new Link("next")
 		{
@@ -141,8 +141,8 @@ public class Tests
 	{
 		var loc = new LinkObjectCollection
 		{
-			LinkObjectBuilder.WithHref(null, "/foo/2").BuildPart(),
-			LinkObjectBuilder.WithHref(null, "/bar/4").BuildPart()
+			LinkObjectBuilder.WithHref(null, "/foo/2").BuildPart(), // null parent: test-only pattern — builder used standalone, not within hierarchy
+			LinkObjectBuilder.WithHref(null, "/bar/4").BuildPart() // null parent: test-only pattern — builder used standalone, not within hierarchy
 		};
 
 		var serial = JsonSerializer.Serialize(loc);
@@ -155,7 +155,7 @@ public class Tests
 	{
 		var loc = new LinkObjectCollection
 		{
-			LinkObjectBuilder.WithHref(null, "/bar/4").BuildPart()
+			LinkObjectBuilder.WithHref(null, "/bar/4").BuildPart() // null parent: test-only pattern — builder used standalone, not within hierarchy
 		};
 
 		var serial = JsonSerializer.Serialize(loc);
@@ -168,8 +168,8 @@ public class Tests
 	{
 		var erc = new EmbeddedResourceCollection
 		{
-			EmbeddedResourceBuilder.WithName(null, "num1").BuildPart(),
-			EmbeddedResourceBuilder.WithName(null, "num2").BuildPart(),
+			EmbeddedResourceBuilder.WithName(null, "num1").BuildPart(), // null parent: test-only pattern — builder used standalone, not within hierarchy
+			EmbeddedResourceBuilder.WithName(null, "num2").BuildPart(), // null parent: test-only pattern — builder used standalone, not within hierarchy
 		};
 
 		var serial = JsonSerializer.Serialize(erc);
@@ -182,7 +182,7 @@ public class Tests
 	{
 		var erc = new EmbeddedResourceCollection
 		{
-			EmbeddedResourceBuilder.WithName(null, "num1").BuildPart()
+			EmbeddedResourceBuilder.WithName(null, "num1").BuildPart() // null parent: test-only pattern — builder used standalone, not within hierarchy
 		};
 
 		var serial = JsonSerializer.Serialize(erc);

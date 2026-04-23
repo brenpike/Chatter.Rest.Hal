@@ -8,7 +8,7 @@ namespace Chatter.Rest.Hal.Converters;
 /// <summary>
 /// JSON converter for serializing and deserializing resource collections within embedded resources.
 /// </summary>
-public class ResourceCollectionConverter : JsonConverter<ResourceCollection>
+public sealed class ResourceCollectionConverter : JsonConverter<ResourceCollection>
 {
 	/// <summary>
 	/// Reads a ResourceCollection from JSON, handling both single resources and arrays.

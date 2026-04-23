@@ -2,14 +2,12 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
-using Chatter.Rest.Hal;
-
 namespace Chatter.Rest.Hal.Converters;
 
 /// <summary>
 /// JSON converter for serializing and deserializing link collections (_links).
 /// </summary>
-public class LinkCollectionConverter : JsonConverter<LinkCollection>
+public sealed class LinkCollectionConverter : JsonConverter<LinkCollection>
 {
 	private readonly HalJsonOptions? _halJsonOptions;
 
@@ -72,19 +70,21 @@ public class LinkCollectionConverter : JsonConverter<LinkCollection>
 			{
 				continue;
 			}
-			var link = new Link(kvp.Key);
+
+			var link = new Link(kvp.Key);
 			// If the value is literally null ("rel": null) leave LinkObjects empty and add the link.
-			if (kvp.Value == null || IsJsonNull(kvp.Value))
+			if (kvp.Value == null || ConverterHelpers.IsJsonNull(kvp.Value))
 			{
 				links.Add(link);
-				continue;			}
+				continue;
+			}
 			// Support string shorthand ("rel": "/orders/123")
 			if (kvp.Value is JsonValue jv)
 			{
 				var href = jv.GetValue<string?>();
 				if (!string.IsNullOrWhiteSpace(href)) link.LinkObjects.Add(new LinkObject(href));
 			}
-			else if (kvp.Value is JsonObject val)
+			if (kvp.Value is JsonObject val)
 			{
 				var lo = val.Deserialize<LinkObject>(options);
 				if (lo != null) link.LinkObjects.Add(lo);
@@ -131,13 +131,4 @@ public class LinkCollectionConverter : JsonConverter<LinkCollection>
 		writer.WriteEndObject();
 	}
 
-	private static bool IsJsonNull(JsonNode? node)
-	{
-		if (node is not JsonValue jv) return false;
-#if NET8_0_OR_GREATER
-		return jv.GetValueKind() == JsonValueKind.Null;
-#else
-		return jv.ToJsonString() == "null";
-#endif
-	}
 }

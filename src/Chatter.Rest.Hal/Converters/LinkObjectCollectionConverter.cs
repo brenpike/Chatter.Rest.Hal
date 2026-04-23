@@ -2,14 +2,12 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
-using Chatter.Rest.Hal;
-
 namespace Chatter.Rest.Hal.Converters;
 
 /// <summary>
 /// JSON converter for serializing and deserializing link object collections within a link relation.
 /// </summary>
-public class LinkObjectCollectionConverter : JsonConverter<LinkObjectCollection>
+public sealed class LinkObjectCollectionConverter : JsonConverter<LinkObjectCollection>
 {
 	private readonly HalJsonOptions? _halJsonOptions;
 
@@ -73,7 +71,7 @@ public class LinkObjectCollectionConverter : JsonConverter<LinkObjectCollection>
 					linkObjects.Add(new LinkObject(href));
 				}
 			}
-			catch
+			catch (Exception)
 			{
 				// ignore non-string values
 			}

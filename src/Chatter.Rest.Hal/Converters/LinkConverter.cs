@@ -1,16 +1,15 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
-using Chatter.Rest.Hal;
-
 namespace Chatter.Rest.Hal.Converters;
 
 /// <summary>
 /// JSON converter for serializing and deserializing HAL links with their link objects.
 /// </summary>
-public class LinkConverter : JsonConverter<Link>
+public sealed class LinkConverter : JsonConverter<Link>
 {
 	private readonly HalJsonOptions? _halJsonOptions;
 
@@ -33,95 +32,99 @@ public class LinkConverter : JsonConverter<Link>
 	/// <param name="options">Serializer options.</param>
 	/// <returns>The deserialized Link, or null if the JSON is malformed.</returns>
 	public override Link? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-    {
-        var node = JsonNode.Parse(ref reader, new JsonNodeOptions() { PropertyNameCaseInsensitive = true });
+	{
+		var node = JsonNode.Parse(ref reader, new JsonNodeOptions() { PropertyNameCaseInsensitive = true });
 
-        // Only accept a single-property object representing a HAL link entry (e.g. { "rel": { ... } })
-        if (node is not JsonObject jsonObject)
-        {
-            // Not an object we can interpret as a Link  be tolerant and return null
-            return null;
-        }
+		// Only accept a single-property object representing a HAL link entry (e.g. { "rel": { ... } })
+		if (node is not JsonObject jsonObject)
+		{
+			// Not an object we can interpret as a Link  be tolerant and return null
+			return null;
+		}
 
-        // A standalone Link JSON should be an object with exactly one property (the rel)
-        if (jsonObject.Count != 1)
-        {
-            return null;
-        }
+		// A standalone Link JSON should be an object with exactly one property (the rel)
+		if (jsonObject.Count != 1)
+		{
+			return null;
+		}
 
-        var kvp = jsonObject.First();
+		var kvp = jsonObject.FirstOrDefault();
+		if (kvp.Equals(default(KeyValuePair<string, JsonNode?>)))
+		{
+			return null;
+		}
 
-        // If rel is missing or invalid, return null rather than throwing to be tolerant of malformed input.
-        if (string.IsNullOrWhiteSpace(kvp.Key))
-        {
-            return null;
-        }
+		// If rel is missing or invalid, return null rather than throwing to be tolerant of malformed input.
+		if (string.IsNullOrWhiteSpace(kvp.Key))
+		{
+			return null;
+		}
 
-        var rel = kvp.Key;
-        Link link = new Link(rel);
+		var rel = kvp.Key;
+		Link link = new Link(rel);
 
-        // If value is null (e.g. "rel": null) create an empty Link with no LinkObjects.
-        if (kvp.Value == null || IsJsonNull(kvp.Value))
-        {
-            return link;
-        }
+		// If value is null (e.g. "rel": null) create an empty Link with no LinkObjects.
+		if (kvp.Value == null || ConverterHelpers.IsJsonNull(kvp.Value))
+		{
+			return link;
+		}
 
-        // If the value is an object, ensure it contains an href (required by HAL) before deserializing.
-        if (kvp.Value is JsonObject obj)
-        {
-            if (obj["href"] == null || IsJsonNull(obj["href"]))
-            {
-                // Not a valid Link Object shape
-                return null;
-            }
+		// If the value is an object, ensure it contains an href (required by HAL) before deserializing.
+		if (kvp.Value is JsonObject obj)
+		{
+			if (obj["href"] == null || ConverterHelpers.IsJsonNull(obj["href"]))
+			{
+				// Not a valid Link Object shape
+				return null;
+			}
 
-            var lo = obj.Deserialize<LinkObject>(options);
-            if (lo != null) link.LinkObjects.Add(lo);
-            return link;
-        }
+			var lo = obj.Deserialize<LinkObject>(options);
+			if (lo != null) link.LinkObjects.Add(lo);
+			return link;
+		}
 
-        // If the value is an array, ensure it is an array of Link Objects (each must have href)
-        if (kvp.Value is JsonArray ja)
-        {
-            foreach (var item in ja)
-            {
-                if (item is not JsonObject itemObj)
-                {
-                    return null;
-                }
-                if (itemObj["href"] == null || IsJsonNull(itemObj["href"]))
-                {
-                    return null;
-                }
-            }
+		// If the value is an array, ensure it is an array of Link Objects (each must have href)
+		if (kvp.Value is JsonArray ja)
+		{
+			foreach (var item in ja)
+			{
+				if (item is not JsonObject itemObj)
+				{
+					return null;
+				}
+				if (itemObj["href"] == null || ConverterHelpers.IsJsonNull(itemObj["href"]))
+				{
+					return null;
+				}
+			}
 
-            var loc = ja.Deserialize<LinkObjectCollection>(options);
-            if (loc != null) link.LinkObjects = loc;
-            link.IsArray = true;
-            return link;
-        }
+			var loc = ja.Deserialize<LinkObjectCollection>(options);
+			if (loc != null) link.LinkObjects = loc;
+			link.IsArray = true;
+			return link;
+		}
 
-        // If the value is a primitive (commonly a string shorthand), treat it as an href value
-        if (kvp.Value is JsonValue jv)
-        {
-            try
-            {
-                var href = jv.Deserialize<string?>();
-                if (!string.IsNullOrWhiteSpace(href))
-                {
-                    link.LinkObjects.Add(new LinkObject(href));
-                    return link;
-                }
-            }
-            catch
-            {
-                // fallthrough to return null
-            }
-        }
+		// If the value is a primitive (commonly a string shorthand), treat it as an href value
+		if (kvp.Value is JsonValue jv)
+		{
+			try
+			{
+				var href = jv.Deserialize<string?>();
+				if (!string.IsNullOrWhiteSpace(href))
+				{
+					link.LinkObjects.Add(new LinkObject(href));
+					return link;
+				}
+			}
+			catch (Exception)
+			{
+				// fallthrough to return null
+			}
+		}
 
-        // Not a recognized HAL link shape be conservative and return null
-        return null;
-    }
+		// Not a recognized HAL link shape be conservative and return null
+		return null;
+	}
 
 	/// <summary>
 	/// Writes a Link to JSON as an object with the relation as the property name.
@@ -150,13 +153,4 @@ public class LinkConverter : JsonConverter<Link>
 		writer.WriteEndObject();
 	}
 
-	private static bool IsJsonNull(JsonNode? node)
-	{
-		if (node is not JsonValue jv) return false;
-#if NET8_0_OR_GREATER
-		return jv.GetValueKind() == JsonValueKind.Null;
-#else
-		return jv.ToJsonString() == "null";
-#endif
-	}
 }

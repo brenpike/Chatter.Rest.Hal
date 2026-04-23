@@ -139,3 +139,7 @@ All projects have `<Nullable>enable</Nullable>`. The `netstandard2.0` target of 
 - **Test naming:** `Method_Scenario_Expected` — e.g., `Curies_Are_Parsed_As_Array_Of_LinkObjects`
 - **JSON fixtures:** `test/Chatter.Rest.Hal.Tests/Json/` — loaded via `TestHelpers.LoadResourceFromFixture()`
 - **Shared helpers:** `TestHelpers` provides factory methods (`CreateLink`, `CreateLinkObject`, `CreateResourceWithLink`) and JSON assertion utilities
+
+### Test Assertion Style
+
+FluentAssertions (`Should()` syntax) is the preferred assertion library for new tests. Existing tests using xUnit `Assert.*` should not be migrated retroactively.

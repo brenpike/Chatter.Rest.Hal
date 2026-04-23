@@ -8,7 +8,7 @@ namespace Chatter.Rest.Hal.Converters;
 /// <summary>
 /// JSON converter for serializing and deserializing HAL resources, separating state from _links and _embedded.
 /// </summary>
-public class ResourceConverter : JsonConverter<Resource>
+public sealed class ResourceConverter : JsonConverter<Resource>
 {
 	/// <summary>
 	/// Reads a Resource from JSON, parsing state, _links, and _embedded properties.

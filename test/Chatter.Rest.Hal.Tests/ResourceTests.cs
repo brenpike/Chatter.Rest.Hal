@@ -88,7 +88,7 @@ public class ResourceTests
 	}
 
 	[Fact]
-	public void State_Should_Striongly_Typed_State_If_StateObject_Matches_Type_Parameter()
+	public void State_Should_Strongly_Typed_State_If_StateObject_Matches_Type_Parameter()
 	{
 		var ocs = new OrderCollectionState { CurrentlyProcessing = 14, ShippedToday = 20 };
 		var res = new Resource
@@ -228,7 +228,7 @@ public class ResourceTests
 
 
 	[Fact]
-	public void Getting_Resource_Embedded_Should_Return_New_EmbeddedResourceollection_If_EmbeddedCreator_Returns_Null()
+	public void Getting_Resource_Embedded_Should_Return_New_EmbeddedResourceCollection_If_EmbeddedCreator_Returns_Null()
 	{
 		var node = JsonSerializer.SerializeToNode(new { foo = 1, bar = "baz" });
 		Func<EmbeddedResourceCollection> embeddedCollection = () => null!;
@@ -240,5 +240,4 @@ public class ResourceTests
 		Assert.Empty(embedded);
 	}
 
-	//TODO: As<T> tests
 }

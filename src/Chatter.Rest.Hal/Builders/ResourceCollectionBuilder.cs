@@ -83,7 +83,7 @@ public sealed class ResourceCollectionBuilder : HalBuilder<ResourceCollection>, 
 			return resource.AddEmbedded(name);
 		}
 
-		throw new InvalidOperationException();
+		throw new InvalidOperationException("No parent EmbeddedResourceCollection or Resource builder found to add an embedded resource.");
 	}
 
 	IEmbeddedLinkCreationStage IAddLinkToEmbeddedStage.AddLink(string rel)
@@ -112,7 +112,7 @@ public sealed class ResourceCollectionBuilder : HalBuilder<ResourceCollection>, 
 		return resourceCollection;
 	}
 
-	Resource IBuildHalPart<Resource>.BuildPart() => throw new NotImplementedException();
+	Resource IBuildHalPart<Resource>.BuildPart() => throw new NotSupportedException("ResourceCollectionBuilder builds ResourceCollection, not individual Resource instances.");
 }
 
 /// <summary>

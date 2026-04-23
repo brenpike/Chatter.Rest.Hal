@@ -202,14 +202,10 @@ public sealed class LinkObjectBuilder : HalBuilder<LinkObject>, ILinkObjectPrope
 			return resource.AddEmbedded(name);
 		}
 
-		throw new InvalidOperationException();
+		throw new InvalidOperationException("No parent EmbeddedResourceCollection or Resource builder found to add an embedded resource.");
 	}
 
 	///<inheritdoc/>
-	/// <summary>
-	/// Builds the LinkObject with all configured properties.
-	/// </summary>
-	/// <returns>The constructed LinkObject.</returns>
 	public override LinkObject BuildPart()
 	{
 		return new LinkObject(_href)
