@@ -1,63 +1,79 @@
-CONTRIBUTING
+# Contributing
 
-Thank you for considering a contribution to Chatter.Rest.Hal 🎉
+Contributions are welcome. For non-trivial changes, please open an issue first to discuss what you would like to change.
 
-This document describes how to get started, the expectations for contributions, and the guidance to prepare a clean, reviewable pull request.
+## Reporting Issues
 
-1. Who this is for
+Use [GitHub Issues](https://github.com/brenpike/Chatter.Rest.Hal/issues) to report bugs or request features. Please include:
 
-- New contributors who want to build, run tests, or extend the project.
-- Maintainers who need a consistent contribution workflow.
+- .NET SDK version
+- Package version
+- A minimal reproduction
+- Actual vs expected behavior
 
-2. Getting started (high level)
+## Getting Started
 
-- Prerequisites: Install the .NET SDK version defined in global.json (use the LTS recommended by the repo maintainers), and a code editor (Visual Studio, VS Code, Rider).
-- Clone the repository and create a feature branch from main/master. Use descriptive branch names (e.g., feat/add-http-links, fix/generator-nullref).
-- Run the project build and tests locally before opening a PR. See docs/development.md for development details and how to run the generator.
+Prerequisites:
 
-3. Code style and quality expectations
+- .NET 8.0 SDK (8.0.x)
+- No other tools required
 
-- Follow standard C# conventions (naming, file organization) and the repository's editorconfig if present.
-- Keep changes small and focused. One logical change per pull request helps reviewers.
-- Add or update unit tests for behavioral changes. Tests that demonstrate the bug and pass after the fix are preferred.
-- Run the formatter and static analysis before committing. If you use an IDE, enable format-on-save or run dotnet format against the solution.
+Clone and build:
 
-4. Tests
+```bash
+git clone https://github.com/brenpike/Chatter.Rest.Hal.git
+cd Chatter.Rest.Hal
+dotnet restore
+dotnet build
+```
 
-- All unit tests must pass locally and in CI.
-- Include tests for new behavior and edge cases when relevant.
-- If a change temporarily requires a failing test (e.g. reproducing a bug), mark it with a clear comment and a linked issue. Prefer fixing the issue in the same PR.
+Run tests:
 
-5. Commit messages
+```bash
+dotnet test
+```
 
-- Use clear, imperative-style commit messages (e.g., "Add HAL link helper", "Fix null ref in generator").
-- Squash or tidy up WIP commits before the final PR if appropriate.
+Full details on build, test, and pack commands are in [docs/development.md](docs/development.md).
 
-6. Pull request guidance
+## Making Changes
 
-- Base your PR on the default development branch (main or master — follow repository convention).
-- Title and description: include a short summary, motivation, and any design notes. Link to related issues using Issue # numbers when available.
-- Make it easy to review: include screenshots (UI changes), relevant logs, and a short checklist of what you verified locally.
-- Add unit/integration tests or explain why tests are not necessary.
-- Tag one or more maintainers as reviewers (see repository owner or CODEOWNERS if present).
+Branch naming:
 
-7. Code generation and schema changes
+- `feature/<short-description>` for new features
+- `bugfix/<short-description>` for bug fixes
+- `docs/<short-description>` for documentation
+- `refactor/<short-description>` for refactoring
 
-- This project uses a code-generation tool for some artifacts. Changes that affect generated sources must include either:
-  - regenerated outputs in the PR, or
-  - clear instructions for maintainers on how to regenerate outputs (see docs/development.md).
-- Keep generated files separate from handwritten code where possible.
+Always branch from `main` and submit pull requests back to `main`.
 
-8. Security and secrets
+## Code Style
 
-- Do not commit secrets, credentials, or any private keys. If your change requires secret configuration for local testing, document how to use environment variables or a local secrets store.
+Follow the existing `.editorconfig` rules:
 
-9. Licensing and contributor agreement
+- Indentation: tabs
+- Line endings: CRLF
+- Braces: Allman style
+- Nullable: enabled
 
-- By contributing, you confirm your code can be licensed under this repository's license. Do not submit third-party code without proper attribution and license compatibility.
+Run `dotnet build` before submitting - zero warnings expected on `net8.0`.
 
-10. Getting help
+## Tests
 
-- Open an issue if you're unsure where to start or want to discuss a design before implementing it. Maintainers will triage and guide.
+- All new behavior must include tests
+- Framework: xunit 2.4.x with FluentAssertions 6.x
+- Test naming: `Method_Scenario_Expected` (example: `AddLink_WithDuplicateRelation_ThrowsInvalidOperationException`)
+- JSON fixtures go in `test/Chatter.Rest.Hal.Tests/Json/`
+- Use `TestHelpers` factory methods for common setup
 
-Thanks again — we appreciate your help in improving Chatter.Rest.Hal.
+## Pull Request Checklist
+
+- [ ] Branched from `main`
+- [ ] `dotnet build` passes with zero warnings on `net8.0`
+- [ ] `dotnet test` passes
+- [ ] New behavior has test coverage
+- [ ] Code style matches `.editorconfig`
+- [ ] PR description explains the why, not just the what
+
+## License
+
+By contributing, you agree your contributions will be licensed under the project's [MIT License](LICENSE).
