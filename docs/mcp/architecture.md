@@ -434,6 +434,116 @@ When returning HAL resource content in `CallToolResult`, the resource is seriali
 
 ---
 
+## Logging Architecture
+
+### ILogger<T> Injection
+
+Each stateful type accepts `ILogger<T>` via constructor injection (REQ-24). Updated constructor signatures:
+
+```csharp
+public sealed class HalMcpStartupService : IHostedService
+{
+    public HalMcpStartupService(
+        McpServerOptions mcpOptions,
+        HttpClient httpClient,
+        HalMcpServerOptions halOptions,
+        ILogger<HalMcpStartupService> logger);
+}
+
+public sealed class HalNavigationTool : McpServerTool
+{
+    public HalNavigationTool(
+        string rel,
+        LinkObject link,
+        string selfHref,
+        HttpClient httpClient,
+        HalMcpServerOptions halOptions,
+        McpServerOptions mcpOptions,
+        ILogger<HalNavigationTool> logger);
+}
+
+public sealed class NavigateToRootTool : McpServerTool
+{
+    public NavigateToRootTool(
+        HttpClient httpClient,
+        HalMcpServerOptions halOptions,
+        McpServerOptions mcpOptions,
+        ILogger<NavigateToRootTool> logger);
+}
+```
+
+**`HalToolCollectionManager` (internal static):** Does not accept `ILogger`. It is a pure collection-mutation helper. All logging for tool-swap operations is performed at the call site (the tool or startup service that calls `SwapTools`), which has richer context (which tool triggered the swap, the root URI, the current navigation href). Injecting a logger into a static helper would make it impure and reduce testability without improving log quality.
+
+**`HalMcpServerBuilderExtensions.WithHalApi`:** Runs during service registration before the DI container is built, so `ILogger` is unavailable at this stage. The configured-root-uri `Debug` log is deferred to `HalMcpStartupService.StartAsync` instead. If `RootUri` validation fails, `ArgumentException` is thrown without logging — the exception message is descriptive, and the caller's exception handler is the appropriate place to log it.
+
+---
+
+### LoggerMessage Source Generators
+
+All log points are defined as `[LoggerMessage]` attributed static partial methods (REQ-35). Event IDs are scoped per category (per type).
+
+**`HalMcpStartupService` log points:**
+
+| Log method | Level | Event ID | Message template | Parameters |
+|---|---|---|---|---|
+| `LogConfiguredRootUri` | Debug | 1 | `"Configured RootUri: {RootUri}"` | `RootUri` |
+| `LogStartupFetchBegin` | Debug | 2 | `"Fetching root resource from {RootUri}"` | `RootUri` |
+| `LogStartupComplete` | Information | 3 | `"HAL MCP tools initialized: {ToolCount} tools registered from {RootUri}"` | `ToolCount`, `RootUri` |
+| `LogStartupFailed` | Warning | 4 | `"Failed to fetch root resource from {RootUri} on startup"` | `RootUri` (exception passed as `Exception` arg) |
+
+**`HalNavigationTool` log points:**
+
+| Log method | Level | Event ID | Message template | Parameters |
+|---|---|---|---|---|
+| `LogToolInvoking` | Debug | 1 | `"Invoking tool '{ToolName}', fetching {Href}"` | `ToolName`, `Href` |
+| `LogToolResponse` | Debug | 2 | `"Tool '{ToolName}' received {StatusCode} from {Href}"` | `ToolName`, `StatusCode`, `Href` |
+| `LogToolHttpError` | Warning | 3 | `"Tool '{ToolName}' received HTTP {StatusCode} from {Href}"` | `ToolName`, `StatusCode`, `Href` |
+| `LogToolNonHalResponse` | Warning | 4 | `"Tool '{ToolName}' received non-HAL response from {Href}"` | `ToolName`, `Href` |
+| `LogToolException` | Error | 5 | `"Tool '{ToolName}' failed"` | `ToolName` (exception passed as `Exception` arg) |
+| `LogToolsSwapped` | Debug | 6 | `"Tool collection updated: {RemovedCount} removed, {AddedCount} added"` | `RemovedCount`, `AddedCount` |
+| `LogToolAdded` | Trace | 7 | `"Tool added: {AddedToolName}"` | `AddedToolName` |
+
+**`NavigateToRootTool` log points:**
+
+| Log method | Level | Event ID | Message template | Parameters |
+|---|---|---|---|---|
+| `LogRootInvoking` | Debug | 1 | `"Navigating to root {RootUri}"` | `RootUri` |
+| `LogRootResponse` | Debug | 2 | `"Root navigation received {StatusCode} from {RootUri}"` | `StatusCode`, `RootUri` |
+| `LogRootNonHalResponse` | Warning | 3 | `"Root resource at {RootUri} was not a valid HAL resource"` | `RootUri` |
+| `LogRootException` | Error | 4 | `"Root navigation failed"` | (exception passed as `Exception` arg) |
+| `LogRootToolsSwapped` | Debug | 5 | `"Root tool collection updated: {RemovedCount} removed, {AddedCount} added"` | `RemovedCount`, `AddedCount` |
+| `LogRootToolAdded` | Trace | 6 | `"Tool added: {AddedToolName}"` | `AddedToolName` |
+
+---
+
+### SwapTools Call-Site Logging Pattern
+
+The calling tool or startup service logs before and after calling `SwapTools`. The Trace-level tool-name loop uses an explicit `IsEnabled` guard (REQ-33):
+
+```
+var previousCount = _mcpOptions.ToolCollection.Count;
+HalToolCollectionManager.SwapTools(
+    _mcpOptions.ToolCollection, response, resolvedHref,
+    _halOptions, _httpClient, _mcpOptions);
+var addedCount = _mcpOptions.ToolCollection.Count - 1; // minus navigate_to_root
+LogToolsSwapped(previousCount - 1, addedCount);
+
+if (_logger.IsEnabled(LogLevel.Trace))
+    foreach (var tool in _mcpOptions.ToolCollection)
+        if (tool.ProtocolTool.Name != "navigate_to_root")
+            LogToolAdded(tool.ProtocolTool.Name);
+```
+
+The `-1` adjusts for the persistent `navigate_to_root` tool, which is not counted in the "removed" or "added" totals.
+
+---
+
+### Sensitive Data
+
+Request bodies, response bodies, auth headers, and API keys must never appear in log messages (REQ-36). Tool names and hrefs are safe to log.
+
+---
+
 ## Test Strategy
 
 ### Unit tests
@@ -494,3 +604,13 @@ When returning HAL resource content in `CallToolResult`, the resource is seriali
 - Start at root -> navigate to sub-resource -> navigate to child -> return to root
 - Verify tool collection updates correctly at each step
 - Verify content returned at each step matches the fetched resource
+
+### Logging
+
+- Verify `HalMcpStartupService` emits `Information` with tool count on successful startup
+- Verify `HalMcpStartupService` emits `Warning` (not `Error`) when root fetch fails on startup
+- Verify `HalNavigationTool.InvokeAsync` emits `Debug` before fetch, `Warning` on HTTP error, `Warning` on non-HAL response, `Error` on exception
+- Verify `NavigateToRootTool.InvokeAsync` follows the same pattern
+- Verify Trace-level tool-name loop does not execute when Trace logging is disabled (confirms `IsEnabled` guard works)
+- Verify no log calls throw when a `NullLogger<T>` is used
+- Use `Microsoft.Extensions.Logging.Testing.FakeLogger<T>` or a mock `ILogger<T>` to assert log level, event ID, and message content

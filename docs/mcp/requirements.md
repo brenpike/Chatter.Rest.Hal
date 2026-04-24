@@ -127,6 +127,34 @@ Examples:
 
 **REQ-23:** `MaxDepth` traversal limiting is not implemented. The agent may traverse indefinitely.
 
+### Logging
+
+**REQ-24:** `HalMcpStartupService`, `HalNavigationTool`, and `NavigateToRootTool` each accept `ILogger<T>` via constructor injection. `HalToolCollectionManager` is an internal static helper and does not hold an `ILogger`; logging for tool-swap operations is performed at the call site (the tool or startup service that calls `SwapTools`), which has richer context about the triggering event.
+
+**REQ-25:** All log messages use structured logging with named placeholders (e.g., `{ToolName}`, `{Href}`, `{StatusCode}`, `{ToolCount}`, `{RootUri}`, `{Rel}`) and never string concatenation or string interpolation in log calls.
+
+**REQ-26:** At `Information` level, `HalMcpStartupService` logs one message on successful root fetch and tool registration, including the number of tools registered and the root URI. This is the only `Information`-level log in the package.
+
+**REQ-27:** At `Warning` level, `HalMcpStartupService` logs when the root fetch fails on startup, including the exception and the root URI. Startup does not throw (per REQ-03).
+
+**REQ-28:** At `Debug` level, `HalNavigationTool.InvokeAsync` logs the tool name and resolved href before each HTTP fetch, and the response status code after receiving the response.
+
+**REQ-29:** At `Warning` level, `HalNavigationTool.InvokeAsync` logs when the HTTP response is a non-success status code, including the status code and resolved href.
+
+**REQ-30:** At `Warning` level, `HalNavigationTool.InvokeAsync` logs when the response is not a valid HAL resource, including the resolved href.
+
+**REQ-31:** At `Error` level, `HalNavigationTool.InvokeAsync` logs unexpected exceptions during tool invocation, including the exception and the tool name.
+
+**REQ-32:** `NavigateToRootTool.InvokeAsync` follows the same logging pattern as `HalNavigationTool` (REQ-28 through REQ-31) using its own `ILogger<NavigateToRootTool>`.
+
+**REQ-33:** At `Debug` level, after `SwapTools` completes, the calling tool or startup service logs the number of tools removed and the number of tools added. At `Trace` level, each individual tool name added to the collection is logged inside an `IsEnabled(LogLevel.Trace)` guard to avoid iteration overhead when `Trace` is not enabled.
+
+**REQ-34:** At `Debug` level, `HalMcpStartupService.StartAsync` logs the configured `RootUri` before fetching. Because `WithHalApi` runs during service registration before the DI container is built, the configured-root-uri log is deferred to `HalMcpStartupService.StartAsync` rather than emitted from `WithHalApi` directly. If `RootUri` validation fails in `WithHalApi`, the `ArgumentException` is thrown without logging — the exception message is descriptive and the caller's exception handler is the correct place to log it.
+
+**REQ-35:** All `Debug`-level log points use `LoggerMessage` source generators to avoid string allocation when `Debug` logging is not enabled. All `Trace`-level log points that iterate collections use explicit `IsEnabled(LogLevel.Trace)` guards before the loop. No `Information`-level logging occurs on hot paths (only on startup).
+
+**REQ-36:** Request bodies, response bodies, auth headers, and API keys must never appear in log messages at any log level. Tool names and hrefs are safe to log.
+
 ---
 
 ## Integration Story

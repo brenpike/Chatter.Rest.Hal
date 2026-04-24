@@ -471,6 +471,59 @@ public static class HttpClientHalExtensions
 
 ---
 
+## Logging Architecture
+
+### ILogger<T> Injection
+
+`HalClient` accepts `ILogger<HalClient>` as a constructor parameter (REQ-35). The `IHalClient` interface is not modified — logging is a `HalClient` implementation detail.
+
+```csharp
+public sealed class HalClient : IHalClient
+{
+    public HalClient(HttpClient httpClient, HalClientOptions options, ILogger<HalClient>? logger = null);
+    public HalClient(HttpClient httpClient, IOptions<HalClientOptions> options, ILogger<HalClient>? logger = null);
+}
+```
+
+The `ILogger<HalClient>` parameter is optional (defaulting to `null`) so that callers who do not use DI can construct `HalClient` without a logger. When `null`, a `NullLogger<HalClient>` is used internally.
+
+**Extension method logging:** `FollowLink`, `FollowLinks`, `PostTo`, `PutTo`, `PatchTo`, and `DeleteTo` extension methods accept an optional `ILogger? logger = null` parameter for rel-resolution logging (REQ-41, REQ-42). Callers that want debug-level rel-resolution logging pass their own logger explicitly. This avoids adding a logging accessor to `IHalClient` (a breaking interface change) and avoids service-locator patterns.
+
+**Rejected alternative:** Adding an internal `ILogger` property to `HalClient` accessible via a cast from `IHalClient`. Rejected because it couples extension methods to the concrete type, breaks the `IHalClient` abstraction, and cannot work when callers substitute a mock `IHalClient`.
+
+---
+
+### LoggerMessage Source Generators
+
+All log points are defined as `[LoggerMessage]` attributed static partial methods (REQ-44). These are declared as a partial class on `HalClient` or in a companion file `HalClientLog.cs`.
+
+| Log method | Level | Event ID | Message template | Parameters |
+|---|---|---|---|---|
+| `LogSendingRequest` | Debug | 1 | `"Sending {Method} {Uri}"` | `Method`, `Uri` |
+| `LogReceivedResponse` | Debug | 2 | `"Received {StatusCode} from {Method} {Uri}"` | `StatusCode`, `Method`, `Uri` |
+| `LogNotFoundReturningNull` | Debug | 3 | `"Received 404 for {Method} {Uri}, returning null"` | `Method`, `Uri` |
+| `LogNonHalContentType` | Warning | 4 | `"Response from {Uri} has Content-Type '{ContentType}', expected HAL media type; returning null"` | `Uri`, `ContentType` |
+| `LogDeserializationFailed` | Error | 5 | `"Failed to deserialize HAL response from {Uri}"` | `Uri` (exception passed as `Exception` arg) |
+| `LogResolvingLink` | Debug | 6 | `"Resolving rel '{Rel}' on resource '{SelfHref}': href={Href}, templated={Templated}"` | `Rel`, `SelfHref`, `Href`, `Templated` |
+| `LogMutationRequest` | Debug | 7 | `"Sending {Method} to rel '{Rel}', uri={Uri}"` | `Method`, `Rel`, `Uri` |
+| `LogHalClientInitialized` | Debug | 8 | `"HalClient initialized"` | (none) |
+
+Event IDs are scoped to the `HalClient` category. `LogHalClientInitialized` is emitted once per `HalClient` instance construction (REQ-43).
+
+---
+
+### IsEnabled Guards
+
+`LoggerMessage` source generators handle the `IsEnabled` check internally for fixed log points. Explicit `IsEnabled` guards are only needed when building expensive log state (e.g., constructing a string from iteration) before the log call. `HalClient` has no such iterating log points; all log messages use fixed structured parameters.
+
+---
+
+### Sensitive Data
+
+Auth headers, request bodies, and response bodies must never appear in log messages (REQ-45). The log point table above lists only safe parameters: HTTP method, URI, status code, rel name, and content type.
+
+---
+
 ## Test Strategy
 
 ### Unit tests
@@ -547,3 +600,12 @@ public static class HttpClientHalExtensions
 - Mock `HttpClient` (via `HttpMessageHandler`) returning HAL JSON
 - GET root -> `FollowLink` to sub-resource -> `PostTo` to create -> `DeleteTo` to remove
 - Verify correct URIs, methods, headers, and deserialized responses at each step
+
+### Logging
+
+- Verify `HalClient` emits `Debug` log before and after each HTTP call when a real logger is provided
+- Verify `HalClient` emits `Warning` when non-HAL Content-Type is received in lenient mode
+- Verify `HalClient` emits `Error` on deserialization failure, including exception
+- Verify no log calls throw when `NullLogger<HalClient>` is used (covers no-logging construction path)
+- Use `Microsoft.Extensions.Logging.Testing.FakeLogger<HalClient>` or a mock `ILogger<HalClient>` to assert exact log level, event ID, and message structure
+- Verify `LogHalClientInitialized` is emitted exactly once per `HalClient` construction
