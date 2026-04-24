@@ -151,7 +151,7 @@ public sealed class NavigateToRootTool : McpServerTool
 - `InputSchema` = `{ "type": "object", "properties": {} }` (no input parameters)
 
 **`InvokeAsync`:**
-1. Fetch `halOptions.RootUri` via `httpClient.GetHalAsync(halOptions.RootUri)`
+1. Fetch `halOptions.RootUri` via `httpClient.GetHalAsync(halOptions.RootUri, cancellationToken: cancellationToken)`
 2. If response is `null`: return `CallToolResult { IsError = true }` with message `$"Response from {halOptions.RootUri} was not a valid HAL resource"`
 3. Call `HalToolCollectionManager.SwapTools(mcpOptions.ToolCollection, response, halOptions.RootUri, halOptions, httpClient, mcpOptions)`
 4. Serialize response to HAL JSON
@@ -220,7 +220,7 @@ public sealed class HalMcpStartupService : IHostedService
 ```
 
 **`StartAsync`:**
-1. Fetch `halOptions.RootUri` via `httpClient.GetHalAsync(halOptions.RootUri)`
+1. Fetch `halOptions.RootUri` via `httpClient.GetHalAsync(halOptions.RootUri, cancellationToken: cancellationToken)`
 2. If successful: call `HalToolCollectionManager.SwapTools(...)` to populate tool collection with root's links
 3. If fetch fails (any exception or null response): catch, log warning, do not throw. The `navigate_to_root` tool (already in the collection from registration) remains available for the agent to retry.
 
@@ -345,7 +345,7 @@ InvokeAsync(request, cancellationToken):
             resolvedHref = _link.Href
 
         // 3. Fetch resource
-        response = await _httpClient.GetHalAsync(resolvedHref)
+        response = await _httpClient.GetHalAsync(resolvedHref, cancellationToken: cancellationToken)
 
         // 4. Handle non-HAL response
         if response is null:
@@ -431,6 +431,31 @@ All template variables are typed as `string` in v1 (REQ-07). The `required` arra
 ## Serialization
 
 When returning HAL resource content in `CallToolResult`, the resource is serialized using `System.Text.Json.JsonSerializer.Serialize<Resource>()` with HAL converters applied (via `JsonSerializerOptions.AddHalConverters()`). This produces standard HAL JSON including `_links`, `_embedded`, and state properties.
+
+---
+
+## Async Conventions
+
+### Async-only I/O (REQ-37)
+
+All I/O in the package is async end-to-end. No sync-over-async wrappers (`.Result`, `.GetAwaiter().GetResult()`, `.Wait()`) or blocking calls (`Thread.Sleep`) appear anywhere. `HalMcpStartupService.StartAsync`, `HalNavigationTool.InvokeAsync`, and `NavigateToRootTool.InvokeAsync` are all inherently async and delegate to async `HttpClient` extension methods.
+
+---
+
+### CancellationToken threading (REQ-38)
+
+Every async call site passes the `CancellationToken` received from the framework:
+- `HalMcpStartupService.StartAsync` receives `CancellationToken` from `IHostedService.StartAsync` and passes it to `GetHalAsync`
+- `HalNavigationTool.InvokeAsync` receives `CancellationToken` from `McpServerTool.InvokeAsync(RequestContext, CancellationToken)` and passes it to `GetHalAsync`
+- `NavigateToRootTool.InvokeAsync` receives `CancellationToken` from the same `McpServerTool` contract and passes it to `GetHalAsync`
+
+The `CancellationToken` is not stored as a field. It flows through the call chain as a parameter at every level.
+
+---
+
+### Parallelism (REQ-39)
+
+No parallelism is needed in this package. Each tool invocation performs a single HTTP GET. `SwapTools` is a synchronous in-memory collection mutation. There are no loops performing independent async I/O calls, so `Task.WhenAll` is not applicable.
 
 ---
 
@@ -614,3 +639,10 @@ Request bodies, response bodies, auth headers, and API keys must never appear in
 - Verify Trace-level tool-name loop does not execute when Trace logging is disabled (confirms `IsEnabled` guard works)
 - Verify no log calls throw when a `NullLogger<T>` is used
 - Use `Microsoft.Extensions.Logging.Testing.FakeLogger<T>` or a mock `ILogger<T>` to assert log level, event ID, and message content
+
+### Async conventions
+
+- Verify `CancellationToken` is passed through to `GetHalAsync` in `HalNavigationTool.InvokeAsync` (mock `HttpClient` asserts token received)
+- Verify `CancellationToken` is passed through to `GetHalAsync` in `NavigateToRootTool.InvokeAsync`
+- Verify `CancellationToken` is passed through to `GetHalAsync` in `HalMcpStartupService.StartAsync`
+- Verify cancellation is honored: when a pre-cancelled token is supplied, the operation throws `OperationCanceledException` without making an HTTP request

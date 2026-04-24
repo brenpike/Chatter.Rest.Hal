@@ -155,6 +155,14 @@ Examples:
 
 **REQ-36:** Request bodies, response bodies, auth headers, and API keys must never appear in log messages at any log level. Tool names and hrefs are safe to log.
 
+### Async and Cancellation
+
+**REQ-37:** All I/O operations in `Chatter.Rest.Hal.Mcp` must be async end-to-end. Synchronous-over-async patterns (`.Result`, `.GetAwaiter().GetResult()`, `.Wait()`) and blocking calls (`Thread.Sleep`) are prohibited anywhere in the implementation. `HalMcpStartupService.StartAsync`, `HalNavigationTool.InvokeAsync`, and `NavigateToRootTool.InvokeAsync` are all inherently async and must remain fully async through all delegate calls.
+
+**REQ-38:** Every async method that performs or delegates to I/O must accept a `CancellationToken` parameter and pass it through to all downstream async calls. Specifically: `HalMcpStartupService.StartAsync` receives `CancellationToken` from the `IHostedService` contract and must pass it to `GetHalAsync`. `HalNavigationTool.InvokeAsync` and `NavigateToRootTool.InvokeAsync` receive `CancellationToken` from the `McpServerTool.InvokeAsync(RequestContext, CancellationToken)` base-class contract and must pass it to `GetHalAsync`. The `CancellationToken` is not stored as a field — it flows as a call-chain parameter at every level.
+
+**REQ-39:** Tool invocation in this package is single-resource-fetch-per-call. There are no loops performing independent async I/O calls, so `Task.WhenAll` parallelism is not applicable. This requirement documents the analysis explicitly so that future maintainers do not introduce unnecessary parallelism.
+
 ---
 
 ## Integration Story

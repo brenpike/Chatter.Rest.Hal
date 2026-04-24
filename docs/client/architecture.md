@@ -322,11 +322,20 @@ public static IAsyncEnumerable<Resource?> FollowLinks(
 
 **Flow:**
 1. Call `ResolveLink(resource, rel)` to get the `Link`
-2. For each `linkObject` in `link.LinkObjects`:
-   a. Construct `Uri` from `linkObject.Href`
-   b. `yield return await client.GetAsync(uri, ct)`
+2. Launch all fetches concurrently:
+   ```
+   tasks = link.LinkObjects
+       .Select(lo => client.GetAsync(new Uri(lo.Href), ct))
+       .ToArray()
+   ```
+3. Await all: `results = await Task.WhenAll(tasks)`
+4. Yield results sequentially:
+   ```
+   foreach (var result in results)
+       yield return result
+   ```
 
-Each link is fetched sequentially. The caller controls iteration via `await foreach`.
+All links are fetched concurrently via `Task.WhenAll`. Results are buffered and then yielded sequentially. The caller still consumes results via `await foreach` over `IAsyncEnumerable<Resource?>`.
 
 ---
 
@@ -471,6 +480,34 @@ public static class HttpClientHalExtensions
 
 ---
 
+## Async Conventions
+
+### Async-only I/O (REQ-46)
+
+All I/O in the package is async end-to-end. No sync-over-async wrappers (`.Result`, `.GetAwaiter().GetResult()`, `.Wait()`) or blocking calls (`Thread.Sleep`) appear anywhere in the implementation. Every public method that performs I/O returns `Task`, `Task<T>`, or `IAsyncEnumerable<T>`.
+
+---
+
+### CancellationToken threading (REQ-47)
+
+Every async method -- public, internal, or private -- that performs or delegates to I/O accepts a `CancellationToken` and passes it to every downstream async call. Public API parameters default to `default`. Internal/private async methods may require the parameter (no default) to catch missing-token bugs at compile time.
+
+Specific threading points:
+- `HalClient.SendAsync` passes `ct` to `HttpClient.SendAsync`, `ReadAsStringAsync`, and `JsonSerializer.DeserializeAsync`
+- All `FollowLink` / `FollowLinks` overloads pass `ct` through to `client.GetAsync`
+- All `PostTo` / `PutTo` / `PatchTo` / `DeleteTo` overloads pass `ct` through to `client.PostAsync` / `client.PutAsync` / `client.PatchAsync` / `client.DeleteAsync`
+- `GetHalAsync` and `PostHalAsync` convenience extensions pass `ct` through to the `HalClient` methods they delegate to
+
+---
+
+### Parallel fetches (REQ-48)
+
+`FollowLinks` is the one method in the package where independent async I/O calls iterate a collection. It uses `Task.WhenAll` to execute all fetches concurrently. The results are buffered in a `Task<Resource?>[]` and then yielded one at a time via `IAsyncEnumerable<Resource?>`. This preserves the existing return type while eliminating sequential-await overhead.
+
+Single-element and empty cases require no special handling: `Task.WhenAll` on a single task has negligible overhead; `ResolveLink` throws `HalLinkNotFoundException` before `FollowLinks` reaches the fetch step when `LinkObjects` is empty.
+
+---
+
 ## Logging Architecture
 
 ### ILogger<T> Injection
@@ -567,6 +604,7 @@ Auth headers, request bodies, and response bodies must never appear in log messa
 - Iterates all `LinkObject` entries for array-valued rel
 - Yields each fetched `Resource?` via `IAsyncEnumerable`
 - Throws `HalLinkNotFoundException` when rel is absent
+- Fetches all links concurrently (not sequentially) -- verify via mock that all `GetAsync` calls are initiated before any result is awaited
 
 **`PostTo` / `PutTo` / `PatchTo`:**
 - Resolves link and calls correct HTTP method

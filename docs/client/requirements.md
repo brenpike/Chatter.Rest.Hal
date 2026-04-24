@@ -146,6 +146,14 @@ Already uses `Chatter.Rest.Hal` for building HAL documents server-side. Wants to
 
 **REQ-45:** Auth headers, request bodies, and response bodies must never appear in log messages at any log level.
 
+### Async and Cancellation
+
+**REQ-46:** All I/O operations in `Chatter.Rest.Hal.Client` must be async end-to-end. Synchronous-over-async patterns (`.Result`, `.GetAwaiter().GetResult()`, `.Wait()`) and blocking calls (`Thread.Sleep`) are prohibited anywhere in the implementation. Every public method that performs I/O returns `Task`, `Task<T>`, or `IAsyncEnumerable<T>`.
+
+**REQ-47:** Every async method that performs or delegates to I/O must accept a `CancellationToken` parameter and pass it through to all downstream async calls (`HttpClient.SendAsync`, `ReadAsStringAsync`, `JsonSerializer.DeserializeAsync`, etc.). On the public API surface the `CancellationToken` parameter defaults to `default`. Internal/private async methods may require the parameter (no default) to enforce threading discipline at the implementation level.
+
+**REQ-48:** When an async method iterates a collection and performs an independent async I/O call for each element, the implementation must use `Task.WhenAll` (or equivalent) to execute the calls concurrently rather than awaiting each call sequentially in a loop. `FollowLinks` is the primary case: it fetches multiple `LinkObject` entries for the same rel concurrently, buffers the results, and then yields them sequentially via `IAsyncEnumerable<Resource?>`. The return type of `FollowLinks` is not changed.
+
 ---
 
 ## Error Handling Summary
@@ -224,8 +232,8 @@ These scenarios describe end-to-end behavior for test derivation.
 
 1. Caller has a `Resource` with `_links: { item: [{ href: "/orders/1" }, { href: "/orders/2" }, { href: "/orders/3" }] }`
 2. Caller calls `resource.FollowLinks("item", halClient)`
-3. Method sends `GET /orders/1`, `GET /orders/2`, `GET /orders/3` sequentially
-4. Yields each `Resource?` via `IAsyncEnumerable`
+3. Method sends `GET /orders/1`, `GET /orders/2`, `GET /orders/3` concurrently via `Task.WhenAll`
+4. Buffers all results, then yields each `Resource?` sequentially via `IAsyncEnumerable`
 
 ### Scenario: Post to a linked resource
 
