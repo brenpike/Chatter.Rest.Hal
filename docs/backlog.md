@@ -126,7 +126,7 @@ NuGet dependencies: `Microsoft.AspNetCore.Mvc.Core`, `Chatter.Rest.Hal`
 **Value:** High — closes the consume-and-navigate gap; library is currently build-and-serialize only
 **Difficulty:** Low–Medium
 **Depends on:** IDEA-01 (URI template expansion) for templated link traversal
-**Required by:** IDEA-05 (pagination async traversal layer)
+**Required by:** IDEA-05 (pagination async traversal layer), IDEA-08 (HAL-FORMS execution)
 
 ### Description
 
@@ -246,3 +246,77 @@ Closes the asymmetric API surface. Useful if consumers build large `LinkObjectCo
 
 - `LinkObjectCollection`: add `Dictionary<string, LinkObject>` keyed on `Name`; expose `TryGetByName(string name, out LinkObject? result)`. Note: `Name` is optional on `LinkObject` — only named items participate in the index.
 - `ResourceCollection`: no natural string key exists. Add XML doc comment explaining the intentional absence; no behavior change.
+
+---
+
+## IDEA-08: HAL-FORMS Support (`Chatter.Rest.Hal.Forms` package)
+
+**Value:** Medium–High — standards-track answer to embedding HTTP verb + body schema in HAL documents
+**Difficulty:** Medium
+**Depends on:** IDEA-04 (HTTP client helpers, for execution side)
+**Required by:** Nothing
+
+### Description
+
+New `Chatter.Rest.Hal.Forms` NuGet package implementing the HAL-FORMS extension spec (https://rwcbook.github.io/hal-forms/). HAL's core `LinkObject` intentionally omits HTTP verb — it is a navigation primitive, not an action descriptor. HAL-FORMS is the standards-track extension that adds method + body schema to HAL documents via a `_templates` property, separate from `_links` and `_embedded`.
+
+Keeps `LinkObject` spec-pure (no `method` property) while enabling rich form-based interactions for consumers who need embedded verb and body-schema hints.
+
+### Value-Add
+
+Allows HAL API servers to describe non-GET operations (POST, PUT, PATCH, DELETE) with full input schema in the document itself. Clients and AI agents discover forms the same way they discover links — no out-of-band knowledge of verbs or body shapes required. Standards-track extension with community tooling and recognized patterns.
+
+### Implementation
+
+New package: `Chatter.Rest.Hal.Forms`
+NuGet dependencies: `Chatter.Rest.Hal`, `Chatter.Rest.Hal.Client` (IDEA-04, for execution)
+
+**Domain types:**
+
+```csharp
+// A single HAL-FORMS template
+public sealed record HalFormTemplate
+{
+    public string Method { get; init; }          // GET, POST, PUT, PATCH, DELETE
+    public string? ContentType { get; init; }    // e.g. application/json
+    public string? Target { get; init; }         // override href if present
+    public IReadOnlyList<HalFormProperty> Properties { get; init; }
+}
+
+// A single form field descriptor
+public sealed record HalFormProperty
+{
+    public string Name { get; init; }
+    public bool Required { get; init; }
+    public bool ReadOnly { get; init; }
+    public string? Value { get; init; }
+    public string? Prompt { get; init; }
+    public string? Type { get; init; }           // text, number, email, etc.
+    public string? Regex { get; init; }
+}
+```
+
+**Serialization:**
+
+- `HalFormsConverter` reads/writes `_templates` property on HAL document
+- `_templates` is a dictionary keyed by template name (e.g. `"default"`, `"create-order"`)
+
+**Builder extensions:**
+
+```csharp
+resource.WithTemplate("create-order", template => template
+    .WithMethod("POST")
+    .WithContentType("application/json")
+    .WithProperty("productId", p => p.Required().OfType("number"))
+    .WithProperty("quantity", p => p.Required().OfType("number")));
+```
+
+**Client integration (depends on IDEA-04):**
+
+```csharp
+// Read a named form template from resource
+HalFormTemplate? form = resource.GetFormTemplate("create-order");
+
+// Execute a form — uses method from template, submits body
+Resource? result = await resource.FollowForm("create-order", body, httpClient);
+```
