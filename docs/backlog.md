@@ -4,7 +4,9 @@ Ideas ordered by value. Dependencies noted per item — implement dependents fir
 
 ---
 
-## IDEA-01: URI Template Expansion (RFC 6570)
+## IDEA-01: URI Template Expansion (RFC 6570) -- COMPLETED
+
+**Status:** Completed -- shipped as standalone NuGet package [`Chatter.Rest.UriTemplates` v0.1.0](https://www.nuget.org/packages/Chatter.Rest.UriTemplates/). `Chatter.Rest.Hal` references it as a package dependency. Levels 1--3 implemented; Level 4 deferred.
 
 **Value:** High — foundational; unlocks MCP and HTTP client ideas
 **Difficulty:** Low–Medium
@@ -19,15 +21,15 @@ Ideas ordered by value. Dependencies noted per item — implement dependents fir
 
 Foundational missing capability in core. Enables MCP tool parameter binding, HTTP link traversal with parameters, and any consumer needing to resolve templated links to real URIs without bringing their own RFC 6570 implementation.
 
-### Implementation
+### Implementation (as delivered)
 
-All changes in core library (`Chatter.Rest.Hal`) — no new package, no new dependencies.
+Shipped as a standalone NuGet package `Chatter.Rest.UriTemplates` (v0.1.0) rather than inline in core. `Chatter.Rest.Hal` references it as a package dependency.
 
-- `LinkObject.GetTemplateVariables()` → `IReadOnlyList<string>` — parses `{var}` tokens from `Href`
-- `LinkObject.Expand(IDictionary<string, string> variables)` → `string` — substitutes variables, returns resolved URI; unresolved variables left as-is by default
-- Guard: only expand when `Templated == true`; return `Href` unchanged (or throw) otherwise
-- RFC 6570 Level 1 needs no external dependency — straightforward regex substitution
-- Levels 2–4 (reserved expansion, label expansion, etc.) are optional stretch goals; `Tavis.UriTemplates` NuGet covers them if needed
+- `LinkObject.GetTemplateVariables()` → `IReadOnlyList<string>` — delegates to `UriTemplate.GetVariables()`
+- `LinkObject.Expand(IDictionary<string, string> variables)` → `string` — delegates to `UriTemplate.Expand()`
+- Guard: only expand when `Templated == true`; return `Href` unchanged otherwise
+- RFC 6570 Levels 1--3 fully implemented (simple, reserved, fragment, label, path, semicolon, query, query continuation)
+- Level 4 (prefix `:N` and explode `*`) deferred — throws `NotSupportedException` at parse time
 
 ---
 
