@@ -259,9 +259,8 @@ public static class HalMcpServerBuilderExtensions
 ToolNaming.CreateToolName(selfHref, rel):
     segment = selfHref
         .TrimStart('/')
+        .Replace each `{varname}` token with just `varname` (strip braces, keep inner name)
         .Replace('/', '_')
-        .Replace('{', '_')
-        .Replace('}', '_')
         .Replace('-', '_')
         .ToLowerInvariant()
     prefix = segment == "" ? "root" : segment
@@ -275,10 +274,13 @@ ToolNaming.CreateToolName(selfHref, rel):
 | `/` | `orders` | `root__orders` |
 | `/orders/42` | `cancel` | `orders_42__cancel` |
 | `/api/v1/customers` | `next` | `api_v1_customers__next` |
-| `/orders/{id}` | `self` | `orders__id___self` |
+| `/orders/{id}` | `self` | `orders_id__self` |
 | `/user-profiles` | `search` | `user_profiles__search` |
 | `/` | `self` | `root__self` |
 | `/api/v2/users/abc-def` | `edit` | `api_v2_users_abc_def__edit` |
+| `/orders/{id}/lines/{lineId}` | `delete` | `orders_id_lines_lineid__delete` |
+
+> **Note:** Template variable tokens (`{varname}`) are replaced as a unit — the inner name is preserved and the braces are dropped. Replacing `{` and `}` individually with `_` would produce trailing underscores in the sanitized prefix (e.g. `orders__id_`) and triple-underscore separators in the final tool name (`orders__id___rel`).
 
 The double-underscore `__` separator between prefix and rel is intentional. Single underscores appear within the sanitized href segments, so the double underscore provides unambiguous parsing of prefix vs. rel.
 
@@ -439,7 +441,8 @@ When returning HAL resource content in `CallToolResult`, the resource is seriali
 **`ToolNaming.CreateToolName`** -- pure function, exhaustive input/output table:
 - Root `/` with various rels
 - Multi-segment paths
-- Paths with template variables (`{id}`)
+- Paths with template variables: `{id}` → inner name preserved, braces dropped (e.g. `/orders/{id}` → `orders_id__rel`)
+- Paths with multiple template variables: `/orders/{id}/lines/{lineId}` → `orders_id_lines_lineid__rel`
 - Paths with hyphens
 - Edge cases: trailing slashes, double slashes, empty rel
 
