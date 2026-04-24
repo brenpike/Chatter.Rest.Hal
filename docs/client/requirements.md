@@ -122,6 +122,30 @@ Already uses `Chatter.Rest.Hal` for building HAL documents server-side. Wants to
 
 **REQ-34:** `IHalClient` is the primary abstraction for all client operations. Callers depend on the interface, enabling mock/stub injection in tests without requiring a live HTTP server.
 
+### Logging
+
+**REQ-35:** `HalClient` accepts `ILogger<HalClient>` via constructor injection. The `IHalClient` interface does not reference `ILogger`; logging is an implementation detail of `HalClient`.
+
+**REQ-36:** All log messages use structured logging with named placeholders (e.g., `{Method}`, `{Uri}`, `{StatusCode}`, `{Rel}`, `{ContentType}`) and never string concatenation or string interpolation in log calls.
+
+**REQ-37:** At `Debug` level, `HalClient` logs the HTTP method and request URI before sending each request, and the response status code after receiving the response.
+
+**REQ-38:** At `Debug` level, `HalClient` logs when a 404 response is received and `null` is returned.
+
+**REQ-39:** At `Warning` level, `HalClient` logs when the response `Content-Type` is not a HAL media type and `StrictContentType` is `false` (lenient mode: non-HAL response returned as `null`).
+
+**REQ-40:** At `Error` level, `HalClient` logs deserialization failures, including the exception and the request URI.
+
+**REQ-41:** At `Debug` level, `FollowLink` and `FollowLinks` extension methods log rel resolution: the rel name, the resolved href, and whether the link is templated. Logging occurs at the extension-method call site (not inside `HalClient`) because the extension has rel context that `HalClient` does not. Extension methods accept an optional `ILogger?` parameter (defaulting to `null`) for this purpose; callers that want rel-resolution logging pass their logger explicitly.
+
+**REQ-42:** At `Debug` level, `PostTo`, `PutTo`, `PatchTo`, and `DeleteTo` extension methods log the rel name and resolved URI before delegating to `IHalClient`. These methods follow the same optional `ILogger?` parameter pattern as `FollowLink` (REQ-41).
+
+**REQ-43:** At `Debug` level, `AddHalClient` and `AddHalOptions` log confirmation that `IHalClient` has been registered. Because these methods run during service registration before the DI container is built, the confirmation log is emitted from the `HalClient` constructor on first instantiation (one-time `Debug` message: `"HalClient initialized"`).
+
+**REQ-44:** All `Debug`-level log points in `HalClient` use `LoggerMessage` source generators to avoid string allocation when `Debug` logging is not enabled. `Trace`-level log points that iterate collections use explicit `IsEnabled(LogLevel.Trace)` guards before the loop. `Information`-level logging is limited to at most one startup message; no `Information` logging occurs on hot paths.
+
+**REQ-45:** Auth headers, request bodies, and response bodies must never appear in log messages at any log level.
+
 ---
 
 ## Error Handling Summary
