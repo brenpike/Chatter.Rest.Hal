@@ -6,9 +6,11 @@ Spec: https://datatracker.ietf.org/doc/html/rfc6570
 
 ## Overview
 
-New project `src/Chatter.Rest.UriTemplates/` implementing RFC 6570 URI Template expansion for Levels 1–3. Ships as its own NuGet package (`Chatter.Rest.UriTemplates`). `Chatter.Rest.Hal` project-references it; `LinkObject.GetTemplateVariables()` and `Expand()` delegate to the new engine.
+[`Chatter.Rest.UriTemplates`](https://www.nuget.org/packages/Chatter.Rest.UriTemplates/) is an external NuGet package implementing RFC 6570 URI Template expansion for Levels 1--3. `Chatter.Rest.Hal` references it as a NuGet package dependency; `LinkObject.GetTemplateVariables()` and `Expand()` delegate to the engine.
 
-Level 4 (value modifiers — prefix `:N` and explode `*`) is explicitly deferred. See [Level 4 TODO](#level-4-todo).
+Source repository: https://github.com/brenpike/Chatter.Rest.UriTemplates
+
+Level 4 (value modifiers -- prefix `:N` and explode `*`) is explicitly deferred. See [Level 4 TODO](#level-4-todo).
 
 ---
 
@@ -27,9 +29,9 @@ Level 4 (value modifiers — prefix `:N` and explode `*`) is explicitly deferred
 ### Non-Functional
 
 - No external NuGet dependencies
-- Target `netstandard2.0` and `net8.0` (matching the rest of the solution)
-- `Chatter.Rest.Hal` project-references `Chatter.Rest.UriTemplates`
-- Package ID: `Chatter.Rest.UriTemplates`
+- Targets `netstandard2.0` and `net8.0`
+- `Chatter.Rest.Hal` references `Chatter.Rest.UriTemplates` as a NuGet package dependency
+- Package ID: `Chatter.Rest.UriTemplates` ([NuGet](https://www.nuget.org/packages/Chatter.Rest.UriTemplates/))
 
 ### Out of Scope
 
@@ -42,27 +44,11 @@ Level 4 (value modifiers — prefix `:N` and explode `*`) is explicitly deferred
 
 ---
 
-## Solution Structure
+## Package Source
 
-```
-src/
-  Chatter.Rest.UriTemplates/
-    Chatter.Rest.UriTemplates.csproj
-    UriTemplate.cs               ← public entry point
-    UriTemplateOperator.cs       ← operator enum
-    UriTemplateExpression.cs     ← one parsed {expression}
-    UriTemplateParser.cs         ← tokenises template into literals + expressions
-    UriTemplateExpander.cs       ← applies per-operator expansion rules
+The source code for `Chatter.Rest.UriTemplates` lives in its own repository: https://github.com/brenpike/Chatter.Rest.UriTemplates
 
-test/
-  Chatter.Rest.UriTemplates.Tests/
-    Chatter.Rest.UriTemplates.Tests.csproj
-    UriTemplateLevel1Tests.cs
-    UriTemplateLevel2Tests.cs
-    UriTemplateLevel3Tests.cs
-    UriTemplateEdgeCaseTests.cs
-    UriTemplateGetVariablesTests.cs
-```
+It is no longer an in-repo project within the `Chatter.Rest.Hal` solution.
 
 ---
 
@@ -210,7 +196,7 @@ Pct-encoded sequences (`%XX`) in the source value are also passed through unenco
 
 ## Integration with `LinkObject`
 
-After this project is implemented:
+`Chatter.Rest.Hal` references `Chatter.Rest.UriTemplates` as a NuGet package dependency. The integration is as follows:
 
 1. `LinkObject.GetTemplateVariables()` refactors to:
    ```csharp

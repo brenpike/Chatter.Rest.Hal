@@ -401,7 +401,8 @@ Chatter.Rest.Hal.sln
 ├── src/
 │   ├── Chatter.Rest.Hal/            # Core library
 │   │   ├── depends on: System.Text.Json (inbox on net8.0, NuGet on netstandard2.0)
-│   │   └── NuGet: Chatter.Rest.Hal v0.9.2
+│   │   ├── depends on: Chatter.Rest.UriTemplates (external NuGet package)
+│   │   └── NuGet: Chatter.Rest.Hal v1.0.1
 │   │
 │   ├── Chatter.Rest.Hal.Core/       # Shared attribute
 │   │   ├── contains: HalResponseAttribute only
@@ -411,7 +412,7 @@ Chatter.Rest.Hal.sln
 │   └── Chatter.Rest.Hal.CodeGenerators/   # Roslyn source generator
 │       ├── references: Chatter.Rest.Hal.Core
 │       ├── consumers add: <PackageReference ... PrivateAssets="all" />
-│       └── NuGet: Chatter.Rest.Hal.CodeGenerators v0.2.5
+│       └── NuGet: Chatter.Rest.Hal.CodeGenerators v0.3.0
 │
 └── test/
     ├── Chatter.Rest.Hal.Tests/                   # Tests for core library
@@ -420,7 +421,7 @@ Chatter.Rest.Hal.sln
 
 ### Package Responsibilities
 
-**`Chatter.Rest.Hal`** — the core library. Provides all domain types, fluent builder API, JSON converters, and query extension methods. Has no dependencies outside `System.Text.Json`. Consumers reference this package to build and consume HAL documents.
+**`Chatter.Rest.Hal`** — the core library. Provides all domain types, fluent builder API, JSON converters, and query extension methods. Depends on `System.Text.Json` and the external NuGet package [`Chatter.Rest.UriTemplates`](https://www.nuget.org/packages/Chatter.Rest.UriTemplates/) for RFC 6570 URI template expansion. Consumers reference this package to build and consume HAL documents.
 
 **`Chatter.Rest.Hal.Core`** — ships only `HalResponseAttribute`. Exists as a separate package so consumer projects can reference the attribute at runtime without taking a dependency on the Roslyn analyzer assembly.
 
@@ -430,9 +431,9 @@ Chatter.Rest.Hal.sln
 
 ## Section 6 — UriTemplates Engine
 
-The `Chatter.Rest.UriTemplates` project implements RFC 6570 URI Template expansion for Levels 1 through 3. It ships as a standalone NuGet package (`Chatter.Rest.UriTemplates`) with no external dependencies.
+The [`Chatter.Rest.UriTemplates`](https://www.nuget.org/packages/Chatter.Rest.UriTemplates/) package implements RFC 6570 URI Template expansion for Levels 1 through 3. It is an external NuGet package with no external dependencies of its own.
 
-The core library project-references `Chatter.Rest.UriTemplates`. `LinkObject.Expand()` and `LinkObject.GetTemplateVariables()` delegate to `UriTemplate` for template parsing and expansion, upgrading the HAL library from Level 1-only support to full Levels 1-3 coverage.
+The core library references `Chatter.Rest.UriTemplates` as a NuGet package dependency. `LinkObject.Expand()` and `LinkObject.GetTemplateVariables()` delegate to `UriTemplate` for template parsing and expansion, upgrading the HAL library from Level 1-only support to full Levels 1-3 coverage.
 
 Level 4 modifiers (prefix `:N` and explode `*`) are explicitly deferred and throw `NotSupportedException` at parse time.
 
