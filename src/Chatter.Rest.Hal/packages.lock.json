@@ -2,6 +2,12 @@
   "version": 1,
   "dependencies": {
     ".NETStandard,Version=v2.0": {
+      "Chatter.Rest.UriTemplates": {
+        "type": "Direct",
+        "requested": "[0.1.0, )",
+        "resolved": "0.1.0",
+        "contentHash": "XhxTZhq1XO0KGBwG/0hSj98nL/JKmcz6pH3qor3P7BZu20zjHFvrA9WASVNKfR7MUoFbT557AGQ33+NB++GWiQ=="
+      },
       "NETStandard.Library": {
         "type": "Direct",
         "requested": "[2.0.3, )",
@@ -81,14 +87,14 @@
         "dependencies": {
           "System.Runtime.CompilerServices.Unsafe": "4.5.3"
         }
-      },
-      "chatter.rest.uritemplates": {
-        "type": "Project"
       }
     },
     "net8.0": {
-      "chatter.rest.uritemplates": {
-        "type": "Project"
+      "Chatter.Rest.UriTemplates": {
+        "type": "Direct",
+        "requested": "[0.1.0, )",
+        "resolved": "0.1.0",
+        "contentHash": "XhxTZhq1XO0KGBwG/0hSj98nL/JKmcz6pH3qor3P7BZu20zjHFvrA9WASVNKfR7MUoFbT557AGQ33+NB++GWiQ=="
       }
     }
   }

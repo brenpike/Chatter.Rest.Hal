@@ -27,6 +27,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Chatter.Rest.UriTemplates\Chatter.Rest.UriTemplates.csproj" />
+    <PackageReference Include="Chatter.Rest.UriTemplates" Version="0.1.0" />
   </ItemGroup>
 </Project>
