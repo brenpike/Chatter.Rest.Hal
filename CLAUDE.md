@@ -19,8 +19,6 @@ Chatter.Rest.Hal is a .NET/C# implementation of the HAL (Hypertext Application L
 | [docs/usage.md](docs/usage.md) | Copy-paste examples for building, serializing, deserializing |
 | [docs/development.md](docs/development.md) | Build/test/pack commands, code style, test conventions, CI/CD |
 | [docs/HAL_TEST_PLAN.md](docs/HAL_TEST_PLAN.md) | Spec-to-test mapping; consult when adding tests or evaluating spec compliance |
-| [docs/uri-templates/usage.md](docs/uri-templates/usage.md) | URI template expansion practical usage guide (external package `Chatter.Rest.UriTemplates`) |
-| [docs/uri-templates/architecture.md](docs/uri-templates/architecture.md) | URI template engine design, operator reference, encoding rules (external package `Chatter.Rest.UriTemplates`) |
 
 ## Solution Structure
 
