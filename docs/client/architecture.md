@@ -248,13 +248,21 @@ SendAsync(HttpMethod method, Uri uri, HttpContent? content, CancellationToken ct
     // 4. Ensure success (throws HttpRequestException for non-2xx except 404)
     response.EnsureSuccessStatusCode()
 
-    // 4a. Handle empty / no-content responses
-    if response.StatusCode == HttpStatusCode.NoContent or response.Content.Headers.ContentLength == 0:
+    // 4a. Handle empty / no-content responses (mutations only: POST, PUT, PATCH, DELETE)
+    // GetAsync does not apply this early-exit; a 204 or explicit Content-Length: 0 on GET
+    // proceeds to Content-Type validation (step 5), which treats missing/non-HAL Content-Type
+    // as non-HAL and returns null or throws per StrictContentType.
+    if method is not HttpMethod.Get and
+       (response.StatusCode == HttpStatusCode.NoContent or response.Content.Headers.ContentLength == 0):
         return null
 
     // 5. Validate Content-Type
+    // HAL media type: compare MediaType (no parameters) case-insensitively to _options.MediaType
+    // Null ContentType header is treated as non-HAL
     responseContentType = response.Content.Headers.ContentType?.MediaType
-    if responseContentType is not a HAL media type:
+    isHal = responseContentType is not null &&
+            string.Equals(responseContentType, _options.MediaType, StringComparison.OrdinalIgnoreCase)
+    if not isHal:
         if _options.StrictContentType:
             throw new HalResponseException(uri, responseContentType)
         return null
@@ -323,7 +331,7 @@ public static class HalClientServiceCollectionExtensions
 
 3. Return `services` for chaining
 
-> **Note:** The factory overload of `AddHttpClient<IHalClient, HalClient>(factory)` wires typed `HttpClient` lifecycle management via `IHttpClientFactory` while allowing explicit constructor control. This is necessary because `HalClientOptions` is not directly resolvable from DI — only `IOptions<HalClientOptions>` is.
+> **Note:** `AddHttpClient<TClient, TImplementation>(Func<HttpClient, IServiceProvider, TImplementation>)` is a valid overload in `Microsoft.Extensions.Http` on net8.0+. It wires typed `HttpClient` lifecycle management via `IHttpClientFactory` while allowing explicit constructor control. This is necessary because `HalClientOptions` is not directly resolvable from DI — only `IOptions<HalClientOptions>` is. Resolving `IHalClient` from the container invokes the factory and returns the constructed `HalClient`.
 
 ### `HalClientHttpClientBuilderExtensions`
 
@@ -377,9 +385,11 @@ ObjectToDictionary(object variables):
     foreach property in variables.GetType().GetProperties(Public | Instance):
         value = property.GetValue(variables)
         if value is not null:
-            result[property.Name] = value.ToString()
+            result[property.Name] = Convert.ToString(value, CultureInfo.InvariantCulture) ?? string.Empty
     return result
 ```
+
+> **Null handling:** Properties with a null value are skipped and do not appear in the expanded template variables. **Invariant culture:** `Convert.ToString(value, CultureInfo.InvariantCulture)` ensures culture-independent formatting for numeric and date values — callers should not rely on locale-specific formats for URI template variables. **Duplicate keys:** Not possible; each public property name is unique within a type. **Supported value types:** Any type whose `IConvertible` or `IFormattable` implementation is culture-safe. Callers passing exotic types (e.g., `DateTimeOffset`, `Guid`) should pre-format values as strings.
 
 This helper is called by all `FollowLinkAsync` templated overloads accepting `object variables`. The result is passed directly to `LinkObject.Expand(IDictionary<string, string>)`.
 
@@ -506,6 +516,21 @@ public static IAsyncEnumerable<Resource?> FollowLinksAsync(
     IHalClient client,
     ILogger logger,
     CancellationToken ct = default);
+
+// Typed — no logger
+public static IAsyncEnumerable<Resource<T>?> FollowLinksAsync<T>(
+    this Resource resource,
+    string rel,
+    IHalClient client,
+    CancellationToken ct = default) where T : class;
+
+// Typed — with logger
+public static IAsyncEnumerable<Resource<T>?> FollowLinksAsync<T>(
+    this Resource resource,
+    string rel,
+    IHalClient client,
+    ILogger logger,
+    CancellationToken ct = default) where T : class;
 ```
 
 **Flow:**
@@ -525,11 +550,13 @@ public static IAsyncEnumerable<Resource?> FollowLinksAsync(
 
 All links are fetched concurrently via `Task.WhenAll`. Results are buffered and then yielded sequentially. The caller still consumes results via `await foreach` over `IAsyncEnumerable<Resource?>`.
 
+**Typed flow (`FollowLinksAsync<T>`):** Identical to the untyped flow except step 2 calls `client.GetAsync<T>(new Uri(lo.Href, UriKind.RelativeOrAbsolute), ct)` for each link object, producing `Task<Resource<T>?>[]` results.
+
 ---
 
 ### `PostToAsync`, `PutToAsync`, `PatchToAsync` -- mutation
 
-Three overloads per verb:
+Eight-overload pattern (four no-logger + four with-logger overloads):
 
 ```csharp
 // Typed body + typed response — no logger
@@ -582,15 +609,32 @@ public static Task<Resource?> PostToAsync(
     IHalClient client,
     ILogger logger,
     CancellationToken ct = default);
+
+// Raw HttpContent — typed response — no logger
+public static Task<Resource<TResponse>?> PostToAsync<TResponse>(
+    this Resource resource,
+    string rel,
+    HttpContent content,
+    IHalClient client,
+    CancellationToken ct = default) where TResponse : class;
+
+// Raw HttpContent — typed response — with logger
+public static Task<Resource<TResponse>?> PostToAsync<TResponse>(
+    this Resource resource,
+    string rel,
+    HttpContent content,
+    IHalClient client,
+    ILogger logger,
+    CancellationToken ct = default) where TResponse : class;
 ```
 
-`PutToAsync` and `PatchToAsync` follow the same six-overload pattern (three no-logger + three with-logger overloads, with only `where TResponse : class` on the typed overloads — no `TBody` constraint), calling `client.PutAsync` and `client.PatchAsync` respectively.
+`PutToAsync` and `PatchToAsync` follow the same eight-overload pattern (four no-logger + four with-logger overloads, with only `where TResponse : class` on the typed overloads — no `TBody` constraint), calling `client.PutAsync` and `client.PatchAsync` respectively.
 
 **Flow (all mutation methods):**
 1. Call `ResolveLink(resource, rel)` to get the `Link`
 2. Extract `linkObject = link.LinkObjects[0]`
 3. Construct `Uri` from `linkObject.Href` via `new Uri(linkObject.Href, UriKind.RelativeOrAbsolute)`
-4. Call the appropriate `client.PostAsync` / `client.PutAsync` / `client.PatchAsync` overload (typed overload calls `client.PostAsync<TResponse>` / `client.PutAsync<TResponse>` / `client.PatchAsync<TResponse>` for the typed extension method)
+4. Call the appropriate `client.PostAsync` / `client.PutAsync` / `client.PatchAsync` overload (typed overload calls `client.PostAsync<TResponse>` / `client.PutAsync<TResponse>` / `client.PatchAsync<TResponse>` for the typed extension method; the typed `HttpContent` overload calls `client.PostAsync<TResponse>(uri, content, ct)` and returns the result directly)
 
 ---
 
@@ -639,6 +683,24 @@ public static Task<Resource?> FollowLinkAsync(
     return resource.FollowLinkAsync(rel, halClient, ct);
 }
 ```
+
+---
+
+### `Resource<T>` extension overloads
+
+Every extension method that takes `this Resource resource` also has a parallel `this Resource<T> resource` overload. The typed overloads are not repeated individually; they follow the same signature pattern with `this Resource<T> resource` substituted for `this Resource resource` and the same return type. They delegate immediately to the `Resource` overload via `resource.Inner`:
+
+```csharp
+// Example: Resource<T> overload for FollowLinkAsync (no logger)
+public static Task<Resource?> FollowLinkAsync<T>(
+    this Resource<T> resource,
+    string rel,
+    IHalClient client,
+    CancellationToken ct = default) where T : class
+    => resource.Inner.FollowLinkAsync(rel, client, ct);
+```
+
+This pattern applies to all `FollowLinkAsync`, `FollowLinksAsync`, `FollowLinksAsync<TItem>`, `PostToAsync`, `PutToAsync`, `PatchToAsync`, and `DeleteToAsync` overloads. Callers holding a `Resource<T>` do not need `.Inner` for traversal or mutation — the overloads handle the delegation transparently.
 
 ---
 
@@ -789,11 +851,11 @@ All log points are defined as `[LoggerMessage]` attributed static partial method
 | `LogNotFoundReturningNull` | Debug | 3 | `"Received 404 for {Method} {Uri}, returning null"` | `Method`, `Uri` |
 | `LogNonHalContentType` | Warning | 4 | `"Response from {Uri} has Content-Type '{ContentType}', expected HAL media type; returning null"` | `Uri`, `ContentType` |
 | `LogDeserializationFailed` | Error | 5 | `"Failed to deserialize HAL response from {Uri}"` | `Uri` (exception passed as `Exception` arg) |
-| `LogResolvingLink` | Debug | 6 | `"Resolving rel '{Rel}' on resource '{SelfHref}': href={Href}, templated={Templated}"` | `Rel`, `SelfHref`, `Href`, `Templated` |
+| `LogResolvingLink` | Debug | 6 | `"Resolving rel '{Rel}', templated={Templated}"` | `Rel`, `Templated` |
 | `LogMutationRequest` | Debug | 7 | `"Sending {Method} to rel '{Rel}', uri={Uri}"` | `Method`, `Rel`, `Uri` |
 | `LogHalClientInitialized` | Debug | 8 | `"HalClient initialized"` | (none) |
 
-`{Uri}` values are redacted via `RedactUri` (scheme + host + path only; query and fragment stripped).
+`{Uri}` values are redacted via `RedactUri` (scheme + host + path only; query and fragment stripped). Link href values (`SelfHref`, `Href`) are not logged because they may contain query tokens.
 
 Event IDs are scoped to the `HalClient` category. `LogHalClientInitialized` is emitted once per `HalClient` instance construction (REQ-43).
 

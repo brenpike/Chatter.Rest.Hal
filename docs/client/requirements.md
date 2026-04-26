@@ -79,7 +79,7 @@ Already uses `Chatter.Rest.Hal` for building HAL documents server-side. Wants to
 
 **REQ-08:** When the server returns HTTP 404, `GetAsync`, `PostAsync`, `PutAsync`, `PatchAsync` return `null`. `DeleteAsync` completes normally.
 
-**REQ-08a:** When the server returns HTTP 204 No Content, or any 2xx response with an explicit `Content-Length: 0` header, `PostAsync`, `PutAsync`, and `PatchAsync` return `null` without performing Content-Type validation or deserialization. Responses that omit `Content-Length` (e.g., chunked transfer encoding) proceed normally to Content-Type validation and deserialization. `DeleteAsync` always skips body handling after successful status code processing (REQ-05), but still throws `HttpRequestException` via `EnsureSuccessStatusCode()` for non-2xx non-404 responses.
+**REQ-08a:** When the server returns HTTP 204 No Content, or any 2xx response with an explicit `Content-Length: 0` header, `PostAsync`, `PutAsync`, and `PatchAsync` return `null` without performing Content-Type validation or deserialization. Responses that omit `Content-Length` (e.g., chunked transfer encoding) proceed normally to Content-Type validation and deserialization. `DeleteAsync` always skips body handling after successful status code processing (REQ-05), but still throws `HttpRequestException` via `EnsureSuccessStatusCode()` for non-2xx non-404 responses. This early-exit applies to `PostAsync`, `PutAsync`, `PatchAsync`, and `DeleteAsync` only. `GetAsync` does not apply this rule; a 204 or empty response to GET proceeds to Content-Type validation (REQ-11/REQ-12), which will return `null` or throw `HalResponseException` depending on `StrictContentType`.
 
 **REQ-09:** HTTP status-code behavior:
 - **2xx with body:** `HalClient` deserializes and returns the response.
@@ -92,9 +92,9 @@ Already uses `Chatter.Rest.Hal` for building HAL documents server-side. Wants to
 
 **REQ-10:** Network errors and timeouts propagate naturally from `HttpClient`. `HalClient` does not add retry or timeout logic.
 
-**REQ-11:** When the response `Content-Type` is not a HAL media type and `HalClientOptions.StrictContentType` is `false` (the default), the method returns `null`.
+**REQ-11:** When the response `Content-Type` is not a HAL media type and `HalClientOptions.StrictContentType` is `false` (the default), the method returns `null`. A HAL media type is determined by comparing `response.Content.Headers.ContentType?.MediaType` case-insensitively to `HalClientOptions.MediaType` (default: `"application/hal+json"`). Content type parameters such as `charset` are ignored in this comparison. A null `ContentType` header is treated as non-HAL.
 
-**REQ-12:** When the response `Content-Type` is not a HAL media type and `HalClientOptions.StrictContentType` is `true`, the method throws `HalResponseException`.
+**REQ-12:** When the response `Content-Type` is not a HAL media type (using the comparison defined in REQ-11) and `HalClientOptions.StrictContentType` is `true`, the method throws `HalResponseException`.
 
 ### Configuration
 
@@ -126,23 +126,29 @@ Already uses `Chatter.Rest.Hal` for building HAL documents server-side. Wants to
 
 **REQ-23:** `FollowLinksAsync(string rel, IHalClient client)` iterates all `LinkObject` entries for an array-valued rel, performs an HTTP GET for each, and yields results as `IAsyncEnumerable<Resource?>`. Throws `HalLinkNotFoundException` if the rel is absent.
 
+**REQ-23a:** `FollowLinksAsync<T>(string rel, IHalClient client)` performs the same concurrent iteration as REQ-23 but yields `IAsyncEnumerable<Resource<T>?>` by calling `client.GetAsync<T>` for each link. `T` is constrained to reference types (`where T : class`). Throws `HalLinkNotFoundException` if the rel is absent.
+
 **REQ-24:** Raw `HttpClient` overloads exist for every `FollowLinkAsync` and `FollowLinksAsync` signature. These use default `HalClientOptions` and accept `HttpClient` in place of `IHalClient`.
+
+**REQ-24a:** Every extension method on `Resource` (REQ-19 through REQ-24 and REQ-25 through REQ-29) has a parallel overload on `Resource<T>` with identical signature except `this Resource<T> resource` replaces `this Resource resource`. These overloads delegate to `resource.Inner`. This allows callers holding a typed `Resource<T>` to chain traversal and mutation calls without `.Inner`.
 
 ### Mutation -- extension methods on `Resource`
 
-**REQ-25:** `PostToAsync` has six overloads in three pairs (no-logger / with-logger, following REQ-42's overload-pair pattern):
+**REQ-25:** `PostToAsync` has eight overloads in four pairs (no-logger / with-logger, following REQ-42's overload-pair pattern):
 - (a) `PostToAsync<TBody, TResponse>(string rel, TBody body, IHalClient client, CancellationToken ct = default)` returning `Resource<TResponse>?`
 - (a-log) same with explicit `ILogger logger` before `ct`
 - (b) `PostToAsync(string rel, object body, IHalClient client, CancellationToken ct = default)` returning `Resource?`
 - (b-log) same with explicit `ILogger logger` before `ct`
 - (c) `PostToAsync(string rel, HttpContent content, IHalClient client, CancellationToken ct = default)` returning `Resource?`
 - (c-log) same with explicit `ILogger logger` before `ct`
+- (d) `PostToAsync<TResponse>(string rel, HttpContent content, IHalClient client, CancellationToken ct = default)` returning `Resource<TResponse>?`
+- (d-log) same with explicit `ILogger logger` before `ct`
 
-All overloads throw `HalLinkNotFoundException` if the rel is absent. `TResponse` is constrained to reference types (`where TResponse : class`).
+All overloads throw `HalLinkNotFoundException` if the rel is absent. `TBody` has no constraint. `TResponse` is constrained to reference types (`where TResponse : class`).
 
-**REQ-26:** `PutToAsync` has the same six-overload pattern as `PostToAsync` (REQ-25), using HTTP PUT.
+**REQ-26:** `PutToAsync` has the same eight-overload pattern as `PostToAsync` (REQ-25), using HTTP PUT.
 
-**REQ-27:** `PatchToAsync` has the same six-overload pattern as `PostToAsync` (REQ-25), using HTTP PATCH.
+**REQ-27:** `PatchToAsync` has the same eight-overload pattern as `PostToAsync` (REQ-25), using HTTP PATCH.
 
 **REQ-28:** `DeleteToAsync` has two overloads (a no-logger / with-logger pair following REQ-42's overload-pair pattern):
 - (a) `DeleteToAsync(string rel, IHalClient client, CancellationToken ct = default)` — no logger
