@@ -103,7 +103,7 @@ Already uses `Chatter.Rest.Hal` server-side for building HAL documents. Wants to
 
 **REQ-28:** `WithHalAutoSelf()` on `IEndpointConventionBuilder` forces auto-self injection for a single endpoint regardless of the global setting. `WithoutHalAutoSelf()` suppresses auto-self injection for a single endpoint regardless of the global setting. Both override `HalOptions.AutoSelfLink` at the endpoint level.
 
-**REQ-29:** Auto-self injection for Minimal API endpoints is implemented as middleware (`AutoSelfMiddleware`) activated by `UseHal()`. Auto-self injection for MVC controller actions is implemented as an `IResultFilter` registered unconditionally as a scoped service. Both check `HalOptions.AutoSelfLink` and per-endpoint metadata markers at runtime.
+**REQ-29:** Auto-self injection for both Minimal API endpoints and MVC controller actions is implemented inside `HalResult.CoreWriteAsync`, which runs before response serialization. `HalResult` reads `IOptions<HalOptions>` and per-endpoint metadata markers (`EnableHalAutoSelf`, `DisableHalAutoSelf`) from `HttpContext` at write time, applying 3-way precedence before calling `WriteAsJsonAsync`.
 
 ### Problem Details / RFC 9457
 
@@ -219,7 +219,7 @@ These scenarios describe end-to-end behavior for test derivation.
 
 1. `HalOptions.AutoSelfLink = true`
 2. Endpoint returns `HalResult` whose `Resource` has no `"self"` link
-3. `AutoSelfMiddleware` / `AutoSelfResultFilter` detects absence of `"self"`
+3. `HalResult.CoreWriteAsync` detects absence of `"self"` before serializing
 4. Filter calls `IHalLinkBuilder.For(currentRouteName, currentRouteValues)`
 5. `"self"` link is added to `Resource` before response is written
 
