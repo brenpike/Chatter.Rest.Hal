@@ -136,10 +136,16 @@ public interface IHalClient
     Task<Resource<T>?> GetAsync<T>(Uri uri, CancellationToken cancellationToken = default);
     Task<Resource?> PostAsync(Uri uri, object body, CancellationToken cancellationToken = default);
     Task<Resource?> PostAsync(Uri uri, HttpContent content, CancellationToken cancellationToken = default);
+    Task<Resource<T>?> PostAsync<T>(Uri uri, object body, CancellationToken cancellationToken = default);
+    Task<Resource<T>?> PostAsync<T>(Uri uri, HttpContent content, CancellationToken cancellationToken = default);
     Task<Resource?> PutAsync(Uri uri, object body, CancellationToken cancellationToken = default);
     Task<Resource?> PutAsync(Uri uri, HttpContent content, CancellationToken cancellationToken = default);
+    Task<Resource<T>?> PutAsync<T>(Uri uri, object body, CancellationToken cancellationToken = default);
+    Task<Resource<T>?> PutAsync<T>(Uri uri, HttpContent content, CancellationToken cancellationToken = default);
     Task<Resource?> PatchAsync(Uri uri, object body, CancellationToken cancellationToken = default);
     Task<Resource?> PatchAsync(Uri uri, HttpContent content, CancellationToken cancellationToken = default);
+    Task<Resource<T>?> PatchAsync<T>(Uri uri, object body, CancellationToken cancellationToken = default);
+    Task<Resource<T>?> PatchAsync<T>(Uri uri, HttpContent content, CancellationToken cancellationToken = default);
     Task DeleteAsync(Uri uri, CancellationToken cancellationToken = default);
 }
 ```
@@ -250,8 +256,12 @@ SendAsync(HttpMethod method, Uri uri, HttpContent? content, CancellationToken ct
 - **`GetAsync<T>`:** Same as `GetAsync` but deserializes as `Resource<T>`.
 - **`PostAsync(object body)`:** `method = HttpMethod.Post`, body serialized to `StringContent` with `application/json` media type.
 - **`PostAsync(HttpContent)`:** `method = HttpMethod.Post`, raw content passed through.
+- **`PostAsync<T>(object body)`:** Same as `PostAsync(object body)` but deserializes as `Resource<T>`.
+- **`PostAsync<T>(HttpContent)`:** Same as `PostAsync(HttpContent)` but deserializes as `Resource<T>`.
 - **`PutAsync`:** Same pattern as `PostAsync` with `HttpMethod.Put`.
+- **`PutAsync<T>`:** Same pattern as `PostAsync<T>` with `HttpMethod.Put`.
 - **`PatchAsync`:** Same pattern as `PostAsync` with `HttpMethod.Patch`.
+- **`PatchAsync<T>`:** Same pattern as `PostAsync<T>` with `HttpMethod.Patch`.
 - **`DeleteAsync`:** `method = HttpMethod.Delete`, no content, no response deserialization. Calls `EnsureSuccessStatusCode()` and returns. Returns normally on 404.
 
 **Object body serialization:** When a method accepts `object body`, the body is serialized via `JsonSerializer.Serialize(body, _options.JsonOptions ?? defaultHalJsonOptions)` and wrapped in `StringContent` with media type `"application/json"` and `UTF-8` encoding.
@@ -309,11 +319,31 @@ public static class HalClientHttpClientBuilderExtensions
 
 All extension methods live in `Chatter.Rest.Hal.Client.Extensions`.
 
+### `ObjectToDictionary` -- internal helper
+
+Templated link-traversal overloads accept `object variables` for convenience. Before calling `LinkObject.Expand()`, the extension method converts `variables` to `IDictionary<string, string>` via this internal helper:
+
+```
+ObjectToDictionary(object variables):
+    if variables is IDictionary<string, string> dict:
+        return dict
+    result = new Dictionary<string, string>()
+    foreach property in variables.GetType().GetProperties(Public | Instance):
+        value = property.GetValue(variables)
+        if value is not null:
+            result[property.Name] = value.ToString()
+    return result
+```
+
+This helper is called by all `FollowLink` and `FollowLinkAsync` templated overloads accepting `object variables`. The result is passed directly to `LinkObject.Expand(IDictionary<string, string>)`.
+
+---
+
 ### Link resolution (shared logic)
 
 ```
 ResolveLink(Resource resource, string rel):
-    link = resource.Links?.FirstOrDefault(l => l.Rel == rel)
+    link = resource.Links?.GetLinkOrDefault(rel)
     if link is null or link.LinkObjects is empty:
         selfHref = resource.Links?
             .FirstOrDefault(l => l.Rel == "self")?
@@ -321,6 +351,8 @@ ResolveLink(Resource resource, string rel):
         throw new HalLinkNotFoundException(rel, selfHref)
     return link
 ```
+
+Uses `LinkCollectionExtensions.GetLinkOrDefault(rel)` which calls `SingleOrDefault` internally. If duplicate rels exist on the resource, `InvalidOperationException` is thrown -- consistent with existing library behavior.
 
 This resolution is used by all `FollowLink`, `FollowLinks`, `PostTo`, `PutTo`, `PatchTo`, and `DeleteTo` methods. The `HalLinkNotFoundException` is thrown before any HTTP request (REQ-32).
 
@@ -440,7 +472,7 @@ public static Task<Resource?> PostTo(
 1. Call `ResolveLink(resource, rel)` to get the `Link`
 2. Extract `linkObject = link.LinkObjects[0]`
 3. Construct `Uri` from `linkObject.Href`
-4. Call the appropriate `client.PostAsync` / `client.PutAsync` / `client.PatchAsync` overload
+4. Call the appropriate `client.PostAsync` / `client.PutAsync` / `client.PatchAsync` overload (typed overload calls `client.PostAsync<TResponse>` / `client.PutAsync<TResponse>` / `client.PatchAsync<TResponse>` for the typed extension method)
 
 ---
 

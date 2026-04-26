@@ -54,7 +54,7 @@ Already uses `Chatter.Rest.Hal` for building HAL documents server-side. Wants to
 
 **REQ-03:** `GetAsync` returns `Resource?` (untyped) or `Resource<T>?` (typed, where `Resource<T>` is a thin wrapper defined in this package that provides strongly-typed access to state via `State()`). Both overloads return `null` when the server responds with HTTP 404.
 
-**REQ-04:** `PostAsync`, `PutAsync`, and `PatchAsync` each have two overloads: one accepting an `object` body (serialized as JSON) and one accepting raw `HttpContent`. Both return `Resource?`.
+**REQ-04:** `PostAsync`, `PutAsync`, and `PatchAsync` each have three overloads: (a) a non-generic overload accepting an `object` body (serialized as JSON) returning `Resource?`, (b) a non-generic overload accepting raw `HttpContent` returning `Resource?`, and (c) a generic overload `PostAsync<T>` / `PutAsync<T>` / `PatchAsync<T>` accepting an `object` body returning `Resource<T>?`. The generic overloads serialize the body the same way as (a) but deserialize the response as `Resource<T>?`.
 
 **REQ-05:** `DeleteAsync` returns `Task` (no body). It does not attempt to deserialize the response.
 
@@ -96,11 +96,13 @@ Already uses `Chatter.Rest.Hal` for building HAL documents server-side. Wants to
 
 **REQ-19:** `FollowLink(string rel, IHalClient client)` resolves a single non-templated link on the resource and performs an HTTP GET via the provided `IHalClient`. Returns `Resource?`. Throws `HalLinkNotFoundException` before any HTTP call if the rel is not present on the resource.
 
+**REQ-19a:** When resolving a rel, if the resource contains duplicate `Link` entries with the same rel, the resolution throws `InvalidOperationException`. This is consistent with `LinkCollectionExtensions.GetLinkOrDefault`, which uses `SingleOrDefault` internally. This check occurs before any HTTP request is made.
+
 **REQ-20:** `FollowLink<T>(string rel, IHalClient client)` performs the same resolution as REQ-19 but deserializes the response as `Resource<T>?`.
 
-**REQ-21:** `FollowLink(string rel, IHalClient client, object variables)` resolves a templated link by delegating to `LinkObject.Expand()` with the provided variables, then performs an HTTP GET. Returns `Resource?`. Throws `HalLinkNotFoundException` if the rel is absent.
+**REQ-21:** `FollowLink(string rel, IHalClient client, object variables)` resolves a templated link by delegating to `LinkObject.Expand()` with the provided variables, then performs an HTTP GET. Returns `Resource?`. Throws `HalLinkNotFoundException` if the rel is absent. (The `object variables` parameter is converted to `IDictionary<string, string>` via an internal `ObjectToDictionary` helper that reflects public properties before calling `LinkObject.Expand()`.)
 
-**REQ-22:** `FollowLink<T>(string rel, IHalClient client, object variables)` performs the same templated resolution as REQ-21 but deserializes the response as `Resource<T>?`.
+**REQ-22:** `FollowLink<T>(string rel, IHalClient client, object variables)` performs the same templated resolution as REQ-21 but deserializes the response as `Resource<T>?`. (The `object variables` parameter is converted to `IDictionary<string, string>` via an internal `ObjectToDictionary` helper that reflects public properties before calling `LinkObject.Expand()`.)
 
 **REQ-23:** `FollowLinks(string rel, IHalClient client)` iterates all `LinkObject` entries for an array-valued rel, performs an HTTP GET for each, and yields results as `IAsyncEnumerable<Resource?>`. Throws `HalLinkNotFoundException` if the rel is absent.
 
