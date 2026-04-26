@@ -14,7 +14,10 @@ This document is the source of truth for what the `Chatter.Rest.Hal.Client` pack
 
 - `Chatter.Rest.Hal` — core HAL types (`Resource`, `LinkObject`, `LinkCollection`, `Link`)
 - `Chatter.Rest.UriTemplates` — RFC 6570 URI template expansion (used for templated link traversal)
-- `System.Net.Http` — no `Microsoft.Extensions.*` dependencies in this package
+- `Microsoft.Extensions.Logging.Abstractions` — `ILogger<T>` and `NullLogger<T>` (logging only; no DI, options, or HTTP factory)
+- `System.Net.Http`
+
+The base package depends only on `Microsoft.Extensions.Logging.Abstractions` for optional structured logging. All other `Microsoft.Extensions.*` packages remain in the companion.
 
 #### `Chatter.Rest.Hal.Client.DependencyInjection`
 
@@ -70,7 +73,7 @@ Already uses `Chatter.Rest.Hal` for building HAL documents server-side. Wants to
 
 **REQ-08:** When the server returns HTTP 404, `GetAsync`, `PostAsync`, `PutAsync`, `PatchAsync` return `null`. `DeleteAsync` completes normally.
 
-**REQ-08a:** When the server returns HTTP 204 No Content, or any 2xx response with an empty body (Content-Length: 0 or no Content-Length), `PostAsync`, `PutAsync`, and `PatchAsync` return `null` without performing Content-Type validation or deserialization. `DeleteAsync` always completes normally with no body handling regardless of response code (REQ-05).
+**REQ-08a:** When the server returns HTTP 204 No Content, or any 2xx response with an explicit `Content-Length: 0` header, `PostAsync`, `PutAsync`, and `PatchAsync` return `null` without performing Content-Type validation or deserialization. Responses that omit `Content-Length` (e.g., chunked transfer encoding) proceed normally to Content-Type validation and deserialization. `DeleteAsync` always skips body handling after successful status code processing (REQ-05), but still throws `HttpRequestException` via `EnsureSuccessStatusCode()` for non-2xx non-404 responses.
 
 **REQ-09:** HTTP status-code behavior:
 - **2xx with body:** `HalClient` deserializes and returns the response.
@@ -147,9 +150,9 @@ Already uses `Chatter.Rest.Hal` for building HAL documents server-side. Wants to
 
 **REQ-34:** `IHalClient` is the primary abstraction for all client operations. Callers depend on the interface, enabling mock/stub injection in tests without requiring a live HTTP server.
 
-### Logging (requires `Chatter.Rest.Hal.Client.DependencyInjection`)
+### Logging
 
-**REQ-35:** `HalClient`, when instantiated via the `Chatter.Rest.Hal.Client.DependencyInjection` package, accepts `ILogger<HalClient>` via constructor injection. The base `HalClient` in `Chatter.Rest.Hal.Client` has no `ILogger` dependency and performs no logging. The `IHalClient` interface does not reference `ILogger`; logging is an implementation detail.
+**REQ-35:** `HalClient` accepts `ILogger<HalClient>?` as an optional constructor parameter (defaulting to `null`). When `null`, `NullLogger<HalClient>.Instance` is used internally and no log output is produced. The `IHalClient` interface does not reference `ILogger`; logging is an implementation detail of `HalClient`. The base package depends on `Microsoft.Extensions.Logging.Abstractions` only — not the full DI stack. When registered via the DI companion package, the DI container injects `ILogger<HalClient>` automatically.
 
 **REQ-36:** All log messages use structured logging with named placeholders (e.g., `{Method}`, `{Uri}`, `{StatusCode}`, `{Rel}`, `{ContentType}`) and never string concatenation or string interpolation in log calls.
 
