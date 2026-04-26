@@ -64,11 +64,22 @@ Already uses `Chatter.Rest.Hal` for building HAL documents server-side. Wants to
 
 **REQ-07:** All async methods on `IHalClient` accept a `CancellationToken` parameter with a default value of `default`, enabling cooperative cancellation throughout the call chain.
 
+**REQ-08b:** `HalClient` constructs request URIs using `UriKind.RelativeOrAbsolute`, accepting both absolute and relative URIs from HAL link hrefs. Relative URIs (e.g., `/orders/42`) are resolved against `HttpClient.BaseAddress` by the underlying `HttpClient`. Callers navigating APIs that return relative links must configure `BaseAddress` on the `HttpClient`. If `BaseAddress` is null and a relative URI is used, `HttpClient.SendAsync` throws `InvalidOperationException`.
+
 ### Response handling and error contract
 
 **REQ-08:** When the server returns HTTP 404, `GetAsync`, `PostAsync`, `PutAsync`, `PatchAsync` return `null`. `DeleteAsync` completes normally.
 
-**REQ-09:** When the server returns HTTP 5xx, the underlying `HttpClient` throws `HttpRequestException`. `HalClient` does not catch or wrap this exception.
+**REQ-08a:** When the server returns HTTP 204 No Content, or any 2xx response with an empty body (Content-Length: 0 or no Content-Length), `PostAsync`, `PutAsync`, and `PatchAsync` return `null` without performing Content-Type validation or deserialization. `DeleteAsync` always completes normally with no body handling regardless of response code (REQ-05).
+
+**REQ-09:** HTTP status-code behavior:
+- **2xx with body:** `HalClient` deserializes and returns the response.
+- **2xx with empty body or 204 No Content:** `HalClient` returns `null` without performing Content-Type validation or deserialization.
+- **3xx (redirect):** `HttpClient` follows redirects automatically by default. Non-redirect 3xx responses are passed to `EnsureSuccessStatusCode()` and throw `HttpRequestException`.
+- **400 / 401 / 403 / 409:** `EnsureSuccessStatusCode()` throws `HttpRequestException`. `HalClient` does not catch or wrap it.
+- **404:** `HalClient` returns `null` (or completes normally for `DeleteAsync`). See REQ-08.
+- **5xx:** `EnsureSuccessStatusCode()` throws `HttpRequestException`. `HalClient` does not catch or wrap it.
+- Network errors and timeouts propagate naturally from `HttpClient` as `HttpRequestException` or `TaskCanceledException`. `HalClient` does not add retry or timeout logic.
 
 **REQ-10:** Network errors and timeouts propagate naturally from `HttpClient`. `HalClient` does not add retry or timeout logic.
 
@@ -175,8 +186,13 @@ Already uses `Chatter.Rest.Hal` for building HAL documents server-side. Wants to
 | Scenario | Behavior |
 |---|---|
 | Rel not found on resource | Throw `HalLinkNotFoundException` (before any HTTP) |
-| HTTP 404 | Return `null` |
-| HTTP 5xx | Throw `HttpRequestException` (from `HttpClient`) |
+| Duplicate rels on resource | Throw `InvalidOperationException` (before any HTTP) |
+| HTTP 2xx with body | Deserialize and return |
+| HTTP 2xx with empty body or 204 | Return `null` (no Content-Type check) |
+| HTTP 3xx | `HttpClient` follows redirects; non-redirect throws `HttpRequestException` |
+| HTTP 400 / 401 / 403 / 409 | Throw `HttpRequestException` |
+| HTTP 404 | Return `null` (DELETE completes normally) |
+| HTTP 5xx | Throw `HttpRequestException` |
 | Network / timeout | `HttpClient` throws naturally |
 | Non-HAL Content-Type, `StrictContentType = false` | Return `null` |
 | Non-HAL Content-Type, `StrictContentType = true` | Throw `HalResponseException` |
@@ -295,6 +311,14 @@ These scenarios describe end-to-end behavior for test derivation.
 3. `HalClient` sends `GET /health`
 4. Server responds with `200 OK` and `Content-Type: text/plain`
 5. Method returns `null`
+
+### Scenario: 204 No Content on mutation
+
+1. Caller has a `Resource` with `_links: { update: { href: "/orders/42" } }`
+2. Caller calls `resource.PutToAsync("update", new { status = "shipped" }, halClient)`
+3. `HalClient` sends `PUT /orders/42` with JSON body and `Accept: application/hal+json`
+4. Server responds with `204 No Content` (no body)
+5. Method returns `null` without performing Content-Type validation
 
 ### Scenario: Convenience extension on raw HttpClient
 

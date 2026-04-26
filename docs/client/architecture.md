@@ -41,7 +41,7 @@ Both packages target `net8.0` and `netstandard2.0`, matching existing packages i
 ### Compatibility notes
 
 - **`HttpMethod.Patch`**: Not available on `netstandard2.0`. Use `new HttpMethod("PATCH")` in implementation. Document this in pseudocode.
-- **`ReadAsStreamAsync(CancellationToken)`**: The overload accepting a `CancellationToken` is not available on `netstandard2.0`. Use the parameterless `ReadAsStreamAsync()` overload with an ambient cancellation pattern, or use `ReadAsStringAsync(ct)` with a `#if NETSTANDARD2_0` guard.
+- **`ReadAsStreamAsync(CancellationToken)`**: The overload accepting a `CancellationToken` is not available on `netstandard2.0`. Use the parameterless `ReadAsStreamAsync()` overload; the cancellation token passed to `HttpClient.SendAsync` with `HttpCompletionOption.ResponseHeadersRead` already governs the connection, and `JsonSerializer.DeserializeAsync` accepts `ct` for deserialization cancellation.
 
 ---
 
@@ -222,20 +222,24 @@ All HTTP methods in `HalClient` follow the same core flow. The verb-specific beh
 ```
 SendAsync(HttpMethod method, Uri uri, HttpContent? content, CancellationToken ct):
     // 1. Build request
-    request = new HttpRequestMessage(method, uri)
+    using var request = new HttpRequestMessage(method, uri)
     request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue(_options.MediaType))
     if content is not null:
         request.Content = content
 
     // 2. Send request
-    response = await _httpClient.SendAsync(request, ct)
+    using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct)
 
     // 3. Handle 404
     if response.StatusCode == HttpStatusCode.NotFound:
         return null
 
-    // 4. Ensure success (throws HttpRequestException for 5xx, etc.)
+    // 4. Ensure success (throws HttpRequestException for non-2xx except 404)
     response.EnsureSuccessStatusCode()
+
+    // 4a. Handle empty / no-content responses
+    if response.StatusCode == HttpStatusCode.NoContent or response.Content.Headers.ContentLength == 0:
+        return null
 
     // 5. Validate Content-Type
     responseContentType = response.Content.Headers.ContentType?.MediaType
@@ -244,10 +248,10 @@ SendAsync(HttpMethod method, Uri uri, HttpContent? content, CancellationToken ct
             throw new HalResponseException(uri, responseContentType)
         return null
 
-    // 6. Deserialize
-    json = await response.Content.ReadAsStringAsync(ct)
+    // 6. Deserialize (stream-based; parameterless ReadAsStreamAsync for netstandard2.0 compat)
+    stream = await response.Content.ReadAsStreamAsync()
     jsonOptions = _options.JsonOptions ?? defaultHalJsonOptions
-    return JsonSerializer.Deserialize<Resource>(json, jsonOptions)
+    return await JsonSerializer.DeserializeAsync<Resource>(stream, jsonOptions, ct)
 ```
 
 **Verb-specific behavior:**
@@ -395,14 +399,16 @@ public static Task<Resource<T>?> FollowLink<T>(
 **Non-templated flow:**
 1. Call `ResolveLink(resource, rel)` to get the `Link`
 2. Extract `linkObject = link.LinkObjects[0]`
-3. Construct `Uri` from `linkObject.Href`
+3. Construct `Uri` from `linkObject.Href` via `new Uri(linkObject.Href, UriKind.RelativeOrAbsolute)`
 4. Call `client.GetAsync(uri, ct)` or `client.GetAsync<T>(uri, ct)`
+
+> **Relative URI handling:** `Uri(href, UriKind.RelativeOrAbsolute)` accepts both absolute and relative URIs. Relative URIs (e.g., `/orders/42`) are resolved against `HttpClient.BaseAddress` by the underlying `HttpClient`. If `BaseAddress` is null and the URI is relative, `HttpClient.SendAsync` throws `InvalidOperationException`. Callers navigating HAL APIs with relative links must configure `BaseAddress` on the `HttpClient`.
 
 **Templated flow:**
 1. Call `ResolveLink(resource, rel)` to get the `Link`
 2. Extract `linkObject = link.LinkObjects[0]`
 3. Call `linkObject.Expand(variables)` to resolve the templated href (delegates to `Chatter.Rest.UriTemplates`)
-4. Construct `Uri` from the expanded href
+4. Construct `Uri` from the expanded href via `new Uri(expandedHref, UriKind.RelativeOrAbsolute)`
 5. Call `client.GetAsync(uri, ct)` or `client.GetAsync<T>(uri, ct)`
 
 ---
@@ -422,7 +428,7 @@ public static IAsyncEnumerable<Resource?> FollowLinks(
 2. Launch all fetches concurrently:
    ```
    tasks = link.LinkObjects
-       .Select(lo => client.GetAsync(new Uri(lo.Href), ct))
+       .Select(lo => client.GetAsync(new Uri(lo.Href, UriKind.RelativeOrAbsolute), ct))
        .ToArray()
    ```
 3. Await all: `results = await Task.WhenAll(tasks)`
@@ -471,7 +477,7 @@ public static Task<Resource?> PostTo(
 **Flow (all mutation methods):**
 1. Call `ResolveLink(resource, rel)` to get the `Link`
 2. Extract `linkObject = link.LinkObjects[0]`
-3. Construct `Uri` from `linkObject.Href`
+3. Construct `Uri` from `linkObject.Href` via `new Uri(linkObject.Href, UriKind.RelativeOrAbsolute)`
 4. Call the appropriate `client.PostAsync` / `client.PutAsync` / `client.PatchAsync` overload (typed overload calls `client.PostAsync<TResponse>` / `client.PutAsync<TResponse>` / `client.PatchAsync<TResponse>` for the typed extension method)
 
 ---
@@ -489,7 +495,7 @@ public static Task DeleteTo(
 **Flow:**
 1. Call `ResolveLink(resource, rel)` to get the `Link`
 2. Extract `linkObject = link.LinkObjects[0]`
-3. Construct `Uri` from `linkObject.Href`
+3. Construct `Uri` from `linkObject.Href` via `new Uri(linkObject.Href, UriKind.RelativeOrAbsolute)`
 4. Call `client.DeleteAsync(uri, ct)`
 
 Returns `Task`, not `Task<Resource?>`. No response body is deserialized.
@@ -561,9 +567,14 @@ public static class HttpClientHalExtensions
 | Condition | Behavior | Error type |
 |---|---|---|
 | Rel not found on resource | Throw before HTTP | `HalLinkNotFoundException` |
-| HTTP 404 | Return `null` | -- |
-| HTTP 5xx | Throw | `HttpRequestException` (from `HttpClient`) |
-| Network / timeout | Throw | `HttpRequestException` / `TaskCanceledException` (from `HttpClient`) |
+| Duplicate rels on resource | Throw before HTTP | `InvalidOperationException` |
+| HTTP 2xx with body | Deserialize and return | -- |
+| HTTP 2xx with empty body or 204 | Return `null` without Content-Type check | -- |
+| HTTP 301/302/3xx (redirect) | `HttpClient` follows redirects by default; non-redirect 3xx reaches `EnsureSuccessStatusCode` and throws | `HttpRequestException` |
+| HTTP 400 / 401 / 403 / 409 | Throw | `HttpRequestException` |
+| HTTP 404 | Return `null` (DELETE completes normally) | -- |
+| HTTP 5xx | Throw | `HttpRequestException` |
+| Network error / timeout | Throw | `HttpRequestException` / `TaskCanceledException` |
 | Non-HAL Content-Type, strict off | Return `null` | -- |
 | Non-HAL Content-Type, strict on | Throw | `HalResponseException` |
 
@@ -573,7 +584,7 @@ public static class HttpClientHalExtensions
 
 **Request serialization:** Object bodies are serialized via `JsonSerializer.Serialize(body, jsonOptions)` where `jsonOptions` is `HalClientOptions.JsonOptions` or library defaults. The resulting JSON is wrapped in `StringContent` with `Content-Type: application/json; charset=utf-8`.
 
-**Response deserialization:** Response bodies are deserialized via `JsonSerializer.Deserialize<Resource>(json, jsonOptions)` or `JsonSerializer.Deserialize<Resource<T>>(json, jsonOptions)` with HAL converters applied. The `jsonOptions` are `HalClientOptions.JsonOptions` or library defaults (which include `AddHalConverters()`).
+**Response deserialization:** Response bodies are deserialized via stream-based `JsonSerializer.DeserializeAsync<Resource>(stream, jsonOptions, ct)` or the `Resource<T>` equivalent, with HAL converters applied. The response stream is obtained via the parameterless `ReadAsStreamAsync()` for `netstandard2.0` compatibility. The `jsonOptions` are `HalClientOptions.JsonOptions` or library defaults (which include `AddHalConverters()`).
 
 ---
 
@@ -590,7 +601,7 @@ All I/O in the package is async end-to-end. No sync-over-async wrappers (`.Resul
 Every async method -- public, internal, or private -- that performs or delegates to I/O accepts a `CancellationToken` and passes it to every downstream async call. Public API parameters default to `default`. Internal/private async methods may require the parameter (no default) to catch missing-token bugs at compile time.
 
 Specific threading points:
-- `HalClient.SendAsync` passes `ct` to `HttpClient.SendAsync`, `ReadAsStringAsync`, and `JsonSerializer.DeserializeAsync`
+- `HalClient.SendAsync` passes `ct` to `HttpClient.SendAsync` and `JsonSerializer.DeserializeAsync` (`ReadAsStreamAsync` uses the parameterless overload for `netstandard2.0` compatibility)
 - All `FollowLink` / `FollowLinks` overloads pass `ct` through to `client.GetAsync`
 - All `PostTo` / `PutTo` / `PatchTo` / `DeleteTo` overloads pass `ct` through to `client.PostAsync` / `client.PutAsync` / `client.PatchAsync` / `client.DeleteAsync`
 - `GetHalAsync` and `PostHalAsync` convenience extensions pass `ct` through to the `HalClient` methods they delegate to
