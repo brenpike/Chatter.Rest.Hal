@@ -105,31 +105,31 @@ Already uses `Chatter.Rest.Hal` for building HAL documents server-side. Wants to
 
 ### Link traversal -- extension methods on `Resource`
 
-**REQ-19:** `FollowLink(string rel, IHalClient client)` resolves a single non-templated link on the resource and performs an HTTP GET via the provided `IHalClient`. Returns `Resource?`. Throws `HalLinkNotFoundException` before any HTTP call if the rel is not present on the resource.
+**REQ-19:** `FollowLinkAsync(string rel, IHalClient client)` resolves a single non-templated link on the resource and performs an HTTP GET via the provided `IHalClient`. Returns `Resource?`. Throws `HalLinkNotFoundException` before any HTTP call if the rel is not present on the resource.
 
 **REQ-19a:** When resolving a rel, if the resource contains duplicate `Link` entries with the same rel, the resolution throws `InvalidOperationException`. This is consistent with `LinkCollectionExtensions.GetLinkOrDefault`, which uses `SingleOrDefault` internally. This check occurs before any HTTP request is made.
 
-**REQ-20:** `FollowLink<T>(string rel, IHalClient client)` performs the same resolution as REQ-19 but deserializes the response as `Resource<T>?`.
+**REQ-20:** `FollowLinkAsync<T>(string rel, IHalClient client)` performs the same resolution as REQ-19 but deserializes the response as `Resource<T>?`.
 
-**REQ-21:** `FollowLink(string rel, IHalClient client, object variables)` resolves a templated link by delegating to `LinkObject.Expand()` with the provided variables, then performs an HTTP GET. Returns `Resource?`. Throws `HalLinkNotFoundException` if the rel is absent. (The `object variables` parameter is converted to `IDictionary<string, string>` via an internal `ObjectToDictionary` helper that reflects public properties before calling `LinkObject.Expand()`.)
+**REQ-21:** `FollowLinkAsync(string rel, IHalClient client, object variables)` resolves a templated link by delegating to `LinkObject.Expand()` with the provided variables, then performs an HTTP GET. Returns `Resource?`. Throws `HalLinkNotFoundException` if the rel is absent. (The `object variables` parameter is converted to `IDictionary<string, string>` via an internal `ObjectToDictionary` helper that reflects public properties before calling `LinkObject.Expand()`.)
 
-**REQ-22:** `FollowLink<T>(string rel, IHalClient client, object variables)` performs the same templated resolution as REQ-21 but deserializes the response as `Resource<T>?`. (The `object variables` parameter is converted to `IDictionary<string, string>` via an internal `ObjectToDictionary` helper that reflects public properties before calling `LinkObject.Expand()`.)
+**REQ-22:** `FollowLinkAsync<T>(string rel, IHalClient client, object variables)` performs the same templated resolution as REQ-21 but deserializes the response as `Resource<T>?`. (The `object variables` parameter is converted to `IDictionary<string, string>` via an internal `ObjectToDictionary` helper that reflects public properties before calling `LinkObject.Expand()`.)
 
-**REQ-23:** `FollowLinks(string rel, IHalClient client)` iterates all `LinkObject` entries for an array-valued rel, performs an HTTP GET for each, and yields results as `IAsyncEnumerable<Resource?>`. Throws `HalLinkNotFoundException` if the rel is absent.
+**REQ-23:** `FollowLinksAsync(string rel, IHalClient client)` iterates all `LinkObject` entries for an array-valued rel, performs an HTTP GET for each, and yields results as `IAsyncEnumerable<Resource?>`. Throws `HalLinkNotFoundException` if the rel is absent.
 
-**REQ-24:** Raw `HttpClient` overloads exist for every `FollowLink` and `FollowLinks` signature. These use default `HalClientOptions` and accept `HttpClient` in place of `IHalClient`.
+**REQ-24:** Raw `HttpClient` overloads exist for every `FollowLinkAsync` and `FollowLinksAsync` signature. These use default `HalClientOptions` and accept `HttpClient` in place of `IHalClient`.
 
 ### Mutation -- extension methods on `Resource`
 
-**REQ-25:** `PostTo` has three overloads: (a) `PostTo<TBody, TResponse>(string rel, TBody body, IHalClient client)` returning `Resource<TResponse>?`, (b) `PostTo(string rel, object body, IHalClient client)` returning `Resource?`, and (c) `PostTo(string rel, HttpContent content, IHalClient client)` returning `Resource?`. All throw `HalLinkNotFoundException` if the rel is absent.
+**REQ-25:** `PostToAsync` has three overloads: (a) `PostToAsync<TBody, TResponse>(string rel, TBody body, IHalClient client)` returning `Resource<TResponse>?`, (b) `PostToAsync(string rel, object body, IHalClient client)` returning `Resource?`, and (c) `PostToAsync(string rel, HttpContent content, IHalClient client)` returning `Resource?`. All throw `HalLinkNotFoundException` if the rel is absent.
 
-**REQ-26:** `PutTo` has the same three overloads as `PostTo` (REQ-25), using HTTP PUT.
+**REQ-26:** `PutToAsync` has the same three overloads as `PostToAsync` (REQ-25), using HTTP PUT.
 
-**REQ-27:** `PatchTo` has the same three overloads as `PostTo` (REQ-25), using HTTP PATCH.
+**REQ-27:** `PatchToAsync` has the same three overloads as `PostToAsync` (REQ-25), using HTTP PATCH.
 
-**REQ-28:** `DeleteTo(string rel, IHalClient client)` has a single overload with no body. It returns `Task` (not `Task<Resource?>`). Throws `HalLinkNotFoundException` if the rel is absent.
+**REQ-28:** `DeleteToAsync(string rel, IHalClient client)` has a single overload with no body. It returns `Task` (not `Task<Resource?>`). Throws `HalLinkNotFoundException` if the rel is absent.
 
-**REQ-29:** Raw `HttpClient` overloads exist for every `PostTo`, `PutTo`, `PatchTo`, and `DeleteTo` signature.
+**REQ-29:** Raw `HttpClient` overloads exist for every `PostToAsync`, `PutToAsync`, `PatchToAsync`, and `DeleteToAsync` signature.
 
 ### HttpClient convenience extensions
 
@@ -163,9 +163,9 @@ Already uses `Chatter.Rest.Hal` for building HAL documents server-side. Wants to
 
 **REQ-40:** At `Error` level, `HalClient` logs deserialization failures, including the exception and the request URI.
 
-**REQ-41:** At `Debug` level, `FollowLink` and `FollowLinks` extension methods log rel resolution: the rel name, the resolved href, and whether the link is templated. Logging occurs at the extension-method call site (not inside `HalClient`) because the extension has rel context that `HalClient` does not. Extension methods accept an optional `ILogger?` parameter (defaulting to `null`) for this purpose; callers that want rel-resolution logging pass their logger explicitly. (These logging overloads are provided by the `Chatter.Rest.Hal.Client.DependencyInjection` companion package. Base package extension methods have no `ILogger` parameter.)
+**REQ-41:** At `Debug` level, `FollowLinkAsync` and `FollowLinksAsync` extension methods log rel resolution: the rel name, the resolved href, and whether the link is templated. Logging occurs at the extension-method call site (not inside `HalClient`) because the extension has rel context that `HalClient` does not. Extension methods accept an optional `ILogger?` parameter (defaulting to `null`) for this purpose; callers that want rel-resolution logging pass their logger explicitly. (These logging overloads are provided by the `Chatter.Rest.Hal.Client.DependencyInjection` companion package. Base package extension methods have no `ILogger` parameter.)
 
-**REQ-42:** At `Debug` level, `PostTo`, `PutTo`, `PatchTo`, and `DeleteTo` extension methods log the rel name and resolved URI before delegating to `IHalClient`. These methods follow the same optional `ILogger?` parameter pattern as `FollowLink` (REQ-41). (These logging overloads are provided by the `Chatter.Rest.Hal.Client.DependencyInjection` companion package. Base package extension methods have no `ILogger` parameter.)
+**REQ-42:** At `Debug` level, `PostToAsync`, `PutToAsync`, `PatchToAsync`, and `DeleteToAsync` extension methods log the rel name and resolved URI before delegating to `IHalClient`. These methods follow the same optional `ILogger?` parameter pattern as `FollowLinkAsync` (REQ-41). (These logging overloads are provided by the `Chatter.Rest.Hal.Client.DependencyInjection` companion package. Base package extension methods have no `ILogger` parameter.)
 
 **REQ-43:** At `Debug` level, `AddHalClient` and `AddHalOptions` log confirmation that `IHalClient` has been registered. Because these methods run during service registration before the DI container is built, the confirmation log is emitted from the `HalClient` constructor on first instantiation (one-time `Debug` message: `"HalClient initialized"`).
 
@@ -179,7 +179,7 @@ Already uses `Chatter.Rest.Hal` for building HAL documents server-side. Wants to
 
 **REQ-47:** Every async method that performs or delegates to I/O must accept a `CancellationToken` parameter and pass it through to all downstream async calls (`HttpClient.SendAsync`, `ReadAsStringAsync`, `JsonSerializer.DeserializeAsync`, etc.). On the public API surface the `CancellationToken` parameter defaults to `default`. Internal/private async methods may require the parameter (no default) to enforce threading discipline at the implementation level.
 
-**REQ-48:** When an async method iterates a collection and performs an independent async I/O call for each element, the implementation must use `Task.WhenAll` (or equivalent) to execute the calls concurrently rather than awaiting each call sequentially in a loop. `FollowLinks` is the primary case: it fetches multiple `LinkObject` entries for the same rel concurrently, buffers the results, and then yields them sequentially via `IAsyncEnumerable<Resource?>`. The return type of `FollowLinks` is not changed.
+**REQ-48:** When an async method iterates a collection and performs an independent async I/O call for each element, the implementation must use `Task.WhenAll` (or equivalent) to execute the calls concurrently rather than awaiting each call sequentially in a loop. `FollowLinksAsync` is the primary case: it fetches multiple `LinkObject` entries for the same rel concurrently, buffers the results, and then yields them sequentially via `IAsyncEnumerable<Resource?>`. The return type of `FollowLinksAsync` is not changed.
 
 ---
 
@@ -241,7 +241,7 @@ These scenarios describe end-to-end behavior for test derivation.
 ### Scenario: Follow a single link
 
 1. Caller has a `Resource` with `_links: { self: { href: "/orders" }, item: { href: "/orders/42" } }`
-2. Caller calls `resource.FollowLink("item", halClient)`
+2. Caller calls `resource.FollowLinkAsync("item", halClient)`
 3. `HalClient` sends `GET /orders/42` with `Accept: application/hal+json`
 4. Server responds with `200 OK` and a HAL resource
 5. Method returns `Resource` deserialized from the response
@@ -249,7 +249,7 @@ These scenarios describe end-to-end behavior for test derivation.
 ### Scenario: Follow a typed link
 
 1. Caller has a `Resource` with `_links: { details: { href: "/orders/42/details" } }`
-2. Caller calls `resource.FollowLink<OrderDetails>("details", halClient)`
+2. Caller calls `resource.FollowLinkAsync<OrderDetails>("details", halClient)`
 3. `HalClient` sends `GET /orders/42/details` with `Accept: application/hal+json`
 4. Server responds with `200 OK` and a HAL resource with state
 5. Method returns `Resource<OrderDetails>` with deserialized state
@@ -257,7 +257,7 @@ These scenarios describe end-to-end behavior for test derivation.
 ### Scenario: Follow a templated link
 
 1. Caller has a `Resource` with `_links: { find: { href: "/orders/{id}", templated: true } }`
-2. Caller calls `resource.FollowLink("find", halClient, new { id = "42" })`
+2. Caller calls `resource.FollowLinkAsync("find", halClient, new { id = "42" })`
 3. `LinkObject.Expand()` resolves href to `/orders/42`
 4. `HalClient` sends `GET /orders/42`
 5. Method returns the deserialized `Resource`
@@ -265,14 +265,14 @@ These scenarios describe end-to-end behavior for test derivation.
 ### Scenario: Follow array-valued links
 
 1. Caller has a `Resource` with `_links: { item: [{ href: "/orders/1" }, { href: "/orders/2" }, { href: "/orders/3" }] }`
-2. Caller calls `resource.FollowLinks("item", halClient)`
+2. Caller calls `resource.FollowLinksAsync("item", halClient)`
 3. Method sends `GET /orders/1`, `GET /orders/2`, `GET /orders/3` concurrently via `Task.WhenAll`
 4. Buffers all results, then yields each `Resource?` sequentially via `IAsyncEnumerable`
 
 ### Scenario: Post to a linked resource
 
 1. Caller has a `Resource` with `_links: { create: { href: "/orders" } }`
-2. Caller calls `resource.PostTo("create", new { product = "Widget" }, halClient)`
+2. Caller calls `resource.PostToAsync("create", new { product = "Widget" }, halClient)`
 3. `HalClient` sends `POST /orders` with JSON body and `Accept: application/hal+json`
 4. Server responds with `201 Created` and a HAL resource
 5. Method returns the deserialized `Resource`
@@ -280,20 +280,20 @@ These scenarios describe end-to-end behavior for test derivation.
 ### Scenario: Delete a linked resource
 
 1. Caller has a `Resource` with `_links: { cancel: { href: "/orders/42/cancel" } }`
-2. Caller calls `resource.DeleteTo("cancel", halClient)`
+2. Caller calls `resource.DeleteToAsync("cancel", halClient)`
 3. `HalClient` sends `DELETE /orders/42/cancel`
 4. Method returns `Task` (no body deserialization)
 
 ### Scenario: Rel not found
 
 1. Caller has a `Resource` with `_links: { self: { href: "/orders" } }`
-2. Caller calls `resource.FollowLink("nonexistent", halClient)`
+2. Caller calls `resource.FollowLinkAsync("nonexistent", halClient)`
 3. Method throws `HalLinkNotFoundException` with rel `"nonexistent"` and self href `"/orders"`
 4. No HTTP request is made
 
 ### Scenario: HTTP 404 response
 
-1. Caller calls `resource.FollowLink("item", halClient)`
+1. Caller calls `resource.FollowLinkAsync("item", halClient)`
 2. `HalClient` sends `GET /orders/42`
 3. Server responds with `404 Not Found`
 4. Method returns `null`
@@ -301,7 +301,7 @@ These scenarios describe end-to-end behavior for test derivation.
 ### Scenario: Non-HAL response with strict mode
 
 1. `HalClientOptions.StrictContentType = true`
-2. Caller calls `resource.FollowLink("health", halClient)`
+2. Caller calls `resource.FollowLinkAsync("health", halClient)`
 3. `HalClient` sends `GET /health`
 4. Server responds with `200 OK` and `Content-Type: text/plain`
 5. Method throws `HalResponseException`
@@ -309,7 +309,7 @@ These scenarios describe end-to-end behavior for test derivation.
 ### Scenario: Non-HAL response with lenient mode
 
 1. `HalClientOptions.StrictContentType = false` (default)
-2. Caller calls `resource.FollowLink("health", halClient)`
+2. Caller calls `resource.FollowLinkAsync("health", halClient)`
 3. `HalClient` sends `GET /health`
 4. Server responds with `200 OK` and `Content-Type: text/plain`
 5. Method returns `null`
@@ -336,7 +336,7 @@ These scenarios describe end-to-end behavior for test derivation.
 
 The following capabilities are explicitly deferred and must not be implemented in the initial version:
 
-- **Automatic pagination** -- `FollowLinks` does not chase `next` links; it iterates a single array-valued rel
+- **Automatic pagination** -- `FollowLinksAsync` does not chase `next` links; it iterates a single array-valued rel
 - **Retry / resilience** -- no built-in retry; users compose Polly via `IHttpClientFactory`
 - **Caching** -- no HTTP cache or ETag handling
 - **HAL-FORMS support** -- form-based actions are not interpreted

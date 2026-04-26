@@ -345,7 +345,7 @@ ObjectToDictionary(object variables):
     return result
 ```
 
-This helper is called by all `FollowLink` and `FollowLinkAsync` templated overloads accepting `object variables`. The result is passed directly to `LinkObject.Expand(IDictionary<string, string>)`.
+This helper is called by all `FollowLinkAsync` templated overloads accepting `object variables`. The result is passed directly to `LinkObject.Expand(IDictionary<string, string>)`.
 
 ---
 
@@ -364,29 +364,29 @@ ResolveLink(Resource resource, string rel):
 
 Uses `LinkCollectionExtensions.GetLinkOrDefault(rel)` which calls `SingleOrDefault` internally. If duplicate rels exist on the resource, `InvalidOperationException` is thrown -- consistent with existing library behavior.
 
-This resolution is used by all `FollowLink`, `FollowLinks`, `PostTo`, `PutTo`, `PatchTo`, and `DeleteTo` methods. The `HalLinkNotFoundException` is thrown before any HTTP request (REQ-32).
+This resolution is used by all `FollowLinkAsync`, `FollowLinksAsync`, `PostToAsync`, `PutToAsync`, `PatchToAsync`, and `DeleteToAsync` methods. The `HalLinkNotFoundException` is thrown before any HTTP request (REQ-32).
 
 ---
 
-### `FollowLink` -- single link, GET
+### `FollowLinkAsync` -- single link, GET
 
 ```csharp
 // Non-templated, untyped
-public static Task<Resource?> FollowLink(
+public static Task<Resource?> FollowLinkAsync(
     this Resource resource,
     string rel,
     IHalClient client,
     CancellationToken ct = default);
 
 // Non-templated, typed
-public static Task<Resource<T>?> FollowLink<T>(
+public static Task<Resource<T>?> FollowLinkAsync<T>(
     this Resource resource,
     string rel,
     IHalClient client,
     CancellationToken ct = default);
 
 // Templated, untyped
-public static Task<Resource?> FollowLink(
+public static Task<Resource?> FollowLinkAsync(
     this Resource resource,
     string rel,
     IHalClient client,
@@ -394,7 +394,7 @@ public static Task<Resource?> FollowLink(
     CancellationToken ct = default);
 
 // Templated, typed
-public static Task<Resource<T>?> FollowLink<T>(
+public static Task<Resource<T>?> FollowLinkAsync<T>(
     this Resource resource,
     string rel,
     IHalClient client,
@@ -419,10 +419,10 @@ public static Task<Resource<T>?> FollowLink<T>(
 
 ---
 
-### `FollowLinks` -- array-valued rel, GET
+### `FollowLinksAsync` -- array-valued rel, GET
 
 ```csharp
-public static IAsyncEnumerable<Resource?> FollowLinks(
+public static IAsyncEnumerable<Resource?> FollowLinksAsync(
     this Resource resource,
     string rel,
     IHalClient client,
@@ -448,13 +448,13 @@ All links are fetched concurrently via `Task.WhenAll`. Results are buffered and 
 
 ---
 
-### `PostTo`, `PutTo`, `PatchTo` -- mutation
+### `PostToAsync`, `PutToAsync`, `PatchToAsync` -- mutation
 
 Three overloads per verb:
 
 ```csharp
 // Typed body + typed response
-public static Task<Resource<TResponse>?> PostTo<TBody, TResponse>(
+public static Task<Resource<TResponse>?> PostToAsync<TBody, TResponse>(
     this Resource resource,
     string rel,
     TBody body,
@@ -462,7 +462,7 @@ public static Task<Resource<TResponse>?> PostTo<TBody, TResponse>(
     CancellationToken ct = default);
 
 // Object body
-public static Task<Resource?> PostTo(
+public static Task<Resource?> PostToAsync(
     this Resource resource,
     string rel,
     object body,
@@ -470,7 +470,7 @@ public static Task<Resource?> PostTo(
     CancellationToken ct = default);
 
 // Raw HttpContent
-public static Task<Resource?> PostTo(
+public static Task<Resource?> PostToAsync(
     this Resource resource,
     string rel,
     HttpContent content,
@@ -478,7 +478,7 @@ public static Task<Resource?> PostTo(
     CancellationToken ct = default);
 ```
 
-`PutTo` and `PatchTo` follow the same three-overload pattern, calling `client.PutAsync` and `client.PatchAsync` respectively.
+`PutToAsync` and `PatchToAsync` follow the same three-overload pattern, calling `client.PutAsync` and `client.PatchAsync` respectively.
 
 **Flow (all mutation methods):**
 1. Call `ResolveLink(resource, rel)` to get the `Link`
@@ -488,10 +488,10 @@ public static Task<Resource?> PostTo(
 
 ---
 
-### `DeleteTo` -- deletion
+### `DeleteToAsync` -- deletion
 
 ```csharp
-public static Task DeleteTo(
+public static Task DeleteToAsync(
     this Resource resource,
     string rel,
     IHalClient client,
@@ -510,18 +510,18 @@ Returns `Task`, not `Task<Resource?>`. No response body is deserialized.
 
 ### Raw `HttpClient` overloads
 
-Every `FollowLink`, `FollowLinks`, `PostTo`, `PutTo`, `PatchTo`, and `DeleteTo` method has a corresponding overload that accepts `HttpClient` in place of `IHalClient`. These overloads construct a `HalClient` with default `HalClientOptions` and delegate to the `IHalClient` overload.
+Every `FollowLinkAsync`, `FollowLinksAsync`, `PostToAsync`, `PutToAsync`, `PatchToAsync`, and `DeleteToAsync` method has a corresponding overload that accepts `HttpClient` in place of `IHalClient`. These overloads construct a `HalClient` with default `HalClientOptions` and delegate to the `IHalClient` overload.
 
 ```csharp
-// Example: raw HttpClient overload for FollowLink
-public static Task<Resource?> FollowLink(
+// Example: raw HttpClient overload for FollowLinkAsync
+public static Task<Resource?> FollowLinkAsync(
     this Resource resource,
     string rel,
     HttpClient client,
     CancellationToken ct = default)
 {
     var halClient = new HalClient(client, new HalClientOptions());
-    return resource.FollowLink(rel, halClient, ct);
+    return resource.FollowLinkAsync(rel, halClient, ct);
 }
 ```
 
@@ -608,17 +608,19 @@ Every async method -- public, internal, or private -- that performs or delegates
 
 Specific threading points:
 - `HalClient.SendAsync` passes `ct` to `HttpClient.SendAsync` and `JsonSerializer.DeserializeAsync` (`ReadAsStreamAsync` uses the parameterless overload for `netstandard2.0` compatibility)
-- All `FollowLink` / `FollowLinks` overloads pass `ct` through to `client.GetAsync`
-- All `PostTo` / `PutTo` / `PatchTo` / `DeleteTo` overloads pass `ct` through to `client.PostAsync` / `client.PutAsync` / `client.PatchAsync` / `client.DeleteAsync`
+- All `FollowLinkAsync` / `FollowLinksAsync` overloads pass `ct` through to `client.GetAsync`
+- All `PostToAsync` / `PutToAsync` / `PatchToAsync` / `DeleteToAsync` overloads pass `ct` through to `client.PostAsync` / `client.PutAsync` / `client.PatchAsync` / `client.DeleteAsync`
 - `GetHalAsync` and `PostHalAsync` convenience extensions pass `ct` through to the `HalClient` methods they delegate to
 
 ---
 
 ### Parallel fetches (REQ-48)
 
-`FollowLinks` is the one method in the package where independent async I/O calls iterate a collection. It uses `Task.WhenAll` to execute all fetches concurrently. The results are buffered in a `Task<Resource?>[]` and then yielded one at a time via `IAsyncEnumerable<Resource?>`. This preserves the existing return type while eliminating sequential-await overhead.
+`FollowLinksAsync` is the one method in the package where independent async I/O calls iterate a collection. It uses `Task.WhenAll` to execute all fetches concurrently. The results are buffered in a `Task<Resource?>[]` and then yielded one at a time via `IAsyncEnumerable<Resource?>`. This preserves the existing return type while eliminating sequential-await overhead.
 
-Single-element and empty cases require no special handling: `Task.WhenAll` on a single task has negligible overhead; `ResolveLink` throws `HalLinkNotFoundException` before `FollowLinks` reaches the fetch step when `LinkObjects` is empty.
+Single-element and empty cases require no special handling: `Task.WhenAll` on a single task has negligible overhead; `ResolveLink` throws `HalLinkNotFoundException` before `FollowLinksAsync` reaches the fetch step when `LinkObjects` is empty.
+
+> **No built-in concurrency limiting.** `FollowLinksAsync` uses unbounded `Task.WhenAll`. Callers with very large link arrays (thousands of entries) should compose their own concurrency control via `SemaphoreSlim` or batching. This is explicitly out of scope for v1.
 
 ---
 
@@ -762,27 +764,27 @@ When `logger` is non-null, the extension method logs rel resolution at Debug lev
 
 ### Extension method tests
 
-**`FollowLink`:**
+**`FollowLinkAsync`:**
 - Resolves non-templated link and calls `GetAsync`
 - Resolves templated link via `LinkObject.Expand()` and calls `GetAsync`
 - Throws `HalLinkNotFoundException` when rel is absent
 - Returns typed `Resource<T>` for generic overload
 - Raw `HttpClient` overload delegates correctly
 
-**`FollowLinks`:**
+**`FollowLinksAsync`:**
 - Iterates all `LinkObject` entries for array-valued rel
 - Yields each fetched `Resource?` via `IAsyncEnumerable`
 - Throws `HalLinkNotFoundException` when rel is absent
 - Fetches all links concurrently (not sequentially) -- verify via mock that all `GetAsync` calls are initiated before any result is awaited
 
-**`PostTo` / `PutTo` / `PatchTo`:**
+**`PostToAsync` / `PutToAsync` / `PatchToAsync`:**
 - Resolves link and calls correct HTTP method
 - Typed overload returns `Resource<TResponse>`
 - Object body overload serializes and sends
 - `HttpContent` overload passes through
 - Throws `HalLinkNotFoundException` when rel is absent
 
-**`DeleteTo`:**
+**`DeleteToAsync`:**
 - Resolves link and calls `DeleteAsync`
 - Returns `Task` (no body)
 - Throws `HalLinkNotFoundException` when rel is absent
@@ -805,7 +807,7 @@ When `logger` is non-null, the extension method logs rel resolution at Debug lev
 
 **End-to-end traversal:**
 - Mock `HttpClient` (via `HttpMessageHandler`) returning HAL JSON
-- GET root -> `FollowLink` to sub-resource -> `PostTo` to create -> `DeleteTo` to remove
+- GET root -> `FollowLinkAsync` to sub-resource -> `PostToAsync` to create -> `DeleteToAsync` to remove
 - Verify correct URIs, methods, headers, and deserialized responses at each step
 
 ### Logging
