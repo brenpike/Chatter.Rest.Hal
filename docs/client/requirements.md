@@ -51,7 +51,7 @@ Already uses `Chatter.Rest.Hal` for building HAL documents server-side. Wants to
 
 ### Core client
 
-**REQ-01:** `HalClient` implements `IHalClient` and wraps an `HttpClient` with HAL-specific request/response behavior. It accepts `HalClientOptions` directly or via `IOptions<HalClientOptions>` for DI integration.
+**REQ-01:** `HalClient` implements `IHalClient` and wraps an `HttpClient` with HAL-specific request/response behavior. It accepts `HalClientOptions` directly via its constructor. The `Chatter.Rest.Hal.Client.DependencyInjection` companion package resolves `IOptions<HalClientOptions>.Value` before constructing `HalClient`, so the base package has no dependency on `Microsoft.Extensions.Options`.
 
 **REQ-02:** `IHalClient` exposes async methods for all standard HTTP verbs: `GetAsync`, `PostAsync`, `PutAsync`, `PatchAsync`, and `DeleteAsync`. All methods accept a `Uri` parameter and a `CancellationToken` with a default value.
 
@@ -166,9 +166,9 @@ Already uses `Chatter.Rest.Hal` for building HAL documents server-side. Wants to
 
 **REQ-40:** At `Error` level, `HalClient` logs deserialization failures, including the exception and the request URI.
 
-**REQ-41:** At `Debug` level, `FollowLinkAsync` and `FollowLinksAsync` extension methods log rel resolution: the rel name, the resolved href, and whether the link is templated. Logging occurs at the extension-method call site (not inside `HalClient`) because the extension has rel context that `HalClient` does not. Extension methods accept an optional `ILogger?` parameter (defaulting to `null`) for this purpose; callers that want rel-resolution logging pass their logger explicitly. (These logging overloads are provided by the `Chatter.Rest.Hal.Client.DependencyInjection` companion package. Base package extension methods have no `ILogger` parameter.)
+**REQ-41:** At `Debug` level, `FollowLinkAsync` and `FollowLinksAsync` extension methods log rel resolution: the rel name, the resolved href, and whether the link is templated. Logging occurs at the extension-method call site (not inside `HalClient`) because the extension has rel context that `HalClient` does not. Extension methods accept an optional `ILogger?` parameter (defaulting to `null`) for this purpose; callers that want rel-resolution logging pass their logger explicitly.
 
-**REQ-42:** At `Debug` level, `PostToAsync`, `PutToAsync`, `PatchToAsync`, and `DeleteToAsync` extension methods log the rel name and resolved URI before delegating to `IHalClient`. These methods follow the same optional `ILogger?` parameter pattern as `FollowLinkAsync` (REQ-41). (These logging overloads are provided by the `Chatter.Rest.Hal.Client.DependencyInjection` companion package. Base package extension methods have no `ILogger` parameter.)
+**REQ-42:** At `Debug` level, `PostToAsync`, `PutToAsync`, `PatchToAsync`, and `DeleteToAsync` extension methods log the rel name and resolved URI before delegating to `IHalClient`. These methods follow the same optional `ILogger?` parameter pattern as `FollowLinkAsync` (REQ-41).
 
 **REQ-43:** At `Debug` level, `AddHalClient` and `AddHalOptions` log confirmation that `IHalClient` has been registered. Because these methods run during service registration before the DI container is built, the confirmation log is emitted from the `HalClient` constructor on first instantiation (one-time `Debug` message: `"HalClient initialized"`).
 
