@@ -63,12 +63,13 @@ Configuration root for the package. All components resolve `IOptions<HalOptions>
 public sealed class HalOptions
 {
     /// <summary>
-    /// When true, auto-self injection filters are globally active. Default: false. (REQ-06)
+    /// When true, HalResult.CoreWriteAsync injects a "self" link globally for responses that lack one. Default: false. (REQ-06)
     /// </summary>
     public bool AutoSelfLink { get; set; } = false;
 
     /// <summary>
-    /// When true, AddHal registers HalExceptionHandler as IExceptionHandler. Default: false. (REQ-07)
+    /// HalExceptionHandler is always registered; when true, TryHandleAsync handles exceptions.
+    /// When false, TryHandleAsync returns false and passes through to other handlers. Default: false. (REQ-07)
     /// </summary>
     public bool UseProblemDetails { get; set; } = false;
 

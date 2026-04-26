@@ -47,7 +47,7 @@ Already uses `Chatter.Rest.Hal` server-side for building HAL documents. Wants to
 
 ### HalOptions
 
-**REQ-06:** `HalOptions.AutoSelfLink` is a `bool` property with default `false`. When `true`, auto-self link injection filters are globally active for all HAL responses that lack a `"self"` link.
+**REQ-06:** `HalOptions.AutoSelfLink` is a `bool` property with default `false`. When `true`, `HalResult.CoreWriteAsync` injects a `"self"` link for all HAL responses that lack one.
 
 **REQ-07:** `HalOptions.UseProblemDetails` is a `bool` property with default `false`. `AddHal` always registers `HalExceptionHandler` as an `IExceptionHandler` implementation because options values are not available at service registration time. `HalExceptionHandler.TryHandleAsync` checks `UseProblemDetails` at runtime and returns `false` (passes through) when `false`.
 
@@ -220,7 +220,7 @@ These scenarios describe end-to-end behavior for test derivation.
 1. `HalOptions.AutoSelfLink = true`
 2. Endpoint returns `HalResult` whose `Resource` has no `"self"` link
 3. `HalResult.CoreWriteAsync` detects absence of `"self"` before serializing
-4. Filter calls `IHalLinkBuilder.For(currentRouteName, currentRouteValues)`
+4. `HalResult.CoreWriteAsync` calls `IHalLinkBuilder.For(currentRouteName, currentRouteValues)`
 5. `"self"` link is added to `Resource` before response is written
 
 ### Scenario: Auto-self skipped when resource already has self link
