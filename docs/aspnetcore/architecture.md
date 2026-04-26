@@ -567,11 +567,12 @@ CoreWriteAsync(HttpContext context):
 
     if disableMarker is null:
         if enableMarker is not null or _options.Value.AutoSelfLink:
-            if resource.Links["self"] is null:                        // REQ-27: skip if already present
+            if not resource.Links.TryGetByRel("self", out _):         // REQ-27: skip if already present
                 linkBuilder ??= context.RequestServices.GetRequiredService<IHalLinkBuilder>()
-                routeName   = endpoint?.Metadata.GetMetadata<IEndpointNameMetadata>()?.EndpointName
-                routeValues = context.Request.RouteValues
-                resource.Links.Add("self", linkBuilder.For(routeName, routeValues))
+                routeName      = endpoint?.Metadata.GetMetadata<IEndpointNameMetadata>()?.EndpointName
+                routeValues    = context.Request.RouteValues
+                selfLinkObject = linkBuilder.For(routeName, routeValues)
+                resource.Links.Add(new Link("self") { LinkObjects = { selfLinkObject } })
 
     // Step 3: Serialize
     jsonOptions = context.RequestServices
@@ -593,7 +594,7 @@ The full pseudocode is shown in the Serialization Flow section above. Summary:
 
 1. Read `EnableHalAutoSelf` and `DisableHalAutoSelf` metadata from `context.GetEndpoint()`
 2. Apply 3-way precedence: enable marker → inject; disable marker → skip; neither → follow `HalOptions.AutoSelfLink`
-3. Skip if `resource.Links["self"]` is already set (REQ-27)
+3. Skip if `resource.Links.TryGetByRel("self", out _)` returns `true` — link already present (REQ-27)
 4. Resolve `IHalLinkBuilder` from `context.RequestServices` (reuses the deferred builder instance if already resolved in Step 1 of `CoreWriteAsync`)
 5. Derive route name from `IEndpointNameMetadata.EndpointName`; route values from `context.Request.RouteValues`
 6. Call `IHalLinkBuilder.For(routeName, routeValues)` and add to `resource.Links`
