@@ -62,4 +62,44 @@ public class ResourceBehaviorTests
 		Assert.Equal("child", round.Embedded.Single().Name);
 		Assert.Single(round.Embedded.Single().Resources);
 	}
+
+	// --- As<T>(JsonSerializerOptions?) tests ---
+
+	private record AsDto(string Name, int Value);
+
+	[Fact]
+	public void As_Should_Respect_Custom_Options_When_Converting_Resource_To_Typed_Object()
+	{
+		// Arrange: build a Resource with state that has a custom name mapping
+		var state = new { name = "test", value = 42 };
+		var resource = new Resource(state);
+		var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+
+		// Serialize with options, then deserialize As<T> with same options
+		var result = resource.As<AsDto>(options);
+
+		// Assert
+		Assert.NotNull(result);
+		Assert.Equal("test", result!.Name);
+		Assert.Equal(42, result.Value);
+	}
+
+	[Fact]
+	public void As_With_Null_Options_Should_Behave_Same_As_Parameterless_Overload()
+	{
+		// Arrange
+		var state = new { Name = "hello", Value = 99 };
+		var r1 = new Resource(state);
+		var r2 = new Resource(state);
+
+		// Act
+		var withNull = r1.As<AsDto>(null);
+		var parameterless = r2.As<AsDto>();
+
+		// Assert
+		Assert.NotNull(withNull);
+		Assert.NotNull(parameterless);
+		Assert.Equal(withNull!.Name, parameterless!.Name);
+		Assert.Equal(withNull.Value, parameterless.Value);
+	}
 }
