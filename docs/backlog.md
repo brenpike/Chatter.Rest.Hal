@@ -97,6 +97,8 @@ var server = new HalMcpServer(httpClient, rootUri);
 
 ## IDEA-03: ASP.NET Core Integration (`Chatter.Rest.Hal.AspNetCore` package)
 
+**Status:** In Progress -- see docs/aspnetcore/
+
 **Value:** High — eliminates manual wiring for every server-side consumer
 **Difficulty:** Medium
 **Depends on:** Nothing

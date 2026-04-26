@@ -19,6 +19,8 @@ Chatter.Rest.Hal is a .NET/C# implementation of the HAL (Hypertext Application L
 | [docs/usage.md](docs/usage.md) | Copy-paste examples for building, serializing, deserializing |
 | [docs/development.md](docs/development.md) | Build/test/pack commands, code style, test conventions, CI/CD |
 | [docs/HAL_TEST_PLAN.md](docs/HAL_TEST_PLAN.md) | Spec-to-test mapping; consult when adding tests or evaluating spec compliance |
+| [docs/aspnetcore/requirements.md](docs/aspnetcore/requirements.md) | Package requirements (REQ-01–REQ-37) for `Chatter.Rest.Hal.AspNetCore` |
+| [docs/aspnetcore/architecture.md](docs/aspnetcore/architecture.md) | Architecture, type pseudocode, and test strategy for `Chatter.Rest.Hal.AspNetCore` |
 
 ## Solution Structure
 
