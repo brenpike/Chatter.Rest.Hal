@@ -51,7 +51,7 @@ Both packages target `net8.0` and `netstandard2.0`, matching existing packages i
 | Namespace | Visibility | Contents |
 |---|---|---|
 | `Chatter.Rest.Hal.Client` | Public | `IHalClient`, `HalClient`, `HalClientOptions`, `Resource<T>`, `HalLinkNotFoundException`, `HalResponseException` |
-| `Chatter.Rest.Hal.Client.Extensions` | Public | Extension methods on `Resource` and `HttpClient` (all `IHalClient` overloads include `ILogger? logger = null`) |
+| `Chatter.Rest.Hal.Client.Extensions` | Public | Extension methods on `Resource` and `HttpClient` (all `IHalClient` overloads provided in no-logger / with-logger pairs) |
 | `Chatter.Rest.Hal.Client.DependencyInjection` | Public | `HalClientServiceCollectionExtensions`, `HalClientHttpClientBuilderExtensions` |
 
 ---
@@ -299,12 +299,21 @@ public static class HalClientServiceCollectionExtensions
 
 **Registration sequence:**
 1. Configure `HalClientOptions` via `services.Configure(configure)`
-2. Register `IHalClient`/`HalClient` using `services.AddHttpClient<IHalClient, HalClient>()`.
-   This wires the typed `HttpClient` factory so that resolving `IHalClient` always goes
-   through `IHttpClientFactory`, ensuring correct `HttpClient` lifecycle management.
+2. Register `IHalClient`/`HalClient` using the factory overload of `AddHttpClient`:
+
+   services.AddHttpClient<IHalClient, HalClient>((sp, httpClient) =>
+       new HalClient(
+           httpClient,
+           sp.GetRequiredService<IOptions<HalClientOptions>>().Value,
+           sp.GetService<ILogger<HalClient>>()))
+
+   The factory receives the configured `HttpClient` and the `IServiceProvider`.
+   It resolves `IOptions<HalClientOptions>.Value` for options and
+   `ILogger<HalClient>` (nullable) for optional logging.
+
 3. Return `services` for chaining
 
-> **Note:** `services.AddHttpClient<IHalClient, HalClient>()` registers both the typed `HttpClient` and the `IHalClient -> HalClient` mapping in a single call. Do not add a separate `services.AddTransient<IHalClient, HalClient>()` — that would bypass the factory.
+> **Note:** The factory overload of `AddHttpClient<IHalClient, HalClient>(factory)` wires typed `HttpClient` lifecycle management via `IHttpClientFactory` while allowing explicit constructor control. This is necessary because `HalClientOptions` is not directly resolvable from DI — only `IOptions<HalClientOptions>` is.
 
 ### `HalClientHttpClientBuilderExtensions`
 
@@ -388,38 +397,68 @@ This resolution is used by all `FollowLinkAsync`, `FollowLinksAsync`, `PostToAsy
 ### `FollowLinkAsync` -- single link, GET
 
 ```csharp
-// Non-templated, untyped
+// Non-templated, untyped — no logger
 public static Task<Resource?> FollowLinkAsync(
     this Resource resource,
     string rel,
     IHalClient client,
-    ILogger? logger = null,
     CancellationToken ct = default);
 
-// Non-templated, typed
+// Non-templated, untyped — with logger
+public static Task<Resource?> FollowLinkAsync(
+    this Resource resource,
+    string rel,
+    IHalClient client,
+    ILogger logger,
+    CancellationToken ct = default);
+
+// Non-templated, typed — no logger
 public static Task<Resource<T>?> FollowLinkAsync<T>(
     this Resource resource,
     string rel,
     IHalClient client,
-    ILogger? logger = null,
     CancellationToken ct = default) where T : class;
 
-// Templated, untyped
+// Non-templated, typed — with logger
+public static Task<Resource<T>?> FollowLinkAsync<T>(
+    this Resource resource,
+    string rel,
+    IHalClient client,
+    ILogger logger,
+    CancellationToken ct = default) where T : class;
+
+// Templated, untyped — no logger
 public static Task<Resource?> FollowLinkAsync(
     this Resource resource,
     string rel,
     IHalClient client,
     object variables,
-    ILogger? logger = null,
     CancellationToken ct = default);
 
-// Templated, typed
+// Templated, untyped — with logger
+public static Task<Resource?> FollowLinkAsync(
+    this Resource resource,
+    string rel,
+    IHalClient client,
+    object variables,
+    ILogger logger,
+    CancellationToken ct = default);
+
+// Templated, typed — no logger
 public static Task<Resource<T>?> FollowLinkAsync<T>(
     this Resource resource,
     string rel,
     IHalClient client,
     object variables,
-    ILogger? logger = null,
+    CancellationToken ct = default) where T : class;
+
+// Templated, typed — with logger
+public static Task<Resource<T>?> FollowLinkAsync<T>(
+    this Resource resource,
+    string rel,
+    IHalClient client,
+    object variables,
+    ILogger logger,
     CancellationToken ct = default) where T : class;
 ```
 
@@ -443,11 +482,19 @@ public static Task<Resource<T>?> FollowLinkAsync<T>(
 ### `FollowLinksAsync` -- array-valued rel, GET
 
 ```csharp
+// No logger
 public static IAsyncEnumerable<Resource?> FollowLinksAsync(
     this Resource resource,
     string rel,
     IHalClient client,
-    ILogger? logger = null,
+    CancellationToken ct = default);
+
+// With logger
+public static IAsyncEnumerable<Resource?> FollowLinksAsync(
+    this Resource resource,
+    string rel,
+    IHalClient client,
+    ILogger logger,
     CancellationToken ct = default);
 ```
 
@@ -475,35 +522,59 @@ All links are fetched concurrently via `Task.WhenAll`. Results are buffered and 
 Three overloads per verb:
 
 ```csharp
-// Typed body + typed response
+// Typed body + typed response — no logger
 public static Task<Resource<TResponse>?> PostToAsync<TBody, TResponse>(
     this Resource resource,
     string rel,
     TBody body,
     IHalClient client,
-    ILogger? logger = null,
-    CancellationToken ct = default) where TBody : class where TResponse : class;
+    CancellationToken ct = default) where TResponse : class;
 
-// Object body
+// Typed body + typed response — with logger
+public static Task<Resource<TResponse>?> PostToAsync<TBody, TResponse>(
+    this Resource resource,
+    string rel,
+    TBody body,
+    IHalClient client,
+    ILogger logger,
+    CancellationToken ct = default) where TResponse : class;
+
+// Object body — no logger
 public static Task<Resource?> PostToAsync(
     this Resource resource,
     string rel,
     object body,
     IHalClient client,
-    ILogger? logger = null,
     CancellationToken ct = default);
 
-// Raw HttpContent
+// Object body — with logger
+public static Task<Resource?> PostToAsync(
+    this Resource resource,
+    string rel,
+    object body,
+    IHalClient client,
+    ILogger logger,
+    CancellationToken ct = default);
+
+// Raw HttpContent — no logger
 public static Task<Resource?> PostToAsync(
     this Resource resource,
     string rel,
     HttpContent content,
     IHalClient client,
-    ILogger? logger = null,
+    CancellationToken ct = default);
+
+// Raw HttpContent — with logger
+public static Task<Resource?> PostToAsync(
+    this Resource resource,
+    string rel,
+    HttpContent content,
+    IHalClient client,
+    ILogger logger,
     CancellationToken ct = default);
 ```
 
-`PutToAsync` and `PatchToAsync` follow the same three-overload pattern (including `ILogger? logger = null` and `where TBody : class where TResponse : class` on the typed overload), calling `client.PutAsync` and `client.PatchAsync` respectively.
+`PutToAsync` and `PatchToAsync` follow the same six-overload pattern (three no-logger + three with-logger overloads, with only `where TResponse : class` on the typed overloads — no `TBody` constraint), calling `client.PutAsync` and `client.PatchAsync` respectively.
 
 **Flow (all mutation methods):**
 1. Call `ResolveLink(resource, rel)` to get the `Link`
@@ -516,11 +587,19 @@ public static Task<Resource?> PostToAsync(
 ### `DeleteToAsync` -- deletion
 
 ```csharp
+// No logger
 public static Task DeleteToAsync(
     this Resource resource,
     string rel,
     IHalClient client,
-    ILogger? logger = null,
+    CancellationToken ct = default);
+
+// With logger
+public static Task DeleteToAsync(
+    this Resource resource,
+    string rel,
+    IHalClient client,
+    ILogger logger,
     CancellationToken ct = default);
 ```
 
@@ -601,7 +680,7 @@ public static class HttpClientHalExtensions
 | Rel not found on resource | Throw before HTTP | `HalLinkNotFoundException` |
 | Duplicate rels on resource | Throw before HTTP | `InvalidOperationException` |
 | HTTP 2xx with body | Deserialize and return | -- |
-| HTTP 2xx with empty body or 204 | Return `null` without Content-Type check | -- |
+| HTTP 204 or explicit `Content-Length: 0` | Return `null` without Content-Type check | -- |
 | HTTP 301/302/3xx (redirect) | `HttpClient` follows redirects by default; non-redirect 3xx reaches `EnsureSuccessStatusCode` and throws | `HttpRequestException` |
 | HTTP 400 / 401 / 403 / 409 | Throw | `HttpRequestException` |
 | HTTP 404 | Return `null` (DELETE completes normally) | -- |
@@ -660,9 +739,9 @@ The base package depends on `Microsoft.Extensions.Logging.Abstractions` only —
 
 When registered via `Chatter.Rest.Hal.Client.DependencyInjection`, the DI container injects `ILogger<HalClient>` automatically from the registered logging providers.
 
-**Extension method logging:** `FollowLinkAsync`, `FollowLinksAsync`, `PostToAsync`, `PutToAsync`, `PatchToAsync`, and `DeleteToAsync` extension methods accept an optional `ILogger? logger = null` parameter for rel-resolution logging (REQ-41, REQ-42). These are defined directly in the base extension class (see [Extension Method Logging](#extension-method-logging)).
+**Extension method logging:** `FollowLinkAsync`, `FollowLinksAsync`, `PostToAsync`, `PutToAsync`, `PatchToAsync`, and `DeleteToAsync` extension methods are provided in overload pairs (no-logger and with-logger) for rel-resolution logging (REQ-41, REQ-42). These are defined directly in the base extension class (see [Extension Method Logging](#extension-method-logging)).
 
-**Rejected alternative:** A `LoggingHalClient : IHalClient` decorator in the DI package. Rejected because it requires the DI package for any logging, complicates the type hierarchy, and adds no benefit over an optional logger parameter.
+**Rejected alternative:** A `LoggingHalClient : IHalClient` decorator in the DI package. Rejected because it requires the DI package for any logging, complicates the type hierarchy, and adds no benefit over explicit logger overloads.
 
 ---
 
@@ -722,9 +801,13 @@ Auth headers, request bodies, and response bodies must never appear in log messa
 
 ### Extension Method Logging
 
-All extension methods in `Chatter.Rest.Hal.Client.Extensions` accept an optional `ILogger? logger = null` parameter. This is possible because the base package depends on `Microsoft.Extensions.Logging.Abstractions`. When `logger` is non-null, the method logs rel resolution at Debug level before delegating to `IHalClient`. When `logger` is null (the default), no logging occurs.
+All extension methods in `Chatter.Rest.Hal.Client.Extensions` are provided in overload pairs:
+- A **no-logger** overload ending in `CancellationToken ct = default` — normal async usage, no logging.
+- A **with-logger** overload accepting an explicit `ILogger logger` (non-optional) followed by `CancellationToken ct = default` — callers who want rel-resolution debug logging pass their logger explicitly.
 
-No separate DI companion overloads are needed — the base extension methods handle both logging and non-logging callers.
+Using separate overloads (rather than an optional `ILogger?` parameter) avoids the ergonomic trap where a `CancellationToken` argument is silently bound as the logger parameter.
+
+When a logger overload is called with a non-null logger, it logs rel resolution at Debug level before delegating to `IHalClient`. The no-logger overload skips all logging.
 
 ---
 
