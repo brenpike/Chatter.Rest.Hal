@@ -8,9 +8,10 @@ This document is the source of truth for how the `Chatter.Rest.Hal.Client` packa
 
 ```
 Chatter.Rest.Hal.Client
-  -> Chatter.Rest.Hal          (core types: Resource, LinkObject, LinkCollection, Link)
-  -> Chatter.Rest.UriTemplates (RFC 6570 URI template expansion via LinkObject.Expand())
-  -> System.Net.Http           (no Microsoft.Extensions.* dependencies)
+  -> Chatter.Rest.Hal                             (core types: Resource, LinkObject, LinkCollection, Link)
+  -> Chatter.Rest.UriTemplates                    (RFC 6570 URI template expansion via LinkObject.Expand())
+  -> System.Net.Http
+  -> Microsoft.Extensions.Logging.Abstractions   (ILogger<T>, NullLogger<T> — logging only; no DI, options, or HTTP factory)
 
 Chatter.Rest.Hal.Client.DependencyInjection
   -> Chatter.Rest.Hal.Client
@@ -20,7 +21,7 @@ Chatter.Rest.Hal.Client.DependencyInjection
   -> Microsoft.Extensions.Logging.Abstractions
 ```
 
-DI registration, logging, and `IHttpClientFactory` integration live in the companion `Chatter.Rest.Hal.Client.DependencyInjection` package. Callers who use `HalClient` directly without DI only take a dependency on `Chatter.Rest.Hal.Client`.
+The base package takes a minimal dependency on `Microsoft.Extensions.Logging.Abstractions` for optional structured logging. DI registration, `IOptions<T>`, and `IHttpClientFactory` remain in the companion package.
 
 ---
 
@@ -59,7 +60,7 @@ Both packages target `net8.0` and `netstandard2.0`, matching existing packages i
 
 ### `HalClientOptions`
 
-Configuration object for `HalClient`. Supports direct construction and the `IOptions<T>` pattern for DI.
+Configuration object for `HalClient`. Supports direct construction. The DI companion package wraps it in `IOptions<HalClientOptions>` for configuration binding.
 
 ```csharp
 namespace Chatter.Rest.Hal.Client;
@@ -93,7 +94,7 @@ namespace Chatter.Rest.Hal.Client;
 /// A typed wrapper around <see cref="Resource"/> that exposes the embedded state
 /// as a strongly-typed value. Defined in this package; not part of the core library.
 /// </summary>
-public sealed class Resource<T>
+public sealed class Resource<T> where T : class
 {
     private readonly Resource _inner;
 
@@ -133,19 +134,19 @@ namespace Chatter.Rest.Hal.Client;
 public interface IHalClient
 {
     Task<Resource?> GetAsync(Uri uri, CancellationToken cancellationToken = default);
-    Task<Resource<T>?> GetAsync<T>(Uri uri, CancellationToken cancellationToken = default);
+    Task<Resource<T>?> GetAsync<T>(Uri uri, CancellationToken cancellationToken = default) where T : class;
     Task<Resource?> PostAsync(Uri uri, object body, CancellationToken cancellationToken = default);
     Task<Resource?> PostAsync(Uri uri, HttpContent content, CancellationToken cancellationToken = default);
-    Task<Resource<T>?> PostAsync<T>(Uri uri, object body, CancellationToken cancellationToken = default);
-    Task<Resource<T>?> PostAsync<T>(Uri uri, HttpContent content, CancellationToken cancellationToken = default);
+    Task<Resource<T>?> PostAsync<T>(Uri uri, object body, CancellationToken cancellationToken = default) where T : class;
+    Task<Resource<T>?> PostAsync<T>(Uri uri, HttpContent content, CancellationToken cancellationToken = default) where T : class;
     Task<Resource?> PutAsync(Uri uri, object body, CancellationToken cancellationToken = default);
     Task<Resource?> PutAsync(Uri uri, HttpContent content, CancellationToken cancellationToken = default);
-    Task<Resource<T>?> PutAsync<T>(Uri uri, object body, CancellationToken cancellationToken = default);
-    Task<Resource<T>?> PutAsync<T>(Uri uri, HttpContent content, CancellationToken cancellationToken = default);
+    Task<Resource<T>?> PutAsync<T>(Uri uri, object body, CancellationToken cancellationToken = default) where T : class;
+    Task<Resource<T>?> PutAsync<T>(Uri uri, HttpContent content, CancellationToken cancellationToken = default) where T : class;
     Task<Resource?> PatchAsync(Uri uri, object body, CancellationToken cancellationToken = default);
     Task<Resource?> PatchAsync(Uri uri, HttpContent content, CancellationToken cancellationToken = default);
-    Task<Resource<T>?> PatchAsync<T>(Uri uri, object body, CancellationToken cancellationToken = default);
-    Task<Resource<T>?> PatchAsync<T>(Uri uri, HttpContent content, CancellationToken cancellationToken = default);
+    Task<Resource<T>?> PatchAsync<T>(Uri uri, object body, CancellationToken cancellationToken = default) where T : class;
+    Task<Resource<T>?> PatchAsync<T>(Uri uri, HttpContent content, CancellationToken cancellationToken = default) where T : class;
     Task DeleteAsync(Uri uri, CancellationToken cancellationToken = default);
 }
 ```
@@ -161,17 +162,19 @@ namespace Chatter.Rest.Hal.Client;
 
 public sealed class HalClient : IHalClient
 {
-    public HalClient(HttpClient httpClient, HalClientOptions options);
-    public HalClient(HttpClient httpClient, IOptions<HalClientOptions> options);
+    public HalClient(HttpClient httpClient, HalClientOptions options, ILogger<HalClient>? logger = null);
 }
 ```
 
 **Fields stored:**
 - `_httpClient` -- the underlying `HttpClient`
-- `_options` -- resolved `HalClientOptions` (unwrapped from `IOptions<T>` if applicable)
+- `_options` -- resolved `HalClientOptions`
+- `_logger` -- the logger. When `null`, `NullLogger<HalClient>.Instance` is used.
 
 **Constructor behavior:**
-- The `IOptions<HalClientOptions>` constructor unwraps `options.Value` and delegates to the primary constructor.
+- Stores `httpClient`, `options`, and `logger ?? NullLogger<HalClient>.Instance`.
+
+> **Note:** The DI companion package resolves `IOptions<HalClientOptions>.Value` before constructing `HalClient`, so the base package has no dependency on `Microsoft.Extensions.Options`.
 
 ---
 
@@ -257,15 +260,15 @@ SendAsync(HttpMethod method, Uri uri, HttpContent? content, CancellationToken ct
 **Verb-specific behavior:**
 
 - **`GetAsync`:** `method = HttpMethod.Get`, no content.
-- **`GetAsync<T>`:** Same as `GetAsync` but deserializes as `Resource<T>`.
+- **`GetAsync<T>`:** Same as `GetAsync` but wraps the deserialized `Resource`: `return resource is null ? null : new Resource<T>(resource)`.
 - **`PostAsync(object body)`:** `method = HttpMethod.Post`, body serialized to `StringContent` with `application/json` media type.
 - **`PostAsync(HttpContent)`:** `method = HttpMethod.Post`, raw content passed through.
-- **`PostAsync<T>(object body)`:** Same as `PostAsync(object body)` but deserializes as `Resource<T>`.
-- **`PostAsync<T>(HttpContent)`:** Same as `PostAsync(HttpContent)` but deserializes as `Resource<T>`.
+- **`PostAsync<T>(object body)`:** Same as `PostAsync(object body)` but wraps the deserialized `Resource` in `new Resource<T>(resource)`.
+- **`PostAsync<T>(HttpContent)`:** Same as `PostAsync(HttpContent)` but wraps the deserialized `Resource` in `new Resource<T>(resource)`.
 - **`PutAsync`:** Same pattern as `PostAsync` with `HttpMethod.Put`.
-- **`PutAsync<T>`:** Same pattern as `PostAsync<T>` with `HttpMethod.Put`.
+- **`PutAsync<T>`:** Same pattern with `HttpMethod.Put`; wraps deserialized `Resource` in `new Resource<T>(resource)`.
 - **`PatchAsync`:** Same pattern as `PostAsync` with `HttpMethod.Patch`.
-- **`PatchAsync<T>`:** Same pattern as `PostAsync<T>` with `HttpMethod.Patch`.
+- **`PatchAsync<T>`:** Same pattern with `HttpMethod.Patch`; wraps deserialized `Resource` in `new Resource<T>(resource)`.
 - **`DeleteAsync`:** `method = HttpMethod.Delete`, no content, no response deserialization. Calls `EnsureSuccessStatusCode()` and returns. Returns normally on 404.
 
 **Object body serialization:** When a method accepts `object body`, the body is serialized via `JsonSerializer.Serialize(body, _options.JsonOptions ?? defaultHalJsonOptions)` and wrapped in `StringContent` with media type `"application/json"` and `UTF-8` encoding.
@@ -279,7 +282,7 @@ SendAsync(HttpMethod method, Uri uri, HttpContent? content, CancellationToken ct
 ### `HalClientServiceCollectionExtensions`
 
 ```csharp
-namespace Chatter.Rest.Hal.Client;
+namespace Chatter.Rest.Hal.Client.DependencyInjection;
 
 public static class HalClientServiceCollectionExtensions
 {
@@ -301,7 +304,7 @@ public static class HalClientServiceCollectionExtensions
 ### `HalClientHttpClientBuilderExtensions`
 
 ```csharp
-namespace Chatter.Rest.Hal.Client;
+namespace Chatter.Rest.Hal.Client.DependencyInjection;
 
 public static class HalClientHttpClientBuilderExtensions
 {
@@ -320,7 +323,8 @@ public static class HalClientHttpClientBuilderExtensions
    `IHalClient` resolution uses the same named/typed `HttpClient` managed by the builder's factory.
    Internally: `builder.Services.AddTransient<IHalClient>(sp =>
        new HalClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient(builder.Name),
-                     sp.GetRequiredService<IOptions<HalClientOptions>>()))`
+                     sp.GetRequiredService<IOptions<HalClientOptions>>().Value,
+                     sp.GetService<ILogger<HalClient>>()))`
 3. Return `builder` for chaining
 
 ---
@@ -383,7 +387,7 @@ public static Task<Resource<T>?> FollowLinkAsync<T>(
     this Resource resource,
     string rel,
     IHalClient client,
-    CancellationToken ct = default);
+    CancellationToken ct = default) where T : class;
 
 // Templated, untyped
 public static Task<Resource?> FollowLinkAsync(
@@ -399,7 +403,7 @@ public static Task<Resource<T>?> FollowLinkAsync<T>(
     string rel,
     IHalClient client,
     object variables,
-    CancellationToken ct = default);
+    CancellationToken ct = default) where T : class;
 ```
 
 **Non-templated flow:**
@@ -459,7 +463,7 @@ public static Task<Resource<TResponse>?> PostToAsync<TBody, TResponse>(
     string rel,
     TBody body,
     IHalClient client,
-    CancellationToken ct = default);
+    CancellationToken ct = default) where TBody : class where TResponse : class;
 
 // Object body
 public static Task<Resource?> PostToAsync(
@@ -478,7 +482,7 @@ public static Task<Resource?> PostToAsync(
     CancellationToken ct = default);
 ```
 
-`PutToAsync` and `PatchToAsync` follow the same three-overload pattern, calling `client.PutAsync` and `client.PatchAsync` respectively.
+`PutToAsync` and `PatchToAsync` follow the same three-overload pattern (including `where TBody : class where TResponse : class` on the typed overload), calling `client.PutAsync` and `client.PatchAsync` respectively.
 
 **Flow (all mutation methods):**
 1. Call `ResolveLink(resource, rel)` to get the `Link`
@@ -590,7 +594,7 @@ public static class HttpClientHalExtensions
 
 **Request serialization:** Object bodies are serialized via `JsonSerializer.Serialize(body, jsonOptions)` where `jsonOptions` is `HalClientOptions.JsonOptions` or library defaults. The resulting JSON is wrapped in `StringContent` with `Content-Type: application/json; charset=utf-8`.
 
-**Response deserialization:** Response bodies are deserialized via stream-based `JsonSerializer.DeserializeAsync<Resource>(stream, jsonOptions, ct)` or the `Resource<T>` equivalent, with HAL converters applied. The response stream is obtained via the parameterless `ReadAsStreamAsync()` for `netstandard2.0` compatibility. The `jsonOptions` are `HalClientOptions.JsonOptions` or library defaults (which include `AddHalConverters()`).
+**Response deserialization:** Response bodies are always deserialized as plain `Resource` via `JsonSerializer.DeserializeAsync<Resource>(stream, jsonOptions, ct)` with HAL converters applied. For typed methods (`GetAsync<T>`, `PostAsync<T>`, etc.), the deserialized `Resource` is then wrapped: `return new Resource<T>(resource)`. `Resource<T>` is never passed directly to `JsonSerializer` — it has no JSON converter. The response stream is obtained via the parameterless `ReadAsStreamAsync()` for `netstandard2.0` compatibility. The `jsonOptions` are `HalClientOptions.JsonOptions` or library defaults (which include `AddHalConverters()`).
 
 ---
 
@@ -626,19 +630,17 @@ Single-element and empty cases require no special handling: `Task.WhenAll` on a 
 
 ## Logging Architecture
 
-### Logging Boundary
+### ILogger<T> Injection
 
-Logging is not part of the base `Chatter.Rest.Hal.Client` package. The `HalClient` constructors have no `ILogger` parameter:
+`HalClient` accepts `ILogger<HalClient>?` as an optional constructor parameter (defaulting to `null`). When `null`, `NullLogger<HalClient>.Instance` is used and no log output is produced. This allows callers who do not use DI to construct `HalClient` directly without a logger.
 
-```csharp
-public sealed class HalClient : IHalClient
-{
-    public HalClient(HttpClient httpClient, HalClientOptions options);
-    public HalClient(HttpClient httpClient, IOptions<HalClientOptions> options);
-}
-```
+The base package depends on `Microsoft.Extensions.Logging.Abstractions` only — no DI container, options framework, or HTTP factory.
 
-When registered via `Chatter.Rest.Hal.Client.DependencyInjection`, the DI container wires up logging. When constructing `HalClient` directly (without DI), no logging occurs. See the DI companion package section for logging wiring. Extension methods that accept `ILogger? logger = null` are provided by the DI companion package only; the base package extension methods in `Chatter.Rest.Hal.Client.Extensions` do not include a logger parameter (see [Extension Method Logging Overloads](#extension-method-logging-overloads-di-companion-package)).
+When registered via `Chatter.Rest.Hal.Client.DependencyInjection`, the DI container injects `ILogger<HalClient>` automatically from the registered logging providers.
+
+**Extension method logging:** `FollowLinkAsync`, `FollowLinksAsync`, `PostToAsync`, `PutToAsync`, `PatchToAsync`, and `DeleteToAsync` extension methods accept an optional `ILogger? logger = null` parameter for rel-resolution logging (REQ-41, REQ-42). These logging overloads are provided by the DI companion package (see [Extension Method Logging Overloads](#extension-method-logging-overloads-di-companion-package)).
+
+**Rejected alternative:** A `LoggingHalClient : IHalClient` decorator in the DI package. Rejected because it requires the DI package for any logging, complicates the type hierarchy, and adds no benefit over an optional logger parameter.
 
 ---
 
@@ -711,7 +713,7 @@ public static Task<Resource?> FollowLinkAsync(
     ILogger? logger = null,
     CancellationToken ct = default);
 
-public static Task<Resource?> FollowLinksAsync(
+public static IAsyncEnumerable<Resource?> FollowLinksAsync(
     this Resource resource,
     string rel,
     IHalClient client,
@@ -747,7 +749,7 @@ When `logger` is non-null, the extension method logs rel resolution at Debug lev
 - Returns `null` on HTTP 404
 - Throws `HttpRequestException` on 5xx
 - Returns deserialized `Resource` on success with HAL Content-Type
-- Returns deserialized `Resource<T>` on typed GET success
+- Returns `Resource<T>` wrapping a deserialized `Resource` on typed GET success (verifies `State()` returns expected typed value)
 - Returns `null` on non-HAL Content-Type when `StrictContentType = false`
 - Throws `HalResponseException` on non-HAL Content-Type when `StrictContentType = true`
 - `DeleteAsync` returns normally on 404
