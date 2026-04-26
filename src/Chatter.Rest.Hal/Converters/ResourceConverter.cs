@@ -43,7 +43,7 @@ public sealed class ResourceConverter : JsonConverter<Resource>
 			return result;
 		};
 
-		return new Resource(node, jsonObjectCreator, linkCollectionCreator, embeddedCollectionCreator);
+		return new Resource(node, jsonObjectCreator, linkCollectionCreator, embeddedCollectionCreator, options);
 	}
 
 	/// <summary>

@@ -27,6 +27,7 @@ public sealed record Resource : IHalPart
 	private readonly Func<LinkCollection?> _linksCreator = () => new LinkCollection();
 	private readonly Func<EmbeddedResourceCollection?> _embeddedCreator = () => new EmbeddedResourceCollection();
 	private readonly Func<JsonObject?> _stateCreator = () => null;
+	private readonly JsonSerializerOptions? _jsonOptions;
 
 	/// <summary>
 	/// Initializes a new empty instance of the <see cref="Resource"/> type.
@@ -42,12 +43,14 @@ public sealed record Resource : IHalPart
 	internal Resource(JsonNode? resourceNode,
 					  Func<JsonObject?> stateCreator,
 					  Func<LinkCollection?> linksCreator,
-					  Func<EmbeddedResourceCollection?> embeddedCreator)
+					  Func<EmbeddedResourceCollection?> embeddedCreator,
+					  JsonSerializerOptions? jsonOptions = null)
 	{
 		_resourceNode = resourceNode;
 		_stateCreator = stateCreator;
 		_linksCreator = linksCreator;
 		_embeddedCreator = embeddedCreator;
+		_jsonOptions = jsonOptions;
 	}
 
 	internal object? StateObject
@@ -70,7 +73,7 @@ public sealed record Resource : IHalPart
 		get
 		{
 			if (_stateObject == null)
-				_stateObject = _stateCreator()?.Deserialize<object>();
+				_stateObject = _stateCreator()?.Deserialize<object>(_jsonOptions);
 			return _stateObject;
 		}
 	}
@@ -117,16 +120,26 @@ public sealed record Resource : IHalPart
 	/// </summary>
 	/// <typeparam name="T">The expected reference type of the Resource state.</typeparam>
 	/// <returns>The Resource state of type <typeparamref name="T"/> or null if the state is missing or cannot be converted.</returns>
-	public T? State<T>() where T : class
+	/// <inheritdoc cref="State{T}(JsonSerializerOptions?)"/>
+	public T? State<T>() where T : class => State<T>(_jsonOptions);
+
+	/// <summary>
+	/// Gets the strongly typed State of a Resource given a generic type parameter,
+	/// using the provided <see cref="JsonSerializerOptions"/> for deserialization.
+	/// </summary>
+	/// <remarks>
+	/// If the state has already been deserialized and cached from a prior <see cref="State{T}()"/>
+	/// call, the cached object is returned regardless of the supplied options.
+	/// </remarks>
+	/// <typeparam name="T">The expected reference type of the Resource state.</typeparam>
+	/// <param name="options">The <see cref="JsonSerializerOptions"/> to use for deserialization, or <c>null</c> to use default options.</param>
+	/// <returns>The Resource state of type <typeparamref name="T"/> or null if the state is missing or cannot be converted.</returns>
+	public T? State<T>(JsonSerializerOptions? options) where T : class
 	{
 		try
 		{
 			if (_stateObject is JsonElement je)
 			{
-				// Be conservative when attempting to deserialize JsonElement to a Link:
-				// a generic object with multiple properties (e.g. a DTO) should not be
-				// interpreted as a HAL link. If the requested type is Link and the JSON
-				// object does not contain exactly one property (the rel), return null.
 				if (typeof(T) == typeof(Link) && je.ValueKind == JsonValueKind.Object)
 				{
 					if (je.EnumerateObject().Count() != 1)
@@ -135,13 +148,13 @@ public sealed record Resource : IHalPart
 					}
 				}
 
-				_stateObject = je.Deserialize<T>();
+				_stateObject = je.Deserialize<T>(options);
 			}
 
 			if (_stateObject == null)
 			{
 				var stateObject = _stateCreator();
-				_stateObject = stateObject?.Deserialize<T>();
+				_stateObject = stateObject?.Deserialize<T>(options);
 			}
 
 			return (T?)_stateObject;
@@ -159,20 +172,54 @@ public sealed record Resource : IHalPart
 	/// </summary>
 	/// <typeparam name="T">The expected reference type to convert the Resource to.</typeparam>
 	/// <returns>An object of <typeparamref name="T"/> or null if conversion fails.</returns>
-	public T? As<T>() where T : class
+	/// <inheritdoc cref="As{T}(JsonSerializerOptions?)"/>
+	public T? As<T>() where T : class => As<T>(_jsonOptions);
+
+	/// <summary>
+	/// Casts the <see cref="Resource"/> to a strongly typed object of type <typeparamref name="T"/>
+	/// using the provided <see cref="JsonSerializerOptions"/>.
+	/// </summary>
+	/// <remarks>
+	/// The internal JSON node is cached on the first serialize call. Subsequent calls with different
+	/// options apply those options only to deserialization, not to re-serialization of the node.
+	/// </remarks>
+	/// <typeparam name="T">The expected reference type to convert the Resource to.</typeparam>
+	/// <param name="options">The <see cref="JsonSerializerOptions"/> to use, or <c>null</c> to use default options.</param>
+	/// <returns>An object of <typeparamref name="T"/> or null if conversion fails.</returns>
+	public T? As<T>(JsonSerializerOptions? options) where T : class
 	{
 		try
 		{
 			if (_resourceNode is null)
 			{
-				_resourceNode = JsonSerializer.SerializeToNode(this);
+				_resourceNode = JsonSerializer.SerializeToNode(this, options);
 			}
 
-			return _resourceNode?.Deserialize<T>();
+			return _resourceNode?.Deserialize<T>(options);
 		}
 		catch (Exception)
 		{
 			return null;
 		}
 	}
+
+	/// <summary>
+	/// Parses a HAL JSON string into a <see cref="Resource"/>.
+	/// </summary>
+	/// <remarks>
+	/// HAL type converters are attribute-wired on all HAL domain types and are applied
+	/// automatically. If <paramref name="options"/> includes a custom naming policy or
+	/// additional converters for state types, they will be propagated to subsequent
+	/// <see cref="State{T}(JsonSerializerOptions?)"/> calls.
+	/// To control HAL-specific behavior (e.g., <c>AlwaysUseArrayForLinks</c>), register
+	/// HAL converters explicitly via
+	/// <see cref="JsonSerializerOptionsExtensions.AddHalConverters(JsonSerializerOptions, HalJsonOptions?)"/>
+	/// before passing <paramref name="options"/> to this method.
+	/// </remarks>
+	/// <param name="json">The HAL JSON string to parse.</param>
+	/// <param name="options">Optional <see cref="JsonSerializerOptions"/> to use for deserialization and
+	/// subsequent state materialization. When <c>null</c>, attribute-wired converters and default options are used.</param>
+	/// <returns>The deserialized <see cref="Resource"/>, or <c>null</c> if the JSON represents <c>null</c>.</returns>
+	public static Resource? Parse(string json, JsonSerializerOptions? options = null)
+		=> JsonSerializer.Deserialize<Resource>(json, options);
 }
