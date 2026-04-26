@@ -504,7 +504,7 @@ public static Task<Resource<T>?> FollowLinkAsync<T>(
 **Templated flow:**
 1. Call `ResolveLink(resource, rel)` to get the `Link`
 2. Extract `linkObject = link.LinkObjects[0]`
-3. Call `linkObject.Expand(variables)` to resolve the templated href (delegates to `Chatter.Rest.UriTemplates`)
+3. Convert `object variables` via `ObjectToDictionary(variables)`, then call `linkObject.Expand(dict)` (delegates to `Chatter.Rest.UriTemplates`; `LinkObject` exposes dictionary/tuple-based `Expand` overloads)
 4. Construct `Uri` from the expanded href via `new Uri(expandedHref, UriKind.RelativeOrAbsolute)`
 5. Call `client.GetAsync(uri, ct)` or `client.GetAsync<T>(uri, ct)`
 
