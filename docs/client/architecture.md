@@ -9,7 +9,6 @@ This document is the source of truth for how the `Chatter.Rest.Hal.Client` packa
 ```
 Chatter.Rest.Hal.Client
   -> Chatter.Rest.Hal                             (core types: Resource, LinkObject, LinkCollection, Link)
-  -> Chatter.Rest.UriTemplates                    (RFC 6570 URI template expansion via LinkObject.Expand())
   -> System.Net.Http
   -> Microsoft.Extensions.Logging.Abstractions   (ILogger<T>, NullLogger<T> — logging only; no DI, options, or HTTP factory)
 
@@ -21,7 +20,7 @@ Chatter.Rest.Hal.Client.DependencyInjection
   -> Microsoft.Extensions.Logging.Abstractions
 ```
 
-The base package takes a minimal dependency on `Microsoft.Extensions.Logging.Abstractions` for optional structured logging. DI registration, `IOptions<T>`, and `IHttpClientFactory` remain in the companion package.
+The base package takes a minimal dependency on `Microsoft.Extensions.Logging.Abstractions` for optional structured logging. DI registration, `IOptions<T>`, and `IHttpClientFactory` remain in the companion package. `Chatter.Rest.UriTemplates` is a transitive dependency via `Chatter.Rest.Hal` — the client package calls `LinkObject.Expand()` (defined in `Chatter.Rest.Hal`), not URI template APIs directly.
 
 ---
 
@@ -64,8 +63,19 @@ namespace Chatter.Rest.Hal.Client;
 
 public sealed class HalClientOptions
 {
-    /// <summary>Default Accept header value. Default: "application/hal+json".</summary>
-    public string MediaType { get; set; } = "application/hal+json";
+    /// <summary>
+    /// Value sent in the Accept header on all requests. May include media type parameters.
+    /// Default: "application/hal+json".
+    /// </summary>
+    public string AcceptMediaType { get; set; } = "application/hal+json";
+
+    /// <summary>
+    /// Bare media type (no parameters) used for response Content-Type validation.
+    /// Comparison is case-insensitive against <c>response.Content.Headers.ContentType.MediaType</c>
+    /// (which strips parameters). Must not include parameters such as <c>charset</c>.
+    /// Default: "application/hal+json".
+    /// </summary>
+    public string ExpectedMediaType { get; set; } = "application/hal+json";
 
     /// <summary>
     /// When true, non-HAL responses (wrong Content-Type) throw HalResponseException.
@@ -123,8 +133,102 @@ public sealed class Resource<T> where T : class
     /// accepts options directly. No internal accessor or re-serialization is needed.
     /// </summary>
     public T? State() => _inner.State<T>(_jsonOptions);
+
+    // ── Typed traversal (single explicit type param; T of receiver is already known) ──
+
+    /// <summary>Follows a non-templated link as <typeparamref name="TResult"/>.</summary>
+    public Task<Resource<TResult>?> FollowLinkAsAsync<TResult>(
+        string rel, IHalClient client, CancellationToken ct = default) where TResult : class
+        => _inner.FollowLinkAsync<TResult>(rel, client, ct);
+
+    /// <summary>Follows a non-templated link as <typeparamref name="TResult"/> with rel-resolution logging.</summary>
+    public Task<Resource<TResult>?> FollowLinkAsAsync<TResult>(
+        string rel, IHalClient client, ILogger logger, CancellationToken ct = default) where TResult : class
+        => _inner.FollowLinkAsync<TResult>(rel, client, logger, ct);
+
+    /// <summary>Follows a templated link as <typeparamref name="TResult"/>.</summary>
+    public Task<Resource<TResult>?> FollowLinkAsAsync<TResult>(
+        string rel, IHalClient client, object variables, CancellationToken ct = default) where TResult : class
+        => _inner.FollowLinkAsync<TResult>(rel, client, variables, ct);
+
+    /// <summary>Follows a templated link as <typeparamref name="TResult"/> with rel-resolution logging.</summary>
+    public Task<Resource<TResult>?> FollowLinkAsAsync<TResult>(
+        string rel, IHalClient client, object variables, ILogger logger, CancellationToken ct = default) where TResult : class
+        => _inner.FollowLinkAsync<TResult>(rel, client, variables, logger, ct);
+
+    /// <summary>Follows all links for an array-valued rel, yielding each as <typeparamref name="TResult"/>.</summary>
+    public IAsyncEnumerable<Resource<TResult>?> FollowLinksAsAsync<TResult>(
+        string rel, IHalClient client, CancellationToken ct = default) where TResult : class
+        => _inner.FollowLinksAsync<TResult>(rel, client, ct);
+
+    /// <summary>Follows all links for an array-valued rel as <typeparamref name="TResult"/> with logging.</summary>
+    public IAsyncEnumerable<Resource<TResult>?> FollowLinksAsAsync<TResult>(
+        string rel, IHalClient client, ILogger logger, CancellationToken ct = default) where TResult : class
+        => _inner.FollowLinksAsync<TResult>(rel, client, logger, ct);
+
+    /// <summary>POSTs to a linked resource and returns the response as <typeparamref name="TResult"/>. TBody is inferred from body.</summary>
+    public Task<Resource<TResult>?> PostToAsAsync<TBody, TResult>(
+        string rel, TBody body, IHalClient client, CancellationToken ct = default) where TResult : class
+        => _inner.PostToAsync<TBody, TResult>(rel, body, client, ct);
+
+    /// <summary>POSTs to a linked resource and returns the response as <typeparamref name="TResult"/>. TBody is inferred from body. With logging.</summary>
+    public Task<Resource<TResult>?> PostToAsAsync<TBody, TResult>(
+        string rel, TBody body, IHalClient client, ILogger logger, CancellationToken ct = default) where TResult : class
+        => _inner.PostToAsync<TBody, TResult>(rel, body, client, logger, ct);
+
+    /// <summary>POSTs raw content to a linked resource and returns the response as <typeparamref name="TResult"/>.</summary>
+    public Task<Resource<TResult>?> PostToAsAsync<TResult>(
+        string rel, HttpContent content, IHalClient client, CancellationToken ct = default) where TResult : class
+        => _inner.PostToAsync<TResult>(rel, content, client, ct);
+
+    /// <summary>POSTs raw content to a linked resource and returns the response as <typeparamref name="TResult"/>. With logging.</summary>
+    public Task<Resource<TResult>?> PostToAsAsync<TResult>(
+        string rel, HttpContent content, IHalClient client, ILogger logger, CancellationToken ct = default) where TResult : class
+        => _inner.PostToAsync<TResult>(rel, content, client, logger, ct);
+
+    /// <summary>PUTs to a linked resource and returns the response as <typeparamref name="TResult"/>. TBody is inferred from body.</summary>
+    public Task<Resource<TResult>?> PutToAsAsync<TBody, TResult>(
+        string rel, TBody body, IHalClient client, CancellationToken ct = default) where TResult : class
+        => _inner.PutToAsync<TBody, TResult>(rel, body, client, ct);
+
+    /// <summary>PUTs to a linked resource as <typeparamref name="TResult"/>. With logging.</summary>
+    public Task<Resource<TResult>?> PutToAsAsync<TBody, TResult>(
+        string rel, TBody body, IHalClient client, ILogger logger, CancellationToken ct = default) where TResult : class
+        => _inner.PutToAsync<TBody, TResult>(rel, body, client, logger, ct);
+
+    /// <summary>PUTs raw content to a linked resource and returns the response as <typeparamref name="TResult"/>.</summary>
+    public Task<Resource<TResult>?> PutToAsAsync<TResult>(
+        string rel, HttpContent content, IHalClient client, CancellationToken ct = default) where TResult : class
+        => _inner.PutToAsync<TResult>(rel, content, client, ct);
+
+    /// <summary>PUTs raw content to a linked resource as <typeparamref name="TResult"/>. With logging.</summary>
+    public Task<Resource<TResult>?> PutToAsAsync<TResult>(
+        string rel, HttpContent content, IHalClient client, ILogger logger, CancellationToken ct = default) where TResult : class
+        => _inner.PutToAsync<TResult>(rel, content, client, logger, ct);
+
+    /// <summary>PATCHes a linked resource and returns the response as <typeparamref name="TResult"/>. TBody is inferred from body.</summary>
+    public Task<Resource<TResult>?> PatchToAsAsync<TBody, TResult>(
+        string rel, TBody body, IHalClient client, CancellationToken ct = default) where TResult : class
+        => _inner.PatchToAsync<TBody, TResult>(rel, body, client, ct);
+
+    /// <summary>PATCHes a linked resource as <typeparamref name="TResult"/>. With logging.</summary>
+    public Task<Resource<TResult>?> PatchToAsAsync<TBody, TResult>(
+        string rel, TBody body, IHalClient client, ILogger logger, CancellationToken ct = default) where TResult : class
+        => _inner.PatchToAsync<TBody, TResult>(rel, body, client, logger, ct);
+
+    /// <summary>PATCHes raw content to a linked resource and returns the response as <typeparamref name="TResult"/>.</summary>
+    public Task<Resource<TResult>?> PatchToAsAsync<TResult>(
+        string rel, HttpContent content, IHalClient client, CancellationToken ct = default) where TResult : class
+        => _inner.PatchToAsync<TResult>(rel, content, client, ct);
+
+    /// <summary>PATCHes raw content to a linked resource as <typeparamref name="TResult"/>. With logging.</summary>
+    public Task<Resource<TResult>?> PatchToAsAsync<TResult>(
+        string rel, HttpContent content, IHalClient client, ILogger logger, CancellationToken ct = default) where TResult : class
+        => _inner.PatchToAsync<TResult>(rel, content, client, logger, ct);
 }
 ```
+
+`Resource<T>` depends on `IHalClient`, `ILogger`, and `HttpContent` — all of which are in the same package. The "As" suffix signals "treat the response as `TResult`" and avoids the generic-inference ambiguity of trying to specify both the receiver type `T` and a return type on the same extension method.
 
 `Resource<T>` is a client-side convenience type. It wraps the untyped `Resource` returned by deserialization and provides strongly-typed access to the embedded state via `State()`. The core `Chatter.Rest.Hal` library exposes `Resource.State<T>(JsonSerializerOptions?)` as a public overload, so `Resource<T>.State()` delegates directly — no internal accessor, `InternalsVisibleTo`, or re-serialization path is needed.
 
@@ -202,7 +306,7 @@ public sealed class HalLinkNotFoundException : Exception
 }
 ```
 
-**Message format:** `"Link relation '{rel}' not found on resource '{selfHref}'."`
+**Message format:** `"Link relation '{rel}' not found on resource '{RedactUri(selfHref)}'."` The `SelfHref` property retains the raw (unredacted) value for programmatic access. `RedactUri` applied to `selfHref` strips query strings and fragments before embedding in the message text, preventing query-token leakage when exception messages are logged.
 
 ---
 
@@ -222,7 +326,7 @@ public sealed class HalResponseException : Exception
 }
 ```
 
-**Message format:** `"Response from '{requestUri}' has Content-Type '{contentType}', expected HAL media type."`
+**Message format:** `"Response from '{RedactUri(requestUri)}' has Content-Type '{contentType}', expected HAL media type."` The `RequestUri` property retains the raw (unredacted) value for programmatic access. `RedactUri` strips query strings and fragments before embedding in the message text.
 
 ---
 
@@ -234,7 +338,7 @@ All HTTP methods in `HalClient` follow the same core flow. The verb-specific beh
 SendAsync(HttpMethod method, Uri uri, HttpContent? content, CancellationToken ct):
     // 1. Build request
     using var request = new HttpRequestMessage(method, uri)
-    request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue(_options.MediaType))
+    request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue(_options.AcceptMediaType))
     if content is not null:
         request.Content = content
 
@@ -257,11 +361,11 @@ SendAsync(HttpMethod method, Uri uri, HttpContent? content, CancellationToken ct
         return null
 
     // 5. Validate Content-Type
-    // HAL media type: compare MediaType (no parameters) case-insensitively to _options.MediaType
+    // HAL media type: compare MediaType (no parameters) case-insensitively to _options.ExpectedMediaType
     // Null ContentType header is treated as non-HAL
     responseContentType = response.Content.Headers.ContentType?.MediaType
     isHal = responseContentType is not null &&
-            string.Equals(responseContentType, _options.MediaType, StringComparison.OrdinalIgnoreCase)
+            string.Equals(responseContentType, _options.ExpectedMediaType, StringComparison.OrdinalIgnoreCase)
     if not isHal:
         if _options.StrictContentType:
             throw new HalResponseException(uri, responseContentType)
@@ -350,21 +454,19 @@ public static class HalClientHttpClientBuilderExtensions
 ```
 
 **Registration sequence:**
-1. Configure `HalClientOptions` via `builder.Services.Configure(configure)`
-2. Register `IHalClient` using a factory that:
-   a. Resolves `IHttpClientFactory` and calls `CreateClient(builder.Name)` to get the named/typed `HttpClient`
-   b. Resolves `IOptions<HalClientOptions>` and uses `.Value` for the options
-   c. Resolves `ILogger<HalClient>?` from the container (or null if not registered)
-   d. Constructs: `new HalClient(httpClient, options, logger)`
-   
-   Implementation shape:
+1. Configure named `HalClientOptions` via `builder.Services.Configure<HalClientOptions>(builder.Name, configure)`. Using a named options instance keyed by `builder.Name` prevents multiple `AddHalOptions` calls from sharing or overwriting each other's options.
+2. Register `IHalClient` as a typed client attached to this specific `IHttpClientBuilder`:
+
    ```csharp
-   builder.Services.AddTransient<IHalClient>(sp =>
+   builder.AddTypedClient<IHalClient>((httpClient, sp) =>
        new HalClient(
-           sp.GetRequiredService<IHttpClientFactory>().CreateClient(builder.Name),
-           sp.GetRequiredService<IOptions<HalClientOptions>>().Value,
+           httpClient,
+           sp.GetRequiredService<IOptionsMonitor<HalClientOptions>>().Get(builder.Name),
            sp.GetService<ILogger<HalClient>>()))
    ```
+
+   `builder.AddTypedClient<IHalClient>` attaches the typed client registration to the named `HttpClient` managed by this builder. `IOptionsMonitor<HalClientOptions>.Get(builder.Name)` resolves the named options snapshot for this specific client. Multiple `AddHalOptions` calls on different builders are fully isolated — each gets its own named options and its own typed client registration.
+
 3. Return `builder` for chaining
 
 ---
@@ -686,12 +788,12 @@ public static Task<Resource?> FollowLinkAsync(
 
 ---
 
-### `Resource<T>` extension overloads
+### `Resource<T>` extension overloads and instance methods
 
-Every extension method that takes `this Resource resource` also has a parallel `this Resource<T> resource` overload. The typed overloads are not repeated individually; they follow the same signature pattern with `this Resource<T> resource` substituted for `this Resource resource` and the same return type. They delegate immediately to the `Resource` overload via `resource.Inner`:
+**Untyped-return extension overloads:** Every extension method on `Resource` that returns `Resource?`, `IAsyncEnumerable<Resource?>`, or `Task` also has a parallel `this Resource<T> resource` extension overload that delegates to `resource.Inner`. For example:
 
 ```csharp
-// Example: Resource<T> overload for FollowLinkAsync (no logger)
+// Extension overload — untyped return, delegates to Inner
 public static Task<Resource?> FollowLinkAsync<T>(
     this Resource<T> resource,
     string rel,
@@ -700,7 +802,24 @@ public static Task<Resource?> FollowLinkAsync<T>(
     => resource.Inner.FollowLinkAsync(rel, client, ct);
 ```
 
-This pattern applies to all `FollowLinkAsync`, `FollowLinksAsync`, `FollowLinksAsync<TItem>`, `PostToAsync`, `PutToAsync`, `PatchToAsync`, and `DeleteToAsync` overloads. Callers holding a `Resource<T>` do not need `.Inner` for traversal or mutation — the overloads handle the delegation transparently.
+This pattern applies to all untyped-return variants of `FollowLinkAsync`, `FollowLinksAsync`, `PostToAsync`, `PutToAsync`, `PatchToAsync`, and `DeleteToAsync`.
+
+**Typed-return instance methods ("As" naming):** For typed traversal and typed mutations returning `Resource<TResult>?` or `IAsyncEnumerable<Resource<TResult>?>`, `Resource<T>` exposes dedicated instance methods with an `As` suffix (`FollowLinkAsAsync<TResult>`, `FollowLinksAsAsync<TResult>`, `PostToAsAsync<TResult>`, `PutToAsAsync<TResult>`, `PatchToAsAsync<TResult>`). These are defined as instance methods — not extension methods — so `TResult` is the only method-level type parameter, avoiding the C# limitation that prevents partial type argument specification on extension methods. See the `Resource<T>` class definition above for the full list.
+
+**Callers navigating from `Resource<T>`:**
+
+```csharp
+Resource<OrderSummary> order = await client.GetAsync<OrderSummary>(uri);
+
+// Untyped traversal via extension overload:
+Resource? raw = await order.FollowLinkAsync("related", client);
+
+// Typed traversal via instance method (single explicit type param):
+Resource<OrderDetails>? details = await order.FollowLinkAsAsync<OrderDetails>("details", client);
+
+// Typed mutation via instance method:
+Resource<ConfirmResult>? result = await order.PostToAsAsync<ConfirmResult>("confirm", new { force = true }, client);
+```
 
 ---
 
@@ -752,7 +871,8 @@ public static class HttpClientHalExtensions
 | Rel not found on resource | Throw before HTTP | `HalLinkNotFoundException` |
 | Duplicate rels on resource | Throw before HTTP | `InvalidOperationException` |
 | HTTP 2xx with body | Deserialize and return | -- |
-| HTTP 204 or explicit `Content-Length: 0` | Return `null` without Content-Type check | -- |
+| HTTP 204 or explicit `Content-Length: 0` (mutations: POST/PUT/PATCH/DELETE) | Return `null` without Content-Type check | -- |
+| HTTP 204 or explicit `Content-Length: 0` (GET) | Proceeds to Content-Type validation → `null` or `HalResponseException` | -- |
 | HTTP 301/302/3xx (redirect) | `HttpClient` follows redirects by default; non-redirect 3xx reaches `EnsureSuccessStatusCode` and throws | `HttpRequestException` |
 | HTTP 400 / 401 / 403 / 409 | Throw | `HttpRequestException` |
 | HTTP 404 | Return `null` (DELETE completes normally) | -- |
@@ -890,7 +1010,7 @@ When a logger overload is called with a non-null logger, it logs rel resolution 
 ### Unit tests
 
 **`HalClient` request behavior:**
-- Sets `Accept` header to `HalClientOptions.MediaType` on all requests
+- Sets `Accept` header to `HalClientOptions.AcceptMediaType` on all requests
 - Sends correct HTTP method for each verb
 - Serializes object body as JSON `StringContent`
 - Passes raw `HttpContent` through unchanged
@@ -946,6 +1066,21 @@ When a logger overload is called with a non-null logger, it logs rel resolution 
 - Constructs `HalClient` with provided or default options
 - Delegates to correct `IHalClient` method
 
+**`Resource<T>` "As" methods:**
+- `FollowLinkAsAsync<TResult>` accepts a single explicit type param; `T` of the receiver is already known
+- `FollowLinksAsAsync<TResult>` yields `IAsyncEnumerable<Resource<TResult>?>`
+- `PostToAsAsync<TBody, TResult>`: `TBody` is inferred from the body argument; only `TResult` is explicitly specified
+- `PostToAsAsync<TResult>(..., HttpContent, ...)` returns `Resource<TResult>?`
+- Untyped-return `Resource<T>` extension overloads delegate correctly to `.Inner` for all verbs
+
+**Exception message redaction:**
+- `HalLinkNotFoundException.Message` does not contain query strings or fragments from `SelfHref`; `SelfHref` property retains raw value
+- `HalResponseException.Message` does not contain query strings or fragments from `RequestUri`; `RequestUri` property retains raw value
+
+**GET 204 behavior:**
+- `GetAsync` with a 204 response proceeds to Content-Type validation; returns `null` in lenient mode, throws `HalResponseException` in strict mode
+- Contrasting: `PostAsync` / `PutAsync` / `PatchAsync` with 204 return `null` without Content-Type validation
+
 ### Integration tests
 
 **DI registration -- `AddHalClient`:**
@@ -957,6 +1092,7 @@ When a logger overload is called with a non-null logger, it logs rel resolution 
 - Resolves `IHalClient` from container
 - `HttpClient` lifecycle managed by factory
 - Options are applied correctly
+- Named option isolation: multiple `AddHalOptions` calls on different `IHttpClientBuilder` instances use independent named options; a second call does not overwrite the first registration's options or replace the first `IHalClient` registration
 
 **End-to-end traversal:**
 - Mock `HttpClient` (via `HttpMessageHandler`) returning HAL JSON
