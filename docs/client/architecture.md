@@ -274,6 +274,8 @@ SendAsync(HttpMethod method, Uri uri, HttpContent? content, CancellationToken ct
 
 ## DI Registration
 
+> DI registration types live in `Chatter.Rest.Hal.Client.DependencyInjection`. The base package has no DI dependency.
+
 ### `HalClientServiceCollectionExtensions`
 
 ```csharp
@@ -314,7 +316,11 @@ public static class HalClientHttpClientBuilderExtensions
 
 **Registration sequence:**
 1. Configure `HalClientOptions` via `builder.Services.Configure(configure)`
-2. Register `IHalClient` -> `HalClient` (uses the typed `HttpClient` from the builder)
+2. Register `IHalClient` → `HalClient` using `AddHttpClient<IHalClient, HalClient>()` so that the
+   `IHalClient` resolution uses the same named/typed `HttpClient` managed by the builder's factory.
+   Internally: `builder.Services.AddTransient<IHalClient>(sp =>
+       new HalClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient(builder.Name),
+                     sp.GetRequiredService<IOptions<HalClientOptions>>()))`
 3. Return `builder` for chaining
 
 ---
@@ -630,7 +636,28 @@ public sealed class HalClient : IHalClient
 }
 ```
 
-When registered via `Chatter.Rest.Hal.Client.DependencyInjection`, the DI container wires up logging. When constructing `HalClient` directly (without DI), no logging occurs. See the DI companion package section for logging wiring.
+When registered via `Chatter.Rest.Hal.Client.DependencyInjection`, the DI container wires up logging. When constructing `HalClient` directly (without DI), no logging occurs. See the DI companion package section for logging wiring. Extension methods that accept `ILogger? logger = null` are provided by the DI companion package only; the base package extension methods in `Chatter.Rest.Hal.Client.Extensions` do not include a logger parameter (see [Extension Method Logging Overloads](#extension-method-logging-overloads-di-companion-package)).
+
+---
+
+### URI Redaction
+
+Full URIs must never appear in log messages because query strings may contain API keys or tokens (REQ-45). All `{Uri}` log parameters use a `RedactUri` helper that strips query and fragment before logging:
+
+```
+RedactUri(Uri uri):
+    if uri is relative:
+        // strip query and fragment from relative URI string
+        uriString = uri.OriginalString
+        queryIndex = uriString.IndexOf('?')
+        fragmentIndex = uriString.IndexOf('#')
+        cutIndex = min of queryIndex and fragmentIndex (ignoring -1)
+        return cutIndex >= 0 ? uriString[..cutIndex] : uriString
+    // absolute URI: use scheme + host + path only
+    return new Uri(uri.GetLeftPart(UriPartial.Path)).ToString()
+```
+
+Log points that accept a `Uri` parameter pass it through `RedactUri` before logging. Raw URIs must never appear in log output.
 
 ---
 
@@ -649,6 +676,8 @@ All log points are defined as `[LoggerMessage]` attributed static partial method
 | `LogMutationRequest` | Debug | 7 | `"Sending {Method} to rel '{Rel}', uri={Uri}"` | `Method`, `Rel`, `Uri` |
 | `LogHalClientInitialized` | Debug | 8 | `"HalClient initialized"` | (none) |
 
+`{Uri}` values are redacted via `RedactUri` (scheme + host + path only; query and fragment stripped).
+
 Event IDs are scoped to the `HalClient` category. `LogHalClientInitialized` is emitted once per `HalClient` instance construction (REQ-43).
 
 ---
@@ -662,6 +691,42 @@ Event IDs are scoped to the `HalClient` category. `LogHalClientInitialized` is e
 ### Sensitive Data
 
 Auth headers, request bodies, and response bodies must never appear in log messages (REQ-45). The log point table above lists only safe parameters: HTTP method, URI, status code, rel name, and content type.
+
+---
+
+### Extension Method Logging Overloads (DI Companion Package)
+
+The `Chatter.Rest.Hal.Client.DependencyInjection` package provides additional overloads of the extension methods that accept `ILogger? logger = null`. These overloads are defined in a separate static class in the DI companion package and shadow the base overloads when the DI package is referenced.
+
+Example signatures (all follow the same pattern):
+
+```csharp
+// In Chatter.Rest.Hal.Client.DependencyInjection:
+public static Task<Resource?> FollowLinkAsync(
+    this Resource resource,
+    string rel,
+    IHalClient client,
+    ILogger? logger = null,
+    CancellationToken ct = default);
+
+public static Task<Resource?> FollowLinksAsync(
+    this Resource resource,
+    string rel,
+    IHalClient client,
+    ILogger? logger = null,
+    CancellationToken ct = default);
+
+public static Task<Resource?> PostToAsync(
+    this Resource resource,
+    string rel,
+    object body,
+    IHalClient client,
+    ILogger? logger = null,
+    CancellationToken ct = default);
+// ... and so on for PutToAsync, PatchToAsync, DeleteToAsync
+```
+
+When `logger` is non-null, the extension method logs rel resolution at Debug level before delegating to `IHalClient`. When `logger` is null, no logging occurs.
 
 ---
 

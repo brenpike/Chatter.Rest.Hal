@@ -153,6 +153,8 @@ Already uses `Chatter.Rest.Hal` for building HAL documents server-side. Wants to
 
 **REQ-36:** All log messages use structured logging with named placeholders (e.g., `{Method}`, `{Uri}`, `{StatusCode}`, `{Rel}`, `{ContentType}`) and never string concatenation or string interpolation in log calls.
 
+**REQ-36a:** All `{Uri}` values in log messages must be redacted before logging. Only the scheme, host, and path are included; query strings and URL fragments are stripped. This prevents API keys or tokens embedded in query parameters from appearing in logs.
+
 **REQ-37:** At `Debug` level, `HalClient` logs the HTTP method and request URI before sending each request, and the response status code after receiving the response.
 
 **REQ-38:** At `Debug` level, `HalClient` logs when a 404 response is received and `null` is returned.
@@ -161,9 +163,9 @@ Already uses `Chatter.Rest.Hal` for building HAL documents server-side. Wants to
 
 **REQ-40:** At `Error` level, `HalClient` logs deserialization failures, including the exception and the request URI.
 
-**REQ-41:** At `Debug` level, `FollowLink` and `FollowLinks` extension methods log rel resolution: the rel name, the resolved href, and whether the link is templated. Logging occurs at the extension-method call site (not inside `HalClient`) because the extension has rel context that `HalClient` does not. Extension methods accept an optional `ILogger?` parameter (defaulting to `null`) for this purpose; callers that want rel-resolution logging pass their logger explicitly.
+**REQ-41:** At `Debug` level, `FollowLink` and `FollowLinks` extension methods log rel resolution: the rel name, the resolved href, and whether the link is templated. Logging occurs at the extension-method call site (not inside `HalClient`) because the extension has rel context that `HalClient` does not. Extension methods accept an optional `ILogger?` parameter (defaulting to `null`) for this purpose; callers that want rel-resolution logging pass their logger explicitly. (These logging overloads are provided by the `Chatter.Rest.Hal.Client.DependencyInjection` companion package. Base package extension methods have no `ILogger` parameter.)
 
-**REQ-42:** At `Debug` level, `PostTo`, `PutTo`, `PatchTo`, and `DeleteTo` extension methods log the rel name and resolved URI before delegating to `IHalClient`. These methods follow the same optional `ILogger?` parameter pattern as `FollowLink` (REQ-41).
+**REQ-42:** At `Debug` level, `PostTo`, `PutTo`, `PatchTo`, and `DeleteTo` extension methods log the rel name and resolved URI before delegating to `IHalClient`. These methods follow the same optional `ILogger?` parameter pattern as `FollowLink` (REQ-41). (These logging overloads are provided by the `Chatter.Rest.Hal.Client.DependencyInjection` companion package. Base package extension methods have no `ILogger` parameter.)
 
 **REQ-43:** At `Debug` level, `AddHalClient` and `AddHalOptions` log confirmation that `IHalClient` has been registered. Because these methods run during service registration before the DI container is built, the confirmation log is emitted from the `HalClient` constructor on first instantiation (one-time `Debug` message: `"HalClient initialized"`).
 
@@ -342,3 +344,4 @@ The following capabilities are explicitly deferred and must not be implemented i
 - **Batch requests** -- no multi-resource fetch optimization
 - **Streaming / SSE** -- no server-sent events or streaming response support
 - **Authentication** -- no built-in auth; users configure `DelegatingHandler`s via `IHttpClientFactory`
+- **Concurrency limiting for `FollowLinksAsync`** -- no built-in semaphore or throttling; `FollowLinksAsync` uses unbounded `Task.WhenAll`. Callers with very large link arrays compose their own concurrency control via `SemaphoreSlim` or similar.
