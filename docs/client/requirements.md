@@ -130,11 +130,19 @@ Already uses `Chatter.Rest.Hal` for building HAL documents server-side. Wants to
 
 ### Mutation -- extension methods on `Resource`
 
-**REQ-25:** `PostToAsync` has three overloads: (a) `PostToAsync<TBody, TResponse>(string rel, TBody body, IHalClient client)` returning `Resource<TResponse>?`, (b) `PostToAsync(string rel, object body, IHalClient client)` returning `Resource?`, and (c) `PostToAsync(string rel, HttpContent content, IHalClient client)` returning `Resource?`. All throw `HalLinkNotFoundException` if the rel is absent.
+**REQ-25:** `PostToAsync` has six overloads in three pairs (no-logger / with-logger, following REQ-42's overload-pair pattern):
+- (a) `PostToAsync<TBody, TResponse>(string rel, TBody body, IHalClient client, CancellationToken ct = default)` returning `Resource<TResponse>?`
+- (a-log) same with explicit `ILogger logger` before `ct`
+- (b) `PostToAsync(string rel, object body, IHalClient client, CancellationToken ct = default)` returning `Resource?`
+- (b-log) same with explicit `ILogger logger` before `ct`
+- (c) `PostToAsync(string rel, HttpContent content, IHalClient client, CancellationToken ct = default)` returning `Resource?`
+- (c-log) same with explicit `ILogger logger` before `ct`
 
-**REQ-26:** `PutToAsync` has the same three overloads as `PostToAsync` (REQ-25), using HTTP PUT.
+All overloads throw `HalLinkNotFoundException` if the rel is absent. `TResponse` is constrained to reference types (`where TResponse : class`).
 
-**REQ-27:** `PatchToAsync` has the same three overloads as `PostToAsync` (REQ-25), using HTTP PATCH.
+**REQ-26:** `PutToAsync` has the same six-overload pattern as `PostToAsync` (REQ-25), using HTTP PUT.
+
+**REQ-27:** `PatchToAsync` has the same six-overload pattern as `PostToAsync` (REQ-25), using HTTP PATCH.
 
 **REQ-28:** `DeleteToAsync(string rel, IHalClient client)` has a single overload with no body. It returns `Task` (not `Task<Resource?>`). Throws `HalLinkNotFoundException` if the rel is absent.
 
