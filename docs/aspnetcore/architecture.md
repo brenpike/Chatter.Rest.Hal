@@ -33,10 +33,11 @@ src/Chatter.Rest.Hal.AspNetCore/
 ├── EndpointConventionExtensions.cs
 └── Internal/
     ├── HalLinkBuilder.cs
-    ├── AutoSelfEndpointFilter.cs
+    ├── AutoSelfMiddleware.cs
     ├── AutoSelfResultFilter.cs
     ├── HalExceptionHandler.cs
     ├── HalFormatterPatcher.cs
+    ├── EnableHalAutoSelf.cs
     ├── DisableHalAutoSelf.cs
     └── HalRegistrationMarker.cs
 ```
@@ -48,7 +49,7 @@ src/Chatter.Rest.Hal.AspNetCore/
 | Namespace | Visibility | Contents |
 |---|---|---|
 | `Chatter.Rest.Hal.AspNetCore` | Public | `HalOptions`, `HalResult`, `HalResults`, `HalControllerBase`, `IHalLinkBuilder`, `HalProblem`, `ServiceCollectionExtensions`, `MvcBuilderExtensions`, `ApplicationBuilderExtensions`, `ControllerBaseExtensions`, `ControllerLinkBuilderExtensions`, `EndpointConventionExtensions` |
-| `Chatter.Rest.Hal.AspNetCore.Internal` | Internal | `HalLinkBuilder`, `AutoSelfEndpointFilter`, `AutoSelfResultFilter`, `HalExceptionHandler`, `HalFormatterPatcher`, `DisableHalAutoSelf`, `HalRegistrationMarker` |
+| `Chatter.Rest.Hal.AspNetCore.Internal` | Internal | `HalLinkBuilder`, `AutoSelfMiddleware`, `AutoSelfResultFilter`, `HalExceptionHandler`, `HalFormatterPatcher`, `EnableHalAutoSelf`, `DisableHalAutoSelf`, `HalRegistrationMarker` |
 
 A single `using Chatter.Rest.Hal.AspNetCore;` exposes all public types (REQ-05, REQ-10, REQ-15).
 
@@ -117,10 +118,18 @@ Single result type that works in both the MVC controller pipeline (`IActionResul
 ```csharp
 public sealed class HalResult : IActionResult, IResult
 {
-    private readonly Resource _resource;
+    private readonly Resource? _resource;
     private readonly int _statusCode;
 
+    // Deferred builder support (used by HalResults.Ok<T>)
+    private readonly object? _state;
+    private readonly Delegate? _builder;   // Func<T, IHalLinkBuilder, Resource>
+
+    // Immediate constructor — used when Resource is already built (controller path, untyped Ok)
     public HalResult(Resource resource, int statusCode);
+
+    // Deferred constructor — used by HalResults.Ok<T> where IHalLinkBuilder is not yet available
+    internal HalResult(object state, Delegate builder, int statusCode);
 
     // IResult (Minimal API pipeline)
     public Task ExecuteAsync(HttpContext httpContext);
@@ -129,6 +138,9 @@ public sealed class HalResult : IActionResult, IResult
     public Task ExecuteResultAsync(ActionContext context);
 
     // Both delegate to the same core write logic — see Serialization Flow below.
+    // If _resource is null (deferred path), resolves IHalLinkBuilder from
+    // context.RequestServices and invokes _builder to produce the Resource
+    // before serializing.
 }
 ```
 
@@ -142,7 +154,8 @@ public static class HalResults
     // HTTP 200 -- untyped (REQ-19)
     public static HalResult Ok(Resource resource);
 
-    // HTTP 200 -- typed; resolves IHalLinkBuilder from request services (REQ-19)
+    // HTTP 200 -- typed; deferred execution: stores state + builder,
+    // resolves IHalLinkBuilder at ExecuteAsync/ExecuteResultAsync time (REQ-19)
     public static HalResult Ok<T>(T state, Func<T, IHalLinkBuilder, Resource> builder);
 
     // HTTP 201 (REQ-20)
@@ -301,13 +314,23 @@ Per-endpoint auto-self overrides (REQ-28).
 ```csharp
 public static class EndpointConventionExtensions
 {
-    // Forces auto-self injection for this endpoint regardless of global setting
+    // Forces auto-self injection for this endpoint regardless of global setting.
+    // Adds EnableHalAutoSelf metadata marker.
     public static IEndpointConventionBuilder WithHalAutoSelf(
-        this IEndpointConventionBuilder builder);
+        this IEndpointConventionBuilder builder)
+    {
+        builder.Add(b => b.Metadata.Add(new EnableHalAutoSelf()));
+        return builder;
+    }
 
-    // Suppresses auto-self injection for this endpoint regardless of global setting
+    // Suppresses auto-self injection for this endpoint regardless of global setting.
+    // Adds DisableHalAutoSelf metadata marker.
     public static IEndpointConventionBuilder WithoutHalAutoSelf(
-        this IEndpointConventionBuilder builder);
+        this IEndpointConventionBuilder builder)
+    {
+        builder.Add(b => b.Metadata.Add(new DisableHalAutoSelf()));
+        return builder;
+    }
 }
 ```
 
@@ -342,23 +365,38 @@ internal sealed class HalLinkBuilder : IHalLinkBuilder
 }
 ```
 
-### `AutoSelfEndpointFilter`
+### `AutoSelfMiddleware`
 
-`IEndpointFilter` implementation for Minimal API auto-self injection (REQ-25, REQ-26, REQ-27, REQ-28, REQ-29).
+Middleware for global Minimal API auto-self injection. Activated by `UseHal()`. Reads `IOptions<HalOptions>` and checks endpoint metadata for `EnableHalAutoSelf` / `DisableHalAutoSelf` overrides (REQ-25, REQ-26, REQ-27, REQ-28, REQ-29).
 
 ```csharp
-internal sealed class AutoSelfEndpointFilter : IEndpointFilter
+internal sealed class AutoSelfMiddleware : IMiddleware
 {
-    public async ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext ctx, EndpointFilterDelegate next)
+    private readonly IHalLinkBuilder _linkBuilder;
+    private readonly IOptions<HalOptions> _options;
+
+    public AutoSelfMiddleware(IHalLinkBuilder linkBuilder, IOptions<HalOptions> options);
+
+    public async Task InvokeAsync(HttpContext context, RequestDelegate next)
     {
-        // if endpoint metadata has DisableHalAutoSelf: return await next(ctx)
-        // result = await next(ctx)
-        // if result is HalResult and resource has no "self" link:
-        //     routeName  = ctx.HttpContext.GetEndpoint()?.DisplayName
-        //     routeValues = ctx.HttpContext.Request.RouteValues
-        //     selfLink = _linkBuilder.For(routeName, routeValues)
+        await next(context);
+
+        // 3-way precedence (REQ-28):
+        //   1. EnableHalAutoSelf metadata present  → inject
+        //   2. DisableHalAutoSelf metadata present → skip
+        //   3. Neither                             → follow _options.Value.AutoSelfLink
+        // endpoint = context.GetEndpoint()
+        // enableMarker  = endpoint?.Metadata.GetMetadata<EnableHalAutoSelf>()
+        // disableMarker = endpoint?.Metadata.GetMetadata<DisableHalAutoSelf>()
+        //
+        // if disableMarker is not null: return
+        // if enableMarker is null and not _options.Value.AutoSelfLink: return
+        //
+        // if response result is HalResult and resource has no "self" link:
+        //     routeName   = endpoint?.Metadata.GetMetadata<IEndpointNameMetadata>()?.EndpointName
+        //     routeValues = context.Request.RouteValues
+        //     selfLink    = _linkBuilder.For(routeName, routeValues)
         //     resource.Links.Add("self", selfLink)
-        // return result
     }
 }
 ```
@@ -370,10 +408,24 @@ internal sealed class AutoSelfEndpointFilter : IEndpointFilter
 ```csharp
 internal sealed class AutoSelfResultFilter : IResultFilter
 {
+    private readonly IHalLinkBuilder _linkBuilder;
+    private readonly IOptions<HalOptions> _options;
+
+    public AutoSelfResultFilter(IHalLinkBuilder linkBuilder, IOptions<HalOptions> options);
+
     public void OnResultExecuting(ResultExecutingContext context)
     {
         // if context.Result is not HalResult: return
-        // if endpoint metadata has DisableHalAutoSelf: return
+        //
+        // 3-way precedence (REQ-28):
+        //   1. EnableHalAutoSelf metadata  → inject
+        //   2. DisableHalAutoSelf metadata → skip
+        //   3. Neither                     → follow _options.Value.AutoSelfLink
+        // endpoint = context.HttpContext.GetEndpoint()
+        // if endpoint?.Metadata.GetMetadata<DisableHalAutoSelf>() is not null: return
+        // if endpoint?.Metadata.GetMetadata<EnableHalAutoSelf>() is null
+        //    and not _options.Value.AutoSelfLink: return
+        //
         // if resource already has "self" link: return
         // routeName   = context.ActionDescriptor.AttributeRouteInfo?.Name
         // routeValues = context.RouteData.Values
@@ -435,6 +487,14 @@ Internal sealed record used as an endpoint metadata marker. Presence suppresses 
 internal sealed record DisableHalAutoSelf;
 ```
 
+### `EnableHalAutoSelf`
+
+Internal sealed record used as an endpoint metadata marker. Presence forces auto-self injection for the decorated endpoint regardless of `HalOptions.AutoSelfLink` (REQ-28).
+
+```csharp
+internal sealed record EnableHalAutoSelf;
+```
+
 ### `HalRegistrationMarker`
 
 Internal sealed class used as a DI sentinel for idempotent registration. `AddHal` returns immediately if this type is already registered (REQ-03).
@@ -471,10 +531,9 @@ AddHal(IServiceCollection services, Action<HalOptions> configure):
         services.Configure<MvcJsonOptions>(o =>
             o.JsonSerializerOptions.AddHalConverters())    // HAL converters for MVC JsonOptions
 
-    // Auto-self filter -- wired after options are configured (REQ-06, REQ-29)
-    services.AddOptions<HalOptions>().PostConfigure(opts =>
-        if opts.AutoSelfLink:
-            services.AddScoped<IResultFilter, AutoSelfResultFilter>())
+    // Auto-self filters -- registered unconditionally; check HalOptions.AutoSelfLink at runtime (REQ-06, REQ-29)
+    services.AddScoped<IResultFilter, AutoSelfResultFilter>()
+    services.AddScoped<AutoSelfMiddleware>()
 
     // UseProblemDetails -- IExceptionHandler registered here; middleware activated by UseHal() (REQ-07, REQ-30)
     if configure sets UseProblemDetails = true:
@@ -495,7 +554,8 @@ AddHal(IMvcBuilder builder, Action<HalOptions> configure):
 
 ```
 UseHal(IApplicationBuilder app):
-    app.UseExceptionHandler()    // activates IExceptionHandler pipeline (REQ-04, REQ-30)
+    app.UseExceptionHandler()              // activates IExceptionHandler pipeline (REQ-04, REQ-30)
+    app.UseMiddleware<AutoSelfMiddleware>() // global Minimal API auto-self injection (REQ-25, REQ-29)
     return app
 ```
 
@@ -510,11 +570,17 @@ CoreWriteAsync(HttpContext context):
     context.Response.StatusCode  = _statusCode
     context.Response.ContentType = _options.Value.MediaType          // e.g. "application/hal+json"
 
+    // Deferred builder path: resolve IHalLinkBuilder and invoke builder to produce Resource
+    resource = _resource
+    if resource is null:
+        linkBuilder = context.RequestServices.GetRequiredService<IHalLinkBuilder>()
+        resource = ((Func<object, IHalLinkBuilder, Resource>)_builder!)(_state!, linkBuilder)
+
     jsonOptions = context.RequestServices
         .GetRequiredService<IOptions<JsonOptions>>()
         .Value.JsonSerializerOptions                                  // HAL-aware options from DI
 
-    await context.Response.WriteAsJsonAsync(_resource, jsonOptions)  // direct stream write (REQ-17)
+    await context.Response.WriteAsJsonAsync(resource, jsonOptions)   // direct stream write (REQ-17)
 ```
 
 The MVC path (`ExecuteResultAsync`) extracts `HttpContext` from `ActionContext.HttpContext` before delegating.
@@ -523,22 +589,30 @@ The MVC path (`ExecuteResultAsync`) extracts `HttpContext` from `ActionContext.H
 
 ## Auto-Self Injection Flow
 
-### Minimal API (`AutoSelfEndpointFilter`)
+### Minimal API (`AutoSelfMiddleware`)
 
 ```
-InvokeAsync(EndpointFilterInvocationContext ctx, EndpointFilterDelegate next):
-    if ctx.HttpContext.GetEndpoint()?.Metadata.GetMetadata<DisableHalAutoSelf>() is not null:
-        return await next(ctx)                                        // suppressed (REQ-28)
+InvokeAsync(HttpContext context, RequestDelegate next):
+    await next(context)
 
-    result = await next(ctx)
+    endpoint      = context.GetEndpoint()
+    enableMarker  = endpoint?.Metadata.GetMetadata<EnableHalAutoSelf>()
+    disableMarker = endpoint?.Metadata.GetMetadata<DisableHalAutoSelf>()
 
-    if result is HalResult halResult and halResult.Resource.Links["self"] is null:
-        routeName   = ctx.HttpContext.GetEndpoint()?.DisplayName
-        routeValues = ctx.HttpContext.Request.RouteValues
+    // 3-way precedence (REQ-28):
+    //   1. EnableHalAutoSelf  → inject
+    //   2. DisableHalAutoSelf → skip
+    //   3. Neither            → follow _options.Value.AutoSelfLink
+    if disableMarker is not null:
+        return                                                        // suppressed (REQ-28)
+    if enableMarker is null and not _options.Value.AutoSelfLink:
+        return                                                        // global off, no override
+
+    if response is HalResult halResult and halResult.Resource.Links["self"] is null:
+        routeName   = endpoint?.Metadata.GetMetadata<IEndpointNameMetadata>()?.EndpointName
+        routeValues = context.Request.RouteValues
         selfLink    = _linkBuilder.For(routeName, routeValues)
         halResult.Resource.Links.Add("self", selfLink)                // inject (REQ-25, REQ-26)
-
-    return result
 ```
 
 ### Controller (`AutoSelfResultFilter`)
@@ -548,8 +622,18 @@ OnResultExecuting(ResultExecutingContext context):
     if context.Result is not HalResult halResult:
         return
 
-    if context.HttpContext.GetEndpoint()?.Metadata.GetMetadata<DisableHalAutoSelf>() is not null:
+    endpoint      = context.HttpContext.GetEndpoint()
+    enableMarker  = endpoint?.Metadata.GetMetadata<EnableHalAutoSelf>()
+    disableMarker = endpoint?.Metadata.GetMetadata<DisableHalAutoSelf>()
+
+    // 3-way precedence (REQ-28):
+    //   1. EnableHalAutoSelf  → inject
+    //   2. DisableHalAutoSelf → skip
+    //   3. Neither            → follow _options.Value.AutoSelfLink
+    if disableMarker is not null:
         return                                                        // suppressed (REQ-28)
+    if enableMarker is null and not _options.Value.AutoSelfLink:
+        return                                                        // global off, no override
 
     if halResult.Resource.Links["self"] is not null:
         return                                                        // already present (REQ-27)
@@ -604,13 +688,13 @@ Limitation: Only constant values and captured closures are supported in expressi
 
 - **`HalOptions`**: verify defaults for all properties; verify `MapException<T>` stores mapping in `ExceptionMappings` keyed by `typeof(TException)`; verify most-derived type wins when multiple mappings registered
 - **`HalResult`**: verify `ExecuteAsync` sets correct status code and `Content-Type`; verify `ExecuteResultAsync` delegates to same write logic; verify `WriteAsJsonAsync` is called with the `Resource` and HAL `JsonSerializerOptions`
-- **`HalResults`**: verify each factory method returns correct HTTP status; verify `Ok<T>` resolves `IHalLinkBuilder` from service provider and passes to builder delegate
+- **`HalResults`**: verify each factory method returns correct HTTP status; verify `Ok<T>` creates a deferred `HalResult` that resolves `IHalLinkBuilder` from `HttpContext.RequestServices` during `ExecuteAsync`
 - **`HalControllerBase` + `ControllerBaseExtensions`**: verify each method delegates to the correct `HalResults` factory; verify `HalOk<T>` resolves `IHalLinkBuilder` from `HttpContext.RequestServices`
 - **`HalProblem`**: verify each factory sets correct `Status`, `Title`, `Detail`, and `Type` URI per RFC 9457; verify `ValidationProblem` includes `Errors` in payload
 - **`HalLinkBuilder`** (internal): verify `For()` calls `LinkGenerator.GetPathByName` with correct arguments; verify `InvalidOperationException` on null result; verify `Template()` returns `LinkObject` with `Templated = true`
 - **`ControllerLinkBuilderExtensions`**: verify expression with `[ActionName]` extracts correct route name; verify expression with `[HttpGet(Name = ...)]` extracts correct route name; verify constant args produce correct route values; verify captured closure args produce correct route values; verify unsupported expression type throws `InvalidOperationException`
-- **`AutoSelfEndpointFilter`**: verify self link injected when absent and no `DisableHalAutoSelf` marker; verify injection skipped when `"self"` already present; verify injection skipped when `DisableHalAutoSelf` present
-- **`AutoSelfResultFilter`**: verify same three conditions for controller pipeline
+- **`AutoSelfMiddleware`**: verify self link injected when `AutoSelfLink = true` and no markers present; verify `EnableHalAutoSelf` forces injection when `AutoSelfLink = false`; verify `DisableHalAutoSelf` skips injection when `AutoSelfLink = true`; verify injection skipped when `"self"` already present
+- **`AutoSelfResultFilter`**: verify same 3-way precedence conditions for controller pipeline; verify filter resolves `IOptions<HalOptions>` and checks `AutoSelfLink` at runtime
 - **`HalExceptionHandler`**: verify matched exception type produces correct status and `Content-Type: application/problem+json`; verify unmatched exception produces HTTP 500; verify most-derived registered type wins over base type
 
 ### Integration tests (`WebApplicationFactory`)

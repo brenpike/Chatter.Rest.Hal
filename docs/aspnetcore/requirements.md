@@ -79,7 +79,7 @@ Already uses `Chatter.Rest.Hal` server-side for building HAL documents. Wants to
 
 ### HalResults factory
 
-**REQ-19:** `HalResults.Ok(Resource)` and `HalResults.Ok<T>(T state, Func<T, IHalLinkBuilder, Resource> builder)` return a `HalResult` with HTTP 200. The generic overload resolves `IHalLinkBuilder` from the request service provider and passes it to the builder delegate.
+**REQ-19:** `HalResults.Ok(Resource)` and `HalResults.Ok<T>(T state, Func<T, IHalLinkBuilder, Resource> builder)` return a `HalResult` with HTTP 200. The generic overload stores the state and builder delegate for deferred execution; `IHalLinkBuilder` is resolved from the request service provider during `HalResult.ExecuteAsync` / `ExecuteResultAsync` when the `HttpContext` is available.
 
 **REQ-20:** `HalResults.Created(string uri, Resource)`, `HalResults.Accepted(Resource)`, and `HalResults.NoContent()` return a `HalResult` with HTTP 201, 202, and 204 respectively.
 
@@ -103,7 +103,7 @@ Already uses `Chatter.Rest.Hal` server-side for building HAL documents. Wants to
 
 **REQ-28:** `WithHalAutoSelf()` on `IEndpointConventionBuilder` forces auto-self injection for a single endpoint regardless of the global setting. `WithoutHalAutoSelf()` suppresses auto-self injection for a single endpoint regardless of the global setting. Both override `HalOptions.AutoSelfLink` at the endpoint level.
 
-**REQ-29:** Auto-self injection for Minimal API endpoints is implemented as an `IEndpointFilter`. Auto-self injection for MVC controller actions is implemented as an `IResultFilter`.
+**REQ-29:** Auto-self injection for Minimal API endpoints is implemented as middleware (`AutoSelfMiddleware`) activated by `UseHal()`. Auto-self injection for MVC controller actions is implemented as an `IResultFilter` registered unconditionally as a scoped service. Both check `HalOptions.AutoSelfLink` and per-endpoint metadata markers at runtime.
 
 ### Problem Details / RFC 9457
 
@@ -219,7 +219,7 @@ These scenarios describe end-to-end behavior for test derivation.
 
 1. `HalOptions.AutoSelfLink = true`
 2. Endpoint returns `HalResult` whose `Resource` has no `"self"` link
-3. `AutoSelfEndpointFilter` / `AutoSelfResultFilter` detects absence of `"self"`
+3. `AutoSelfMiddleware` / `AutoSelfResultFilter` detects absence of `"self"`
 4. Filter calls `IHalLinkBuilder.For(currentRouteName, currentRouteValues)`
 5. `"self"` link is added to `Resource` before response is written
 
