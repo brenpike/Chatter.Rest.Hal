@@ -6,13 +6,25 @@ This document is the source of truth for what the `Chatter.Rest.Hal.Client` pack
 
 ## Overview
 
-`Chatter.Rest.Hal.Client` is a new NuGet package that provides an HTTP client for consuming HAL (Hypertext Application Language) APIs. It wraps `HttpClient` with HAL-aware request/response handling, typed deserialization into the existing `Resource` / `Resource<T>` domain model, and fluent link-traversal extension methods that let callers navigate a HAL API by following rels -- without writing HTTP boilerplate or RFC 6570 expansion code.
+`Chatter.Rest.Hal.Client` is a new NuGet package that provides an HTTP client for consuming HAL (Hypertext Application Language) APIs. It wraps `HttpClient` with HAL-aware request/response handling, typed deserialization into the `Resource` domain model, with `Resource<T>` defined in this package as a thin typed wrapper, and fluent link-traversal extension methods that let callers navigate a HAL API by following rels -- without writing HTTP boilerplate or RFC 6570 expansion code.
 
 ### Package dependencies
 
-- `Chatter.Rest.Hal` -- core HAL types (`Resource`, `Resource<T>`, `LinkObject`, `LinkCollection`, `Link`)
-- `Chatter.Rest.UriTemplates` -- RFC 6570 URI template expansion (used for templated link traversal)
-- `System.Net.Http` -- no new transitive dependencies beyond this
+#### `Chatter.Rest.Hal.Client`
+
+- `Chatter.Rest.Hal` — core HAL types (`Resource`, `LinkObject`, `LinkCollection`, `Link`)
+- `Chatter.Rest.UriTemplates` — RFC 6570 URI template expansion (used for templated link traversal)
+- `System.Net.Http` — no `Microsoft.Extensions.*` dependencies in this package
+
+#### `Chatter.Rest.Hal.Client.DependencyInjection`
+
+- `Chatter.Rest.Hal.Client` — base client package
+- `Microsoft.Extensions.Http` — `IHttpClientFactory` and typed client support
+- `Microsoft.Extensions.DependencyInjection.Abstractions` — `IServiceCollection`
+- `Microsoft.Extensions.Options` — `IOptions<T>` and `Configure<T>`
+- `Microsoft.Extensions.Logging.Abstractions` — `ILogger<T>` and `NullLogger<T>`
+
+Callers who use `HalClient` directly without a DI container only need `Chatter.Rest.Hal.Client`.
 
 ---
 
@@ -40,7 +52,7 @@ Already uses `Chatter.Rest.Hal` for building HAL documents server-side. Wants to
 
 **REQ-02:** `IHalClient` exposes async methods for all standard HTTP verbs: `GetAsync`, `PostAsync`, `PutAsync`, `PatchAsync`, and `DeleteAsync`. All methods accept a `Uri` parameter and a `CancellationToken` with a default value.
 
-**REQ-03:** `GetAsync` returns `Resource?` (untyped) or `Resource<T>?` (typed). Both overloads return `null` when the server responds with HTTP 404.
+**REQ-03:** `GetAsync` returns `Resource?` (untyped) or `Resource<T>?` (typed, where `Resource<T>` is a thin wrapper defined in this package that provides strongly-typed access to state via `State()`). Both overloads return `null` when the server responds with HTTP 404.
 
 **REQ-04:** `PostAsync`, `PutAsync`, and `PatchAsync` each have two overloads: one accepting an `object` body (serialized as JSON) and one accepting raw `HttpContent`. Both return `Resource?`.
 
@@ -72,11 +84,11 @@ Already uses `Chatter.Rest.Hal` for building HAL documents server-side. Wants to
 
 **REQ-15:** `HalClientOptions.JsonOptions` provides custom `JsonSerializerOptions` for deserialization. When `null`, library defaults are used.
 
-### DI registration
+### DI registration (requires `Chatter.Rest.Hal.Client.DependencyInjection`)
 
-**REQ-16:** `AddHalClient(Action<HalClientOptions>)` is an extension method on `IServiceCollection` that registers `IHalClient` / `HalClient` as a service and manages the `HttpClient` internally.
+**REQ-16:** `AddHalClient(Action<HalClientOptions>)` is an extension method on `IServiceCollection` (available in the `Chatter.Rest.Hal.Client.DependencyInjection` package) that registers `IHalClient` / `HalClient` as a service and manages the `HttpClient` internally.
 
-**REQ-17:** `AddHalOptions(Action<HalClientOptions>)` is an extension method on `IHttpClientBuilder` that composes `HalClient` with `IHttpClientFactory`, enabling Polly policies, auth `DelegatingHandler`s, and named/typed client lifecycle management.
+**REQ-17:** `AddHalOptions(Action<HalClientOptions>)` is an extension method on `IHttpClientBuilder` (available in the `Chatter.Rest.Hal.Client.DependencyInjection` package) that composes `HalClient` with `IHttpClientFactory`, enabling Polly policies, auth `DelegatingHandler`s, and named/typed client lifecycle management.
 
 **REQ-18:** Both registration paths resolve `IHalClient` to `HalClient` in the DI container.
 
@@ -122,9 +134,9 @@ Already uses `Chatter.Rest.Hal` for building HAL documents server-side. Wants to
 
 **REQ-34:** `IHalClient` is the primary abstraction for all client operations. Callers depend on the interface, enabling mock/stub injection in tests without requiring a live HTTP server.
 
-### Logging
+### Logging (requires `Chatter.Rest.Hal.Client.DependencyInjection`)
 
-**REQ-35:** `HalClient` accepts `ILogger<HalClient>` via constructor injection. The `IHalClient` interface does not reference `ILogger`; logging is an implementation detail of `HalClient`.
+**REQ-35:** `HalClient`, when instantiated via the `Chatter.Rest.Hal.Client.DependencyInjection` package, accepts `ILogger<HalClient>` via constructor injection. The base `HalClient` in `Chatter.Rest.Hal.Client` has no `ILogger` dependency and performs no logging. The `IHalClient` interface does not reference `ILogger`; logging is an implementation detail.
 
 **REQ-36:** All log messages use structured logging with named placeholders (e.g., `{Method}`, `{Uri}`, `{StatusCode}`, `{Rel}`, `{ContentType}`) and never string concatenation or string interpolation in log calls.
 
@@ -172,6 +184,8 @@ Already uses `Chatter.Rest.Hal` for building HAL documents server-side. Wants to
 ## Integration Story
 
 The following shows two ways to register `HalClient` in a .NET application:
+
+> **Note:** Both registration options require the `Chatter.Rest.Hal.Client.DependencyInjection` package. To use `HalClient` without DI, construct it directly: `new HalClient(httpClient, new HalClientOptions())`.
 
 ### Option A -- simple registration
 

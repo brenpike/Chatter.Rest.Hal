@@ -8,17 +8,40 @@ This document is the source of truth for how the `Chatter.Rest.Hal.Client` packa
 
 ```
 Chatter.Rest.Hal.Client
-  -> Chatter.Rest.Hal          (core types: Resource, Resource<T>, LinkObject, LinkCollection, Link)
+  -> Chatter.Rest.Hal          (core types: Resource, LinkObject, LinkCollection, Link)
   -> Chatter.Rest.UriTemplates (RFC 6570 URI template expansion via LinkObject.Expand())
-  -> System.Net.Http           (no new transitive dependencies beyond this)
+  -> System.Net.Http           (no Microsoft.Extensions.* dependencies)
+
+Chatter.Rest.Hal.Client.DependencyInjection
+  -> Chatter.Rest.Hal.Client
+  -> Microsoft.Extensions.Http
+  -> Microsoft.Extensions.DependencyInjection.Abstractions
+  -> Microsoft.Extensions.Options
+  -> Microsoft.Extensions.Logging.Abstractions
 ```
+
+DI registration, logging, and `IHttpClientFactory` integration live in the companion `Chatter.Rest.Hal.Client.DependencyInjection` package. Callers who use `HalClient` directly without DI only take a dependency on `Chatter.Rest.Hal.Client`.
 
 ---
 
 ## Project Location
 
 - Source: `src/Chatter.Rest.Hal.Client/`
-- Tests: `test/Chatter.Rest.Hal.Client.Tests/`
+- Tests:  `test/Chatter.Rest.Hal.Client.Tests/`
+
+- Source: `src/Chatter.Rest.Hal.Client.DependencyInjection/`
+- Tests:  `test/Chatter.Rest.Hal.Client.DependencyInjection.Tests/`
+
+---
+
+## Target Frameworks
+
+Both packages target `net8.0` and `netstandard2.0`, matching existing packages in the solution.
+
+### Compatibility notes
+
+- **`HttpMethod.Patch`**: Not available on `netstandard2.0`. Use `new HttpMethod("PATCH")` in implementation. Document this in pseudocode.
+- **`ReadAsStreamAsync(CancellationToken)`**: The overload accepting a `CancellationToken` is not available on `netstandard2.0`. Use the parameterless `ReadAsStreamAsync()` overload with an ambient cancellation pattern, or use `ReadAsStringAsync(ct)` with a `#if NETSTANDARD2_0` guard.
 
 ---
 
@@ -26,8 +49,9 @@ Chatter.Rest.Hal.Client
 
 | Namespace | Visibility | Contents |
 |---|---|---|
-| `Chatter.Rest.Hal.Client` | Public | `IHalClient`, `HalClient`, `HalClientOptions`, `HalLinkNotFoundException`, `HalResponseException` |
+| `Chatter.Rest.Hal.Client` | Public | `IHalClient`, `HalClient`, `HalClientOptions`, `Resource<T>`, `HalLinkNotFoundException`, `HalResponseException` |
 | `Chatter.Rest.Hal.Client.Extensions` | Public | Extension methods on `Resource` and `HttpClient` |
+| `Chatter.Rest.Hal.Client.DependencyInjection` | Public | `HalClientServiceCollectionExtensions`, `HalClientHttpClientBuilderExtensions` |
 
 ---
 
@@ -55,6 +79,47 @@ public sealed class HalClientOptions
     public JsonSerializerOptions? JsonOptions { get; set; }
 }
 ```
+
+---
+
+### `Resource<T>`
+
+A typed wrapper around `Resource` that exposes the embedded state as a strongly-typed value. Defined in this package; not part of the core library.
+
+```csharp
+namespace Chatter.Rest.Hal.Client;
+
+/// <summary>
+/// A typed wrapper around <see cref="Resource"/> that exposes the embedded state
+/// as a strongly-typed value. Defined in this package; not part of the core library.
+/// </summary>
+public sealed class Resource<T>
+{
+    private readonly Resource _inner;
+
+    public Resource(Resource inner)
+    {
+        _inner = inner ?? throw new ArgumentNullException(nameof(inner));
+    }
+
+    /// <summary>The underlying untyped resource.</summary>
+    public Resource Inner => _inner;
+
+    /// <summary>Links from the underlying resource.</summary>
+    public LinkCollection? Links => _inner.Links;
+
+    /// <summary>Embedded resources from the underlying resource.</summary>
+    public EmbeddedResourceCollection? Embedded => _inner.Embedded;
+
+    /// <summary>
+    /// Deserializes the resource state as <typeparamref name="T"/>.
+    /// Delegates to <see cref="Resource.State{T}()"/>.
+    /// </summary>
+    public T? State() => _inner.State<T>();
+}
+```
+
+`Resource<T>` is a client-side convenience type. It wraps the untyped `Resource` returned by deserialization and provides strongly-typed access to the embedded state via `State()`. The core `Chatter.Rest.Hal` library is not modified.
 
 ---
 
@@ -510,23 +575,19 @@ Single-element and empty cases require no special handling: `Task.WhenAll` on a 
 
 ## Logging Architecture
 
-### ILogger<T> Injection
+### Logging Boundary
 
-`HalClient` accepts `ILogger<HalClient>` as a constructor parameter (REQ-35). The `IHalClient` interface is not modified — logging is a `HalClient` implementation detail.
+Logging is not part of the base `Chatter.Rest.Hal.Client` package. The `HalClient` constructors have no `ILogger` parameter:
 
 ```csharp
 public sealed class HalClient : IHalClient
 {
-    public HalClient(HttpClient httpClient, HalClientOptions options, ILogger<HalClient>? logger = null);
-    public HalClient(HttpClient httpClient, IOptions<HalClientOptions> options, ILogger<HalClient>? logger = null);
+    public HalClient(HttpClient httpClient, HalClientOptions options);
+    public HalClient(HttpClient httpClient, IOptions<HalClientOptions> options);
 }
 ```
 
-The `ILogger<HalClient>` parameter is optional (defaulting to `null`) so that callers who do not use DI can construct `HalClient` without a logger. When `null`, a `NullLogger<HalClient>` is used internally.
-
-**Extension method logging:** `FollowLink`, `FollowLinks`, `PostTo`, `PutTo`, `PatchTo`, and `DeleteTo` extension methods accept an optional `ILogger? logger = null` parameter for rel-resolution logging (REQ-41, REQ-42). Callers that want debug-level rel-resolution logging pass their own logger explicitly. This avoids adding a logging accessor to `IHalClient` (a breaking interface change) and avoids service-locator patterns.
-
-**Rejected alternative:** Adding an internal `ILogger` property to `HalClient` accessible via a cast from `IHalClient`. Rejected because it couples extension methods to the concrete type, breaks the `IHalClient` abstraction, and cannot work when callers substitute a mock `IHalClient`.
+When registered via `Chatter.Rest.Hal.Client.DependencyInjection`, the DI container wires up logging. When constructing `HalClient` directly (without DI), no logging occurs. See the DI companion package section for logging wiring.
 
 ---
 
