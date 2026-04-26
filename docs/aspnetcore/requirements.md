@@ -49,7 +49,7 @@ Already uses `Chatter.Rest.Hal` server-side for building HAL documents. Wants to
 
 **REQ-06:** `HalOptions.AutoSelfLink` is a `bool` property with default `false`. When `true`, auto-self link injection filters are globally active for all HAL responses that lack a `"self"` link.
 
-**REQ-07:** `HalOptions.UseProblemDetails` is a `bool` property with default `false`. When `true`, `AddHal` registers `HalExceptionHandler` as an `IExceptionHandler` implementation in the DI container.
+**REQ-07:** `HalOptions.UseProblemDetails` is a `bool` property with default `false`. `AddHal` always registers `HalExceptionHandler` as an `IExceptionHandler` implementation because options values are not available at service registration time. `HalExceptionHandler.TryHandleAsync` checks `UseProblemDetails` at runtime and returns `false` (passes through) when `false`.
 
 **REQ-08:** `HalOptions.MediaType` is a `string` property with default `"application/hal+json"`. This value is used as the `Content-Type` on all `HalResult` responses.
 
@@ -91,7 +91,7 @@ Already uses `Chatter.Rest.Hal` server-side for building HAL documents. Wants to
 
 **REQ-23:** `HalControllerBase` is an optional abstract class that inherits `ControllerBase`. It re-exposes the factory methods from REQ-22 as `protected` members. It adds no behavior beyond the extension methods.
 
-**REQ-24:** `HalOk<T>(T state, Func<T, IHalLinkBuilder, Resource> builder)` resolves `IHalLinkBuilder` from `HttpContext.RequestServices` and passes it to the builder delegate before constructing the `HalResult`.
+**REQ-24:** `HalOk<T>(T state, Func<T, IHalLinkBuilder, Resource> builder)` resolves `IHalLinkBuilder` from `HttpContext.RequestServices`, invokes `builder(state, linkBuilder)` immediately to produce a `Resource`, and passes the result to `HalResult(resource, 200)` using the immediate constructor. Unlike `HalResults.Ok<T>`, builder execution is not deferred because `HttpContext` is available at the call site in MVC.
 
 ### Auto-self link injection
 
@@ -107,7 +107,7 @@ Already uses `Chatter.Rest.Hal` server-side for building HAL documents. Wants to
 
 ### Problem Details / RFC 9457
 
-**REQ-30:** When `HalOptions.UseProblemDetails` is `true`, `AddHal` registers `HalExceptionHandler` as an `IExceptionHandler` implementation. `UseHal()` activates the exception-handling middleware pipeline that invokes registered `IExceptionHandler` instances.
+**REQ-30:** `AddHal` always registers `HalExceptionHandler` as an `IExceptionHandler` implementation. `UseHal()` activates the exception-handling middleware pipeline only when `HalOptions.UseProblemDetails` is `true` (resolved via `IOptions<HalOptions>` at middleware build time). `HalExceptionHandler.TryHandleAsync` additionally guards itself with a runtime check on `UseProblemDetails`.
 
 **REQ-31:** `HalExceptionHandler.TryHandleAsync` walks the exception type hierarchy against registered `ExceptionMappings` (most-derived type first). On a match, it writes the mapped `HalProblem` to the response and returns `true`. When no match is found, it writes a generic HTTP 500 problem response.
 

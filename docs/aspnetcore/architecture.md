@@ -286,7 +286,9 @@ public static class ControllerBaseExtensions
 {
     public static HalResult HalOk(this ControllerBase controller, Resource resource);
 
-    // Resolves IHalLinkBuilder from HttpContext.RequestServices (REQ-24)
+    // Resolves IHalLinkBuilder from controller.HttpContext.RequestServices, invokes builder(state, linkBuilder)
+    // immediately to produce a Resource, then returns HalResult(resource, 200) — the immediate constructor.
+    // Unlike HalResults.Ok<T>, no deferred execution is needed here: HttpContext is available at call time. (REQ-24)
     public static HalResult HalOk<T>(
         this ControllerBase controller,
         T state,
@@ -422,6 +424,10 @@ internal sealed class HalExceptionHandler : IExceptionHandler
         Exception exception,
         CancellationToken cancellationToken)
     {
+        // Guard: handler registered unconditionally; return false when disabled to pass through
+        if not _options.Value.UseProblemDetails:
+            return false
+
         // Walk exception type hierarchy against _options.Value.ExceptionMappings
         //   (most-derived registered type first)
         // On match:
@@ -504,9 +510,12 @@ AddHal(IServiceCollection services, Action<HalOptions> configure):
         services.Configure<MvcJsonOptions>(o =>
             o.JsonSerializerOptions.AddHalConverters())    // HAL converters for MVC JsonOptions
 
-    // UseProblemDetails -- IExceptionHandler registered here; middleware activated by UseHal() (REQ-07, REQ-30)
-    if configure sets UseProblemDetails = true:
-        services.AddExceptionHandler<HalExceptionHandler>()
+    // HalExceptionHandler always registered. services.Configure<HalOptions>() defers the configure
+    // delegate — UseProblemDetails cannot be read at registration time. The handler checks
+    // _options.Value.UseProblemDetails at runtime and returns false when disabled (passes through
+    // to other handlers). UseHal() additionally guards UseExceptionHandler() via IOptions<HalOptions>.
+    // (REQ-07, REQ-30)
+    services.AddExceptionHandler<HalExceptionHandler>()
 
     return services
 ```
