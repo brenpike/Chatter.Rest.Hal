@@ -227,7 +227,7 @@ These scenarios describe end-to-end behavior for test derivation.
 
 1. `HalOptions.AutoSelfLink = true`
 2. Endpoint returns `HalResult` whose `Resource` already has a `"self"` link
-3. Filter checks for `"self"` presence and finds it
+3. `HalResult.CoreWriteAsync` checks for `"self"` presence and finds it
 4. No injection occurs; existing `"self"` link is unchanged in the response
 
 ### Scenario: Auto-self suppressed by WithoutHalAutoSelf()
@@ -235,7 +235,7 @@ These scenarios describe end-to-end behavior for test derivation.
 1. `HalOptions.AutoSelfLink = true` globally
 2. Endpoint is decorated with `.WithoutHalAutoSelf()`
 3. `DisableHalAutoSelf` metadata marker is present on the endpoint
-4. Filter reads metadata and skips injection regardless of global setting
+4. `HalResult.CoreWriteAsync` reads `DisableHalAutoSelf` metadata and skips injection regardless of global setting
 5. Response does not contain an injected `"self"` link
 
 ### Scenario: Registered exception mapped to problem response
