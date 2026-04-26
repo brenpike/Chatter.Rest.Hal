@@ -166,12 +166,12 @@ public sealed class Resource<T> where T : class
         string rel, IHalClient client, ILogger logger, CancellationToken ct = default) where TResult : class
         => _inner.FollowLinksAsync<TResult>(rel, client, logger, ct);
 
-    /// <summary>POSTs to a linked resource and returns the response as <typeparamref name="TResult"/>. TBody is inferred from body.</summary>
+    /// <summary>POSTs to a linked resource and returns the response as <typeparamref name="TResult"/>. Both TBody and TResult must be specified explicitly.</summary>
     public Task<Resource<TResult>?> PostToAsAsync<TBody, TResult>(
         string rel, TBody body, IHalClient client, CancellationToken ct = default) where TResult : class
         => _inner.PostToAsync<TBody, TResult>(rel, body, client, ct);
 
-    /// <summary>POSTs to a linked resource and returns the response as <typeparamref name="TResult"/>. TBody is inferred from body. With logging.</summary>
+    /// <summary>POSTs to a linked resource and returns the response as <typeparamref name="TResult"/>. Both TBody and TResult must be specified explicitly. With logging.</summary>
     public Task<Resource<TResult>?> PostToAsAsync<TBody, TResult>(
         string rel, TBody body, IHalClient client, ILogger logger, CancellationToken ct = default) where TResult : class
         => _inner.PostToAsync<TBody, TResult>(rel, body, client, logger, ct);
@@ -196,7 +196,7 @@ public sealed class Resource<T> where T : class
         string rel, HttpContent content, IHalClient client, ILogger logger, CancellationToken ct = default) where TResult : class
         => _inner.PostToAsync<TResult>(rel, content, client, logger, ct);
 
-    /// <summary>PUTs to a linked resource and returns the response as <typeparamref name="TResult"/>. TBody is inferred from body.</summary>
+    /// <summary>PUTs to a linked resource and returns the response as <typeparamref name="TResult"/>. Both TBody and TResult must be specified explicitly.</summary>
     public Task<Resource<TResult>?> PutToAsAsync<TBody, TResult>(
         string rel, TBody body, IHalClient client, CancellationToken ct = default) where TResult : class
         => _inner.PutToAsync<TBody, TResult>(rel, body, client, ct);
@@ -226,7 +226,7 @@ public sealed class Resource<T> where T : class
         string rel, HttpContent content, IHalClient client, ILogger logger, CancellationToken ct = default) where TResult : class
         => _inner.PutToAsync<TResult>(rel, content, client, logger, ct);
 
-    /// <summary>PATCHes a linked resource and returns the response as <typeparamref name="TResult"/>. TBody is inferred from body.</summary>
+    /// <summary>PATCHes a linked resource and returns the response as <typeparamref name="TResult"/>. Both TBody and TResult must be specified explicitly.</summary>
     public Task<Resource<TResult>?> PatchToAsAsync<TBody, TResult>(
         string rel, TBody body, IHalClient client, CancellationToken ct = default) where TResult : class
         => _inner.PatchToAsync<TBody, TResult>(rel, body, client, ct);
@@ -381,7 +381,7 @@ public sealed class Resource<T> where T : class
 ```
 
 > **Mutation overload shapes for `PostToAsAsync` / `PutToAsAsync` / `PatchToAsAsync`:**
-> - `PostToAsAsync<TBody, TResult>(string rel, TBody body, ...)` -- strongly-typed body; `TBody` is inferred from the argument; only `TResult` needs to be specified explicitly. Use when the body type is known at the call site.
+> - `PostToAsAsync<TBody, TResult>(string rel, TBody body, ...)` -- strongly-typed body; **both type arguments must be specified explicitly** (`TBody` is not inferred when `TResult` is provided — C# does not allow partial type argument specification). Use when the body type is known and distinct, e.g. `order.PostToAsAsync<CreateOrder, OrderResult>("rel", body, client)`.
 > - `PostToAsAsync<TResult>(string rel, object body, ...)` -- body passed as `object`; single explicit type param. Delegates to `_inner.PostToAsync<object, TResult>(...)`. Use when only the response type matters.
 > - `PostToAsAsync<TResult>(string rel, HttpContent content, ...)` -- raw content; single explicit type param.
 
@@ -1238,7 +1238,7 @@ When a logger overload is called with a non-null logger, it logs rel resolution 
 **`Resource<T>` "As" methods:**
 - `FollowLinkAsAsync<TResult>` accepts a single explicit type param; `T` of the receiver is already known
 - `FollowLinksAsAsync<TResult>` yields `IAsyncEnumerable<Resource<TResult>?>`
-- `PostToAsAsync<TBody, TResult>`: `TBody` is inferred from the body argument; only `TResult` is explicitly specified
+- `PostToAsAsync<TBody, TResult>`: both type arguments must be specified explicitly (C# does not allow partial type argument specification)
 - `PostToAsAsync<TResult>(..., HttpContent, ...)` returns `Resource<TResult>?`
 - Untyped-return `Resource<T>` extension overloads delegate correctly to `.Inner` for all verbs
 
