@@ -120,14 +120,19 @@ public sealed class HalResult : IActionResult, IResult
     private readonly int _statusCode;
 
     // Deferred builder support (used by HalResults.Ok<T>)
+    // _builder is always Func<object, IHalLinkBuilder, Resource> — the typed
+    // Func<T, IHalLinkBuilder, Resource> is wrapped by HalResults.Ok<T> before storage
+    // to avoid the invalid cast Func<T,...> → Func<object,...> at invocation time.
     private readonly object? _state;
-    private readonly Delegate? _builder;   // Func<T, IHalLinkBuilder, Resource>
+    private readonly Func<object, IHalLinkBuilder, Resource>? _builder;
 
     // Immediate constructor — used when Resource is already built (controller path, untyped Ok)
     public HalResult(Resource resource, int statusCode);
 
-    // Deferred constructor — used by HalResults.Ok<T> where IHalLinkBuilder is not yet available
-    internal HalResult(object state, Delegate builder, int statusCode);
+    // Deferred constructor — used by HalResults.Ok<T> where IHalLinkBuilder is not yet available.
+    // Caller (HalResults.Ok<T>) must wrap the typed delegate:
+    //   (object s, IHalLinkBuilder lb) => typedBuilder((T)s, lb)
+    internal HalResult(object state, Func<object, IHalLinkBuilder, Resource> builder, int statusCode);
 
     // IResult (Minimal API pipeline)
     public Task ExecuteAsync(HttpContext httpContext);
@@ -153,8 +158,10 @@ public static class HalResults
     // HTTP 200 -- untyped (REQ-19)
     public static HalResult Ok(Resource resource);
 
-    // HTTP 200 -- typed; deferred execution: stores state + builder,
-    // resolves IHalLinkBuilder at ExecuteAsync/ExecuteResultAsync time (REQ-19)
+    // HTTP 200 -- typed; deferred execution (REQ-19)
+    // Wraps builder as (object s, IHalLinkBuilder lb) => builder((T)s, lb) before storing,
+    // so CoreWriteAsync can invoke _builder without an invalid generic delegate cast.
+    // IHalLinkBuilder is resolved from RequestServices at ExecuteAsync/ExecuteResultAsync time.
     public static HalResult Ok<T>(T state, Func<T, IHalLinkBuilder, Resource> builder);
 
     // HTTP 201 (REQ-20)
@@ -329,6 +336,12 @@ public static class ControllerLinkBuilderExtensions
     public static LinkObject Template<TController>(
         this IHalLinkBuilder builder,
         Expression<Action<TController>> action)
+        where TController : ControllerBase;
+
+    // For synchronous IActionResult actions
+    public static LinkObject Template<TController>(
+        this IHalLinkBuilder builder,
+        Expression<Func<TController, IActionResult>> action)
         where TController : ControllerBase;
 
     // For async Task<IActionResult> actions
@@ -531,7 +544,7 @@ CoreWriteAsync(HttpContext context):
     resource = _resource
     if resource is null:
         linkBuilder = context.RequestServices.GetRequiredService<IHalLinkBuilder>()
-        resource = ((Func<object, IHalLinkBuilder, Resource>)_builder!)(_state!, linkBuilder)
+        resource = _builder!(_state!, linkBuilder)   // safe: already Func<object,...> (see HalResult ctor)
 
     // Step 2: Auto-self injection (REQ-25, REQ-26, REQ-27, REQ-28, REQ-29)
     //   Runs before serialization so the self link is included in the response body.
