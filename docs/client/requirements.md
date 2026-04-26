@@ -83,7 +83,7 @@ Already uses `Chatter.Rest.Hal` for building HAL documents server-side. Wants to
 
 **REQ-09:** HTTP status-code behavior:
 - **2xx with body:** `HalClient` deserializes and returns the response.
-- **2xx with empty body or 204 No Content:** `HalClient` returns `null` without performing Content-Type validation or deserialization.
+- **HTTP 204 or explicit Content-Length: 0:** HalClient returns `null` without Content-Type validation or deserialization. Responses that omit Content-Length proceed to Content-Type validation.
 - **3xx (redirect):** `HttpClient` follows redirects automatically by default. Non-redirect 3xx responses are passed to `EnsureSuccessStatusCode()` and throw `HttpRequestException`.
 - **400 / 401 / 403 / 409:** `EnsureSuccessStatusCode()` throws `HttpRequestException`. `HalClient` does not catch or wrap it.
 - **404:** `HalClient` returns `null` (or completes normally for `DeleteAsync`). See REQ-08.
@@ -172,9 +172,9 @@ Already uses `Chatter.Rest.Hal` for building HAL documents server-side. Wants to
 
 **REQ-40:** At `Error` level, `HalClient` logs deserialization failures, including the exception and the request URI.
 
-**REQ-41:** At `Debug` level, `FollowLinkAsync` and `FollowLinksAsync` extension methods log rel resolution: the rel name, the resolved href, and whether the link is templated. Logging occurs at the extension-method call site (not inside `HalClient`) because the extension has rel context that `HalClient` does not. Extension methods accept an optional `ILogger?` parameter (defaulting to `null`) for this purpose; callers that want rel-resolution logging pass their logger explicitly.
+**REQ-41:** At `Debug` level, `FollowLinkAsync` and `FollowLinksAsync` extension methods log rel resolution: the rel name, the resolved href, and whether the link is templated. Logging occurs at the extension-method call site (not inside `HalClient`) because the extension has rel context that `HalClient` does not. Extension methods are provided in overload pairs: a no-logger overload (ending in `CancellationToken ct = default`) and a with-logger overload accepting an explicit non-optional `ILogger logger` followed by `CancellationToken ct = default`. Callers that want rel-resolution logging call the with-logger overload explicitly. This avoids the ergonomic problem where a `CancellationToken` argument is silently bound as the logger parameter.
 
-**REQ-42:** At `Debug` level, `PostToAsync`, `PutToAsync`, `PatchToAsync`, and `DeleteToAsync` extension methods log the rel name and resolved URI before delegating to `IHalClient`. These methods follow the same optional `ILogger?` parameter pattern as `FollowLinkAsync` (REQ-41).
+**REQ-42:** At `Debug` level, `PostToAsync`, `PutToAsync`, `PatchToAsync`, and `DeleteToAsync` extension methods log the rel name and resolved URI before delegating to `IHalClient`. These methods follow the same overload-pair pattern as `FollowLinkAsync` (REQ-41): a no-logger overload and a with-logger overload accepting an explicit `ILogger logger`.
 
 **REQ-43:** At `Debug` level, `AddHalClient` and `AddHalOptions` log confirmation that `IHalClient` has been registered. Because these methods run during service registration before the DI container is built, the confirmation log is emitted from the `HalClient` constructor on first instantiation (one-time `Debug` message: `"HalClient initialized"`).
 
@@ -199,7 +199,7 @@ Already uses `Chatter.Rest.Hal` for building HAL documents server-side. Wants to
 | Rel not found on resource | Throw `HalLinkNotFoundException` (before any HTTP) |
 | Duplicate rels on resource | Throw `InvalidOperationException` (before any HTTP) |
 | HTTP 2xx with body | Deserialize and return |
-| HTTP 2xx with empty body or 204 | Return `null` (no Content-Type check) |
+| HTTP 204 or explicit `Content-Length: 0` | Return `null` (no Content-Type check) |
 | HTTP 3xx | `HttpClient` follows redirects; non-redirect throws `HttpRequestException` |
 | HTTP 400 / 401 / 403 / 409 | Throw `HttpRequestException` |
 | HTTP 404 | Return `null` (DELETE completes normally) |
