@@ -73,7 +73,7 @@ public sealed record Resource : IHalPart
 		get
 		{
 			if (_stateObject == null)
-				_stateObject = _stateCreator()?.Deserialize<object>(_jsonOptions);
+				_stateObject = _stateCreator()?.Deserialize<object>();
 			return _stateObject;
 		}
 	}
