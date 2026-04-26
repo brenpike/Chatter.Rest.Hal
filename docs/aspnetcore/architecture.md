@@ -163,8 +163,8 @@ public static class HalResults
     // HTTP 202 (REQ-20)
     public static HalResult Accepted(Resource resource);
 
-    // HTTP 204 (REQ-20)
-    public static HalResult NoContent();
+    // HTTP 204 -- no response body; returns IResult, not HalResult (REQ-20)
+    public static IResult NoContent();
 
     // Problem responses -- Content-Type: application/problem+json (REQ-21)
     public static IResult NotFound(string title, string? detail);
@@ -301,7 +301,7 @@ Expression-based overloads of `For` and `Template` on `IHalLinkBuilder`. Resolve
 ```csharp
 public static class ControllerLinkBuilderExtensions
 {
-    // Resolves route name from [ActionName]/[HttpGet]/[Route], extracts args, delegates to For()
+    // Resolves route name from [HttpGet]/[Route] Name property, extracts args, delegates to For()
     public static LinkObject For<TController>(
         this IHalLinkBuilder builder,
         Expression<Action<TController>> action)
@@ -568,17 +568,22 @@ For MVC controller actions, `HttpContext` is extracted from `ActionContext.HttpC
 ```
 For<TController>(Expression<Action<TController>> action):
 1. Cast action.Body to MethodCallExpression; get MethodInfo
-2. Check [ActionName] attribute on method -> use .Name as routeName
-3. Else check [HttpGet/Post/Put/Patch/Delete] attribute Name property -> use as routeName
-4. Else check [Route] attribute Name property -> use as routeName
-5. Else use method.Name as convention fallback
-6. Extract route values:
+2. Check [HttpGet/Post/Put/Patch/Delete] attribute Name property -> use as routeName
+   Note: [ActionName] is NOT checked; it changes the MVC action name but does not
+   create a named route for LinkGenerator.GetPathByName
+3. Else check [Route] attribute Name property -> use as routeName
+4. Else throw InvalidOperationException("No named route found on action method '{method.Name}'.
+   Annotate the action with [HttpGet(Name = \"...\")], [HttpPost(Name = \"...\")], or
+   [Route(Name = \"...\")] to provide a route name for LinkGenerator.")
+   Note: Falling back to method.Name is omitted because an unnamed route would cause
+   LinkGenerator.GetPathByName to return null and throw InvalidOperationException anyway.
+5. Extract route values:
    For each argument expression in MethodCallExpression.Arguments:
      - ConstantExpression -> use .Value directly
      - MemberExpression (captured closure) -> compile and invoke lambda to get value
      - Other -> throw InvalidOperationException("Expression argument not supported")
    Build RouteValueDictionary from parameter name -> value pairs
-7. Delegate to _builder.For(routeName, routeValues)
+6. Delegate to _builder.For(routeName, routeValues)
 ```
 
 Limitation: Only constant values and captured closures are supported in expression arguments. Method calls and complex expressions will throw `InvalidOperationException`.
@@ -603,11 +608,11 @@ Limitation: Only constant values and captured closures are supported in expressi
 
 - **`HalOptions`**: verify defaults for all properties; verify `MapException<T>` stores mapping in `ExceptionMappings` keyed by `typeof(TException)`; verify most-derived type wins when multiple mappings registered
 - **`HalResult`**: verify `ExecuteAsync` sets correct status code and `Content-Type`; verify `ExecuteResultAsync` delegates to same write logic; verify `WriteAsJsonAsync` is called with the `Resource` and HAL `JsonSerializerOptions`; verify auto-self injected when `AutoSelfLink = true` and `"self"` absent; verify `EnableHalAutoSelf` forces injection when `AutoSelfLink = false`; verify `DisableHalAutoSelf` suppresses injection when `AutoSelfLink = true`; verify injection skipped when `"self"` already present
-- **`HalResults`**: verify each factory method returns correct HTTP status; verify `Ok<T>` creates a deferred `HalResult` that resolves `IHalLinkBuilder` from `HttpContext.RequestServices` during `ExecuteAsync`
+- **`HalResults`**: verify each factory method returns correct HTTP status; verify `Ok<T>` creates a deferred `HalResult` that resolves `IHalLinkBuilder` from `HttpContext.RequestServices` during `ExecuteAsync`; verify `NoContent()` returns `IResult` that produces `204` with no response body
 - **`HalControllerBase` + `ControllerBaseExtensions`**: verify each method delegates to the correct `HalResults` factory; verify `HalOk<T>` resolves `IHalLinkBuilder` from `HttpContext.RequestServices`
 - **`HalProblem`**: verify each factory sets correct `Status`, `Title`, `Detail`, and `Type` URI per RFC 9457; verify `ValidationProblem` includes `Errors` in payload
 - **`HalLinkBuilder`** (internal): verify `For()` calls `LinkGenerator.GetPathByName` with correct arguments; verify `InvalidOperationException` on null result; verify `Template()` returns `LinkObject` with `Templated = true`
-- **`ControllerLinkBuilderExtensions`**: verify expression with `[ActionName]` extracts correct route name; verify expression with `[HttpGet(Name = ...)]` extracts correct route name; verify constant args produce correct route values; verify captured closure args produce correct route values; verify unsupported expression type throws `InvalidOperationException`
+- **`ControllerLinkBuilderExtensions`**: verify expression with `[HttpGet(Name = ...)]` extracts correct route name; verify expression with `[Route(Name = ...)]` extracts correct route name; verify action with no named route throws `InvalidOperationException`; verify `[ActionName]` alone (no named route) throws `InvalidOperationException`; verify constant args produce correct route values; verify captured closure args produce correct route values; verify unsupported expression type throws `InvalidOperationException`
 - **`HalExceptionHandler`**: verify matched exception type produces correct status and `Content-Type: application/problem+json`; verify unmatched exception produces HTTP 500; verify most-derived registered type wins over base type
 
 ### Integration tests (`WebApplicationFactory`)
