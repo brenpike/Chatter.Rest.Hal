@@ -1,5 +1,6 @@
 ﻿using Chatter.Rest.Hal.Builders;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Xunit;
 
 namespace Chatter.Rest.Hal.Tests;
@@ -238,6 +239,190 @@ public class ResourceTests
 
 		Assert.NotNull(embedded);
 		Assert.Empty(embedded);
+	}
+
+	// --- State<T>(JsonSerializerOptions?) tests ---
+
+	private record StateDto(string FirstName, string LastName);
+
+	[Fact]
+	public void State_Should_Respect_Custom_Options_When_Deserializing_From_JsonObject()
+	{
+		// Arrange: JSON uses camelCase keys; default options would fail to bind PascalCase DTO
+		var json = """{"firstName":"Alice","lastName":"Smith"}""";
+		var node = JsonNode.Parse(json);
+		JsonObject? stateCreator() => node?.AsObject();
+		var resource = new Resource(node, stateCreator, () => new LinkCollection(), () => new EmbeddedResourceCollection());
+		var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+
+		// Act
+		var result = resource.State<StateDto>(options);
+
+		// Assert
+		Assert.NotNull(result);
+		Assert.Equal("Alice", result!.FirstName);
+		Assert.Equal("Smith", result!.LastName);
+	}
+
+	[Fact]
+	public void State_Should_Apply_NamingPolicy_When_Options_Supplied()
+	{
+		// Arrange: camelCase JSON + camelCase naming policy
+		var json = """{"firstName":"Bob","lastName":"Jones"}""";
+		var node = JsonNode.Parse(json);
+		JsonObject? stateCreator() => node?.AsObject();
+		var resource = new Resource(node, stateCreator, () => new LinkCollection(), () => new EmbeddedResourceCollection());
+		var options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+
+		// Act
+		var result = resource.State<StateDto>(options);
+
+		// Assert: CamelCase policy means "firstName" in JSON matches "FirstName" on DTO
+		Assert.NotNull(result);
+		Assert.Equal("Bob", result!.FirstName);
+	}
+
+	[Fact]
+	public void State_With_Null_Options_Should_Behave_Same_As_Parameterless_Overload()
+	{
+		// Arrange: PascalCase JSON matches PascalCase DTO with default options
+		var json = """{"FirstName":"Carol","LastName":"White"}""";
+		var node = JsonNode.Parse(json);
+		JsonObject? stateCreator() => node?.AsObject();
+		var r1 = new Resource(node, stateCreator, () => new LinkCollection(), () => new EmbeddedResourceCollection());
+		var r2 = new Resource(node, stateCreator, () => new LinkCollection(), () => new EmbeddedResourceCollection());
+
+		// Act
+		var withNull = r1.State<StateDto>(null);
+		var parameterless = r2.State<StateDto>();
+
+		// Assert
+		Assert.NotNull(withNull);
+		Assert.NotNull(parameterless);
+		Assert.Equal(withNull!.FirstName, parameterless!.FirstName);
+		Assert.Equal(withNull.LastName, parameterless.LastName);
+	}
+
+	[Fact]
+	public void State_Should_Return_Cached_Object_Regardless_Of_Options_After_First_Deserialization()
+	{
+		// Arrange
+		var json = """{"FirstName":"Dave","LastName":"Brown"}""";
+		var node = JsonNode.Parse(json);
+		JsonObject? stateCreator() => node?.AsObject();
+		var resource = new Resource(node, stateCreator, () => new LinkCollection(), () => new EmbeddedResourceCollection());
+
+		// Act: first call caches the result
+		var first = resource.State<StateDto>();
+		// Second call with different options should return the same cached object
+		var options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+		var second = resource.State<StateDto>(options);
+
+		// Assert: same reference (caching)
+		Assert.Same(first, second);
+	}
+
+	[Fact]
+	public void State_Should_Pass_Options_To_Deserialize_When_State_Is_JsonElement()
+	{
+		// Arrange: simulate a Resource whose _stateObject starts as a JsonElement
+		// Build a resource via JSON deserialization with custom options so _stateObject is JsonElement
+		var halJson = """{"firstName":"Eve","lastName":"Green"}""";
+		var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+		// Deserialize through the converter so _stateObject starts as the raw JsonObject (not yet typed)
+		var resource = JsonSerializer.Deserialize<Resource>(halJson, options);
+		Assert.NotNull(resource);
+
+		// Act
+		var result = resource!.State<StateDto>(options);
+
+		// Assert
+		Assert.NotNull(result);
+		Assert.Equal("Eve", result!.FirstName);
+	}
+
+	// --- Parse() tests ---
+
+	private const string SimpleHalJson = """
+		{
+			"firstName": "Test",
+			"lastName": "User",
+			"_links": {
+				"self": { "href": "/users/1" }
+			}
+		}
+		""";
+
+	[Fact]
+	public void Resource_Parse_Should_Return_Resource_With_Links_Embedded_And_State()
+	{
+		// Arrange
+		var json = """
+			{
+				"firstName": "Alice",
+				"_links": { "self": { "href": "/users/1" } },
+				"_embedded": { "orders": { "_links": { "self": { "href": "/orders/1" } } } }
+			}
+			""";
+
+		// Act
+		var resource = Resource.Parse(json);
+
+		// Assert
+		Assert.NotNull(resource);
+		Assert.True(resource!.Links.Count > 0);
+		Assert.True(resource.Embedded.Count > 0);
+	}
+
+	[Fact]
+	public void Resource_Parse_Should_Thread_Options_Into_State_Deserialization()
+	{
+		// Arrange: camelCase JSON
+		var json = """{"firstName":"Alice","lastName":"Smith"}""";
+		var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+
+		// Act
+		var resource = Resource.Parse(json, options);
+		Assert.NotNull(resource);
+		var state = resource!.State<StateDto>();
+
+		// Assert: State<T>() (parameterless) should use the threaded options
+		Assert.NotNull(state);
+		Assert.Equal("Alice", state!.FirstName);
+	}
+
+	[Fact]
+	public void Resource_Parse_Should_Return_Empty_Resource_For_Empty_Object()
+	{
+		// Act
+		var resource = Resource.Parse("{}");
+
+		// Assert
+		Assert.NotNull(resource);
+		Assert.Empty(resource!.Links);
+		Assert.Empty(resource.Embedded);
+		// Empty JSON object deserializes to a StateDto with null property values (no matching keys)
+		var state = resource.State<StateDto>();
+		Assert.NotNull(state);
+		Assert.Null(state!.FirstName);
+		Assert.Null(state.LastName);
+	}
+
+	[Fact]
+	public void Resource_Parse_Should_Return_Null_For_Null_Json()
+	{
+		// Act
+		var resource = Resource.Parse("null");
+
+		// Assert
+		Assert.Null(resource);
+	}
+
+	[Fact]
+	public void Resource_Parse_Should_Throw_For_Invalid_Json()
+	{
+		// Act & Assert
+		Assert.ThrowsAny<Exception>(() => Resource.Parse("not valid json {{"));
 	}
 
 }
