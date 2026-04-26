@@ -63,7 +63,7 @@ Already uses `Chatter.Rest.Hal` for building HAL documents server-side. Wants to
 - (c) Generic, object body: `PostAsync<T>` / `PutAsync<T>` / `PatchAsync<T>` accepting `object` (serialized as JSON), returns `Resource<T>?`
 - (d) Generic, raw content: `PostAsync<T>` / `PutAsync<T>` / `PatchAsync<T>` accepting `HttpContent`, returns `Resource<T>?`
 
-`T` is constrained to reference types (`where T : class`). Overloads (c) and (d) deserialize the response as plain `Resource` and wrap it in `new Resource<T>(resource)`.
+`T` is constrained to reference types (`where T : class`). Overloads (c) and (d) deserialize the response as plain `Resource` and wrap it in `new Resource<T>(resource, jsonOptions)`, where `jsonOptions` is `HalClientOptions.JsonOptions` (or the library default when null). Passing `jsonOptions` ensures `Resource<T>.State()` honours custom serializer settings (REQ-15).
 
 **REQ-05:** `DeleteAsync` returns `Task` (no body). It does not attempt to deserialize the response.
 
