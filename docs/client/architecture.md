@@ -301,7 +301,7 @@ public static class HalClientServiceCollectionExtensions
 1. Configure `HalClientOptions` via `services.Configure(configure)`
 2. Register `IHalClient`/`HalClient` using the factory overload of `AddHttpClient`:
 
-   services.AddHttpClient<IHalClient, HalClient>((sp, httpClient) =>
+   services.AddHttpClient<IHalClient, HalClient>((httpClient, sp) =>
        new HalClient(
            httpClient,
            sp.GetRequiredService<IOptions<HalClientOptions>>().Value,
