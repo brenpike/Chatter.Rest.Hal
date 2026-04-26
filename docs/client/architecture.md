@@ -97,10 +97,16 @@ namespace Chatter.Rest.Hal.Client;
 public sealed class Resource<T> where T : class
 {
     private readonly Resource _inner;
+    private readonly JsonSerializerOptions? _jsonOptions;
 
-    public Resource(Resource inner)
+    /// <summary>
+    /// Wraps an untyped resource, optionally capturing the serializer options used
+    /// during deserialization so that State() can honour custom converters.
+    /// </summary>
+    public Resource(Resource inner, JsonSerializerOptions? jsonOptions = null)
     {
         _inner = inner ?? throw new ArgumentNullException(nameof(inner));
+        _jsonOptions = jsonOptions;
     }
 
     /// <summary>The underlying untyped resource.</summary>
@@ -113,14 +119,40 @@ public sealed class Resource<T> where T : class
     public EmbeddedResourceCollection? Embedded => _inner.Embedded;
 
     /// <summary>
-    /// Deserializes the resource state as <typeparamref name="T"/>.
-    /// Delegates to <see cref="Resource.State{T}()"/>.
+    /// Deserializes the resource state as <typeparamref name="T"/> using the
+    /// JsonSerializerOptions supplied at construction (if any).
+    ///
+    /// Implementation note: Resource.State&lt;T&gt;() in the core library does not
+    /// accept JsonSerializerOptions. To honour custom options, this method accesses
+    /// the underlying state JSON via an internal API on Resource
+    /// (e.g., internal JsonObject? RawStateNode) and deserializes directly:
+    ///
+    ///   var node = _inner.RawStateNode;
+    ///   if (node is null) return null;
+    ///   return node.Deserialize&lt;T&gt;(_jsonOptions);
+    ///
+    /// If no internal accessor is available, the implementation serializes _inner
+    /// back to JSON bytes (using _jsonOptions) and deserializes the state portion.
+    /// The exact mechanism is an implementation detail; the contract is that
+    /// _jsonOptions are always applied when deserializing state.
     /// </summary>
-    public T? State() => _inner.State<T>();
+    public T? State()
+    {
+        // Implementation accesses raw state JSON with _jsonOptions.
+        // Falls back to _inner.State<T>() when _jsonOptions is null.
+        if (_jsonOptions is null)
+            return _inner.State<T>();
+
+        // Use internal accessor or re-serialization path to apply custom options.
+        // See implementation note above.
+        throw new NotImplementedException("Placeholder — see architecture note.");
+    }
 }
 ```
 
 `Resource<T>` is a client-side convenience type. It wraps the untyped `Resource` returned by deserialization and provides strongly-typed access to the embedded state via `State()`. The core `Chatter.Rest.Hal` library is not modified.
+
+> **Implementation note:** `Resource.State<T>()` in the core library uses `JsonElement.Deserialize<T>()` with no options overload and cannot propagate `HalClientOptions.JsonOptions`. `Resource<T>` therefore stores `JsonSerializerOptions?` at construction and accesses the raw state JSON directly via an internal API (`internal JsonObject? RawStateNode` or similar) exposed on `Resource` for this purpose. Adding this internal accessor to `Chatter.Rest.Hal` is a prerequisite for correct typed-state deserialization with custom options. When `_jsonOptions` is `null`, `State()` delegates to `_inner.State<T>()` as before.
 
 ---
 
@@ -260,16 +292,18 @@ SendAsync(HttpMethod method, Uri uri, HttpContent? content, CancellationToken ct
 **Verb-specific behavior:**
 
 - **`GetAsync`:** `method = HttpMethod.Get`, no content.
-- **`GetAsync<T>`:** Same as `GetAsync` but wraps the deserialized `Resource`: `return resource is null ? null : new Resource<T>(resource)`.
+- **`GetAsync<T>`:** Same as `GetAsync` but wraps the deserialized `Resource`: `return resource is null ? null : new Resource<T>(resource, jsonOptions)`.
 - **`PostAsync(object body)`:** `method = HttpMethod.Post`, body serialized to `StringContent` with `application/json` media type.
 - **`PostAsync(HttpContent)`:** `method = HttpMethod.Post`, raw content passed through.
-- **`PostAsync<T>(object body)`:** Same as `PostAsync(object body)` but wraps the deserialized `Resource` in `new Resource<T>(resource)`.
-- **`PostAsync<T>(HttpContent)`:** Same as `PostAsync(HttpContent)` but wraps the deserialized `Resource` in `new Resource<T>(resource)`.
+- **`PostAsync<T>(object body)`:** Same as `PostAsync(object body)` but wraps the deserialized `Resource` in `new Resource<T>(resource, jsonOptions)`.
+- **`PostAsync<T>(HttpContent)`:** Same as `PostAsync(HttpContent)` but wraps the deserialized `Resource` in `new Resource<T>(resource, jsonOptions)`.
 - **`PutAsync`:** Same pattern as `PostAsync` with `HttpMethod.Put`.
-- **`PutAsync<T>`:** Same pattern with `HttpMethod.Put`; wraps deserialized `Resource` in `new Resource<T>(resource)`.
+- **`PutAsync<T>`:** Same pattern with `HttpMethod.Put`; wraps deserialized `Resource` in `new Resource<T>(resource, jsonOptions)`.
 - **`PatchAsync`:** Same pattern as `PostAsync` with `HttpMethod.Patch`.
-- **`PatchAsync<T>`:** Same pattern with `HttpMethod.Patch`; wraps deserialized `Resource` in `new Resource<T>(resource)`.
+- **`PatchAsync<T>`:** Same pattern with `HttpMethod.Patch`; wraps deserialized `Resource` in `new Resource<T>(resource, jsonOptions)`.
 - **`DeleteAsync`:** `method = HttpMethod.Delete`, no content, no response deserialization. Calls `EnsureSuccessStatusCode()` and returns. Returns normally on 404.
+
+Where `jsonOptions` is `_options.JsonOptions ?? defaultHalJsonOptions` (already resolved earlier in `SendAsync`).
 
 **Object body serialization:** When a method accepts `object body`, the body is serialized via `JsonSerializer.Serialize(body, _options.JsonOptions ?? defaultHalJsonOptions)` and wrapped in `StringContent` with media type `"application/json"` and `UTF-8` encoding.
 
@@ -695,7 +729,9 @@ public static class HttpClientHalExtensions
 
 **Request serialization:** Object bodies are serialized via `JsonSerializer.Serialize(body, jsonOptions)` where `jsonOptions` is `HalClientOptions.JsonOptions` or library defaults. The resulting JSON is wrapped in `StringContent` with `Content-Type: application/json; charset=utf-8`.
 
-**Response deserialization:** Response bodies are always deserialized as plain `Resource` via `JsonSerializer.DeserializeAsync<Resource>(stream, jsonOptions, ct)` with HAL converters applied. For typed methods (`GetAsync<T>`, `PostAsync<T>`, etc.), the deserialized `Resource` is then wrapped: `return new Resource<T>(resource)`. `Resource<T>` is never passed directly to `JsonSerializer` — it has no JSON converter. The response stream is obtained via the parameterless `ReadAsStreamAsync()` for `netstandard2.0` compatibility. The `jsonOptions` are `HalClientOptions.JsonOptions` or library defaults (which include `AddHalConverters()`).
+**Response deserialization:** Response bodies are always deserialized as plain `Resource` via `JsonSerializer.DeserializeAsync<Resource>(stream, jsonOptions, ct)` with HAL converters applied. For typed methods (`GetAsync<T>`, `PostAsync<T>`, etc.), the deserialized `Resource` is then wrapped: `return new Resource<T>(resource, jsonOptions)`. `Resource<T>` is never passed directly to `JsonSerializer` — it has no JSON converter. The response stream is obtained via the parameterless `ReadAsStreamAsync()` for `netstandard2.0` compatibility. The `jsonOptions` are `HalClientOptions.JsonOptions` or library defaults (which include `AddHalConverters()`).
+
+The resolved `jsonOptions` are also passed to `new Resource<T>(resource, jsonOptions)` so that `Resource<T>.State()` can apply the same custom options when the caller accesses typed state. This satisfies REQ-15 for typed API consumers.
 
 ---
 
