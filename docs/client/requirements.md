@@ -144,7 +144,11 @@ All overloads throw `HalLinkNotFoundException` if the rel is absent. `TResponse`
 
 **REQ-27:** `PatchToAsync` has the same six-overload pattern as `PostToAsync` (REQ-25), using HTTP PATCH.
 
-**REQ-28:** `DeleteToAsync(string rel, IHalClient client)` has a single overload with no body. It returns `Task` (not `Task<Resource?>`). Throws `HalLinkNotFoundException` if the rel is absent.
+**REQ-28:** `DeleteToAsync` has two overloads (a no-logger / with-logger pair following REQ-42's overload-pair pattern):
+- (a) `DeleteToAsync(string rel, IHalClient client, CancellationToken ct = default)` — no logger
+- (b) `DeleteToAsync(string rel, IHalClient client, ILogger logger, CancellationToken ct = default)` — with explicit logger
+
+Both overloads return `Task` (no body deserialization). Both throw `HalLinkNotFoundException` if the rel is absent.
 
 **REQ-29:** Raw `HttpClient` overloads exist for every `PostToAsync`, `PutToAsync`, `PatchToAsync`, and `DeleteToAsync` signature.
 
