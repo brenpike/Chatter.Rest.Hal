@@ -57,7 +57,13 @@ Already uses `Chatter.Rest.Hal` for building HAL documents server-side. Wants to
 
 **REQ-03:** `GetAsync` returns `Resource?` (untyped) or `Resource<T>?` (typed, where `Resource<T>` is a thin wrapper defined in this package that provides strongly-typed access to state via `State()`). Both overloads return `null` when the server responds with HTTP 404.
 
-**REQ-04:** `PostAsync`, `PutAsync`, and `PatchAsync` each have three overloads: (a) a non-generic overload accepting an `object` body (serialized as JSON) returning `Resource?`, (b) a non-generic overload accepting raw `HttpContent` returning `Resource?`, and (c) a generic overload `PostAsync<T>` / `PutAsync<T>` / `PatchAsync<T>` accepting an `object` body returning `Resource<T>?`. The generic overloads serialize the body the same way as (a) but deserialize the response as `Resource<T>?`.
+**REQ-04:** `PostAsync`, `PutAsync`, and `PatchAsync` each have four overloads:
+- (a) Non-generic, object body: accepts `object` (serialized as JSON), returns `Resource?`
+- (b) Non-generic, raw content: accepts `HttpContent`, returns `Resource?`
+- (c) Generic, object body: `PostAsync<T>` / `PutAsync<T>` / `PatchAsync<T>` accepting `object` (serialized as JSON), returns `Resource<T>?`
+- (d) Generic, raw content: `PostAsync<T>` / `PutAsync<T>` / `PatchAsync<T>` accepting `HttpContent`, returns `Resource<T>?`
+
+`T` is constrained to reference types (`where T : class`). Overloads (c) and (d) deserialize the response as plain `Resource` and wrap it in `new Resource<T>(resource)`.
 
 **REQ-05:** `DeleteAsync` returns `Task` (no body). It does not attempt to deserialize the response.
 
