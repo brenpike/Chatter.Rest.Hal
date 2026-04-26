@@ -37,12 +37,9 @@ The base package takes a minimal dependency on `Microsoft.Extensions.Logging.Abs
 
 ## Target Frameworks
 
-Both packages target `net8.0` and `netstandard2.0`, matching existing packages in the solution.
+Both packages target `net8.0` and later.
 
-### Compatibility notes
-
-- **`HttpMethod.Patch`**: Not available on `netstandard2.0`. Use `new HttpMethod("PATCH")` in implementation. Document this in pseudocode.
-- **`ReadAsStreamAsync(CancellationToken)`**: The overload accepting a `CancellationToken` is not available on `netstandard2.0`. Use the parameterless `ReadAsStreamAsync()` overload; the cancellation token passed to `HttpClient.SendAsync` with `HttpCompletionOption.ResponseHeadersRead` already governs the connection, and `JsonSerializer.DeserializeAsync` accepts `ct` for deserialization cancellation.
+`net8.0` provides `HttpMethod.Patch`, `ReadAsStreamAsync(CancellationToken)`, and all other APIs used by this package natively — no compatibility shims or workarounds are required.
 
 ---
 
@@ -283,8 +280,8 @@ SendAsync(HttpMethod method, Uri uri, HttpContent? content, CancellationToken ct
             throw new HalResponseException(uri, responseContentType)
         return null
 
-    // 6. Deserialize (stream-based; parameterless ReadAsStreamAsync for netstandard2.0 compat)
-    stream = await response.Content.ReadAsStreamAsync()
+    // 6. Deserialize
+    stream = await response.Content.ReadAsStreamAsync(ct)
     jsonOptions = _options.JsonOptions ?? defaultHalJsonOptions
     return await JsonSerializer.DeserializeAsync<Resource>(stream, jsonOptions, ct)
 ```
@@ -729,7 +726,7 @@ public static class HttpClientHalExtensions
 
 **Request serialization:** Object bodies are serialized via `JsonSerializer.Serialize(body, jsonOptions)` where `jsonOptions` is `HalClientOptions.JsonOptions` or library defaults. The resulting JSON is wrapped in `StringContent` with `Content-Type: application/json; charset=utf-8`.
 
-**Response deserialization:** Response bodies are always deserialized as plain `Resource` via `JsonSerializer.DeserializeAsync<Resource>(stream, jsonOptions, ct)` with HAL converters applied. For typed methods (`GetAsync<T>`, `PostAsync<T>`, etc.), the deserialized `Resource` is then wrapped: `return new Resource<T>(resource, jsonOptions)`. `Resource<T>` is never passed directly to `JsonSerializer` — it has no JSON converter. The response stream is obtained via the parameterless `ReadAsStreamAsync()` for `netstandard2.0` compatibility. The `jsonOptions` are `HalClientOptions.JsonOptions` or library defaults (which include `AddHalConverters()`).
+**Response deserialization:** Response bodies are always deserialized as plain `Resource` via `JsonSerializer.DeserializeAsync<Resource>(stream, jsonOptions, ct)` with HAL converters applied. For typed methods (`GetAsync<T>`, `PostAsync<T>`, etc.), the deserialized `Resource` is then wrapped: `return new Resource<T>(resource, jsonOptions)`. `Resource<T>` is never passed directly to `JsonSerializer` — it has no JSON converter. The response stream is obtained via `ReadAsStreamAsync(ct)`. The `jsonOptions` are `HalClientOptions.JsonOptions` or library defaults (which include `AddHalConverters()`).
 
 The resolved `jsonOptions` are also passed to `new Resource<T>(resource, jsonOptions)` so that `Resource<T>.State()` can apply the same custom options when the caller accesses typed state. This satisfies REQ-15 for typed API consumers.
 
@@ -748,7 +745,7 @@ All I/O in the package is async end-to-end. No sync-over-async wrappers (`.Resul
 Every async method -- public, internal, or private -- that performs or delegates to I/O accepts a `CancellationToken` and passes it to every downstream async call. Public API parameters default to `default`. Internal/private async methods may require the parameter (no default) to catch missing-token bugs at compile time.
 
 Specific threading points:
-- `HalClient.SendAsync` passes `ct` to `HttpClient.SendAsync` and `JsonSerializer.DeserializeAsync` (`ReadAsStreamAsync` uses the parameterless overload for `netstandard2.0` compatibility)
+- `HalClient.SendAsync` passes `ct` to `HttpClient.SendAsync`, `ReadAsStreamAsync(ct)`, and `JsonSerializer.DeserializeAsync`
 - All `FollowLinkAsync` / `FollowLinksAsync` overloads pass `ct` through to `client.GetAsync`
 - All `PostToAsync` / `PutToAsync` / `PatchToAsync` / `DeleteToAsync` overloads pass `ct` through to `client.PostAsync` / `client.PutAsync` / `client.PatchAsync` / `client.DeleteAsync`
 - `GetHalAsync` and `PostHalAsync` convenience extensions pass `ct` through to the `HalClient` methods they delegate to
