@@ -119,37 +119,16 @@ public sealed class Resource<T> where T : class
     /// Deserializes the resource state as <typeparamref name="T"/> using the
     /// JsonSerializerOptions supplied at construction (if any).
     ///
-    /// Implementation note: Resource.State&lt;T&gt;() in the core library does not
-    /// accept JsonSerializerOptions. To honour custom options, this method accesses
-    /// the underlying state JSON via an internal API on Resource
-    /// (e.g., internal JsonObject? RawStateNode) and deserializes directly:
-    ///
-    ///   var node = _inner.RawStateNode;
-    ///   if (node is null) return null;
-    ///   return node.Deserialize&lt;T&gt;(_jsonOptions);
-    ///
-    /// If no internal accessor is available, the implementation serializes _inner
-    /// back to JSON bytes (using _jsonOptions) and deserializes the state portion.
-    /// The exact mechanism is an implementation detail; the contract is that
-    /// _jsonOptions are always applied when deserializing state.
+    /// Delegates to <c>Resource.State&lt;T&gt;(JsonSerializerOptions?)</c>, which
+    /// accepts options directly. No internal accessor or re-serialization is needed.
     /// </summary>
-    public T? State()
-    {
-        // Implementation accesses raw state JSON with _jsonOptions.
-        // Falls back to _inner.State<T>() when _jsonOptions is null.
-        if (_jsonOptions is null)
-            return _inner.State<T>();
-
-        // Use internal accessor or re-serialization path to apply custom options.
-        // See implementation note above.
-        throw new NotImplementedException("Placeholder — see architecture note.");
-    }
+    public T? State() => _inner.State<T>(_jsonOptions);
 }
 ```
 
-`Resource<T>` is a client-side convenience type. It wraps the untyped `Resource` returned by deserialization and provides strongly-typed access to the embedded state via `State()`. The core `Chatter.Rest.Hal` library requires a minimal addition: an `internal` state accessor (e.g., `internal JsonObject? RawStateNode`) on `Resource`, used exclusively by `Resource<T>.State()` when custom `JsonSerializerOptions` are present. No public API on `Chatter.Rest.Hal` changes.
+`Resource<T>` is a client-side convenience type. It wraps the untyped `Resource` returned by deserialization and provides strongly-typed access to the embedded state via `State()`. The core `Chatter.Rest.Hal` library exposes `Resource.State<T>(JsonSerializerOptions?)` as a public overload, so `Resource<T>.State()` delegates directly — no internal accessor, `InternalsVisibleTo`, or re-serialization path is needed.
 
-> **Implementation note:** `Resource.State<T>()` in the core library uses `JsonElement.Deserialize<T>()` with no options overload and cannot propagate `HalClientOptions.JsonOptions`. `Resource<T>` therefore stores `JsonSerializerOptions?` at construction and accesses the raw state JSON directly via an internal API (`internal JsonObject? RawStateNode` or similar) exposed on `Resource` for this purpose. Adding this internal accessor to `Chatter.Rest.Hal` is a prerequisite for correct typed-state deserialization with custom options. When `_jsonOptions` is `null`, `State()` delegates to `_inner.State<T>()` as before.
+> **Implementation note:** `Resource.State<T>(JsonSerializerOptions?)` is a public overload in the core library. The no-arg `Resource.State<T>()` delegates to it internally, using the `JsonSerializerOptions` captured when the `Resource` was deserialized (via `JsonSerializer.DeserializeAsync<Resource>` — the converter stores the options on the instance). `Resource<T>.State()` simply calls `_inner.State<T>(_jsonOptions)`. No internal accessor or `InternalsVisibleTo` is required.
 
 ---
 
