@@ -287,6 +287,8 @@ public static class ControllerBaseExtensions
 
     public static HalResult HalCreated(this ControllerBase controller, string uri, Resource resource);
     public static HalResult HalAccepted(this ControllerBase controller, Resource resource);
+    // Returns new NoContentResult() directly — does NOT delegate to HalResults.NoContent()
+    // because HalResults.NoContent() returns IResult (Minimal API), not IActionResult (MVC)
     public static IActionResult HalNoContent(this ControllerBase controller);
     public static IActionResult HalNotFound(this ControllerBase controller, string title, string? detail);
     public static IActionResult HalValidationProblem(this ControllerBase controller, IDictionary<string, string[]> errors);
@@ -302,20 +304,37 @@ Expression-based overloads of `For` and `Template` on `IHalLinkBuilder`. Resolve
 public static class ControllerLinkBuilderExtensions
 {
     // Resolves route name from [HttpGet]/[Route] Name property, extracts args, delegates to For()
+
+    // For void actions
     public static LinkObject For<TController>(
         this IHalLinkBuilder builder,
         Expression<Action<TController>> action)
         where TController : ControllerBase;
 
+    // For synchronous IActionResult actions
     public static LinkObject For<TController>(
         this IHalLinkBuilder builder,
         Expression<Func<TController, IActionResult>> action)
         where TController : ControllerBase;
 
+    // For async Task<IActionResult> actions (covers typical async controller actions)
+    public static LinkObject For<TController>(
+        this IHalLinkBuilder builder,
+        Expression<Func<TController, Task<IActionResult>>> action)
+        where TController : ControllerBase;
+
     // Resolves route name, delegates to Template()
+
+    // For void actions
     public static LinkObject Template<TController>(
         this IHalLinkBuilder builder,
         Expression<Action<TController>> action)
+        where TController : ControllerBase;
+
+    // For async Task<IActionResult> actions
+    public static LinkObject Template<TController>(
+        this IHalLinkBuilder builder,
+        Expression<Func<TController, Task<IActionResult>>> action)
         where TController : ControllerBase;
 }
 ```
@@ -609,7 +628,7 @@ Limitation: Only constant values and captured closures are supported in expressi
 - **`HalOptions`**: verify defaults for all properties; verify `MapException<T>` stores mapping in `ExceptionMappings` keyed by `typeof(TException)`; verify most-derived type wins when multiple mappings registered
 - **`HalResult`**: verify `ExecuteAsync` sets correct status code and `Content-Type`; verify `ExecuteResultAsync` delegates to same write logic; verify `WriteAsJsonAsync` is called with the `Resource` and HAL `JsonSerializerOptions`; verify auto-self injected when `AutoSelfLink = true` and `"self"` absent; verify `EnableHalAutoSelf` forces injection when `AutoSelfLink = false`; verify `DisableHalAutoSelf` suppresses injection when `AutoSelfLink = true`; verify injection skipped when `"self"` already present
 - **`HalResults`**: verify each factory method returns correct HTTP status; verify `Ok<T>` creates a deferred `HalResult` that resolves `IHalLinkBuilder` from `HttpContext.RequestServices` during `ExecuteAsync`; verify `NoContent()` returns `IResult` that produces `204` with no response body
-- **`HalControllerBase` + `ControllerBaseExtensions`**: verify each method delegates to the correct `HalResults` factory; verify `HalOk<T>` resolves `IHalLinkBuilder` from `HttpContext.RequestServices`
+- **`HalControllerBase` + `ControllerBaseExtensions`**: verify `HalOk`, `HalCreated`, `HalAccepted`, `HalNotFound`, `HalValidationProblem`, and `HalProblem` delegate to the matching `HalResults` factory methods; verify `HalNoContent` returns `new NoContentResult()` directly (does not delegate to `HalResults.NoContent()` which returns `IResult`); verify `HalOk<T>` resolves `IHalLinkBuilder` from `HttpContext.RequestServices`
 - **`HalProblem`**: verify each factory sets correct `Status`, `Title`, `Detail`, and `Type` URI per RFC 9457; verify `ValidationProblem` includes `Errors` in payload
 - **`HalLinkBuilder`** (internal): verify `For()` calls `LinkGenerator.GetPathByName` with correct arguments; verify `InvalidOperationException` on null result; verify `Template()` returns `LinkObject` with `Templated = true`
 - **`ControllerLinkBuilderExtensions`**: verify expression with `[HttpGet(Name = ...)]` extracts correct route name; verify expression with `[Route(Name = ...)]` extracts correct route name; verify action with no named route throws `InvalidOperationException`; verify `[ActionName]` alone (no named route) throws `InvalidOperationException`; verify constant args produce correct route values; verify captured closure args produce correct route values; verify unsupported expression type throws `InvalidOperationException`
