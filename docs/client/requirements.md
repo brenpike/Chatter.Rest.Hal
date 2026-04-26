@@ -78,11 +78,11 @@ Already uses `Chatter.Rest.Hal` for building HAL documents server-side. Wants to
 
 **REQ-08:** When the server returns HTTP 404, `GetAsync`, `PostAsync`, `PutAsync`, `PatchAsync` return `null`. `DeleteAsync` completes normally.
 
-**REQ-08a:** When the server returns HTTP 204 No Content, or any 2xx response with an explicit `Content-Length: 0` header, `PostAsync`, `PutAsync`, and `PatchAsync` return `null` without performing Content-Type validation or deserialization. Responses that omit `Content-Length` (e.g., chunked transfer encoding) proceed normally to Content-Type validation and deserialization. `DeleteAsync` always skips body handling after successful status code processing (REQ-05), but still throws `HttpRequestException` via `EnsureSuccessStatusCode()` for non-2xx non-404 responses. This early-exit applies to `PostAsync`, `PutAsync`, `PatchAsync`, and `DeleteAsync` only. `GetAsync` does not apply this rule; a 204 or empty response to GET proceeds to Content-Type validation (REQ-11/REQ-12), which will return `null` or throw `HalResponseException` depending on `StrictContentType`.
+**REQ-08a:** When the server returns HTTP 204 No Content, or any 2xx response with an explicit `Content-Length: 0` header, `GetAsync`, `PostAsync`, `PutAsync`, and `PatchAsync` return `null` without performing Content-Type validation or deserialization. Responses that omit `Content-Length` (e.g., chunked transfer encoding) proceed normally to Content-Type validation and deserialization. `DeleteAsync` always skips body handling after successful status code processing (REQ-05), but still throws `HttpRequestException` via `EnsureSuccessStatusCode()` for non-2xx non-404 responses.
 
 **REQ-09:** HTTP status-code behavior:
 - **2xx with body:** `HalClient` deserializes and returns the response.
-- **HTTP 204 or explicit Content-Length: 0 (mutations only):** For `PostAsync`, `PutAsync`, `PatchAsync`, and `DeleteAsync`: `HalClient` returns `null` (or completes normally for DELETE) without Content-Type validation or deserialization. Responses that omit Content-Length proceed to Content-Type validation. `GetAsync` does **not** apply this early-exit: a 204 or empty-body GET response proceeds to Content-Type validation (REQ-11/REQ-12), returning `null` or throwing `HalResponseException` depending on `StrictContentType`.
+- **HTTP 204 or explicit Content-Length: 0:** `HalClient` returns `null` (or completes normally for `DeleteAsync`) without Content-Type validation or deserialization. Responses that omit `Content-Length` (e.g., chunked transfer encoding) proceed to Content-Type validation.
 - **3xx (redirect):** `HttpClient` follows redirects automatically by default. Non-redirect 3xx responses are passed to `EnsureSuccessStatusCode()` and throw `HttpRequestException`.
 - **400 / 401 / 403 / 409:** `EnsureSuccessStatusCode()` throws `HttpRequestException`. `HalClient` does not catch or wrap it.
 - **404:** `HalClient` returns `null` (or completes normally for `DeleteAsync`). See REQ-08.
@@ -99,7 +99,7 @@ Already uses `Chatter.Rest.Hal` for building HAL documents server-side. Wants to
 
 **REQ-13a:** `HalClientOptions.AcceptMediaType` controls the `Accept` header value sent on all requests. May include media type parameters. Default: `"application/hal+json"`.
 
-**REQ-13b:** `HalClientOptions.ExpectedMediaType` controls the bare media type used for response Content-Type validation (REQ-11/REQ-12). Must be a bare media type without parameters (e.g., `"application/hal+json"`, not `"application/hal+json; charset=utf-8"`). Default: `"application/hal+json"`.
+**REQ-13b:** `HalClientOptions.ExpectedMediaType` controls the bare media type used for response Content-Type validation (REQ-11/REQ-12). Must be a bare media type without parameters (e.g., `"application/hal+json"`, not `"application/hal+json; charset=utf-8"`). Default: `"application/hal+json"`. **Validation:** `HalClient` constructor throws `ArgumentException` if `ExpectedMediaType` is `null`, empty, or contains a `';'` character.
 
 **REQ-14:** `HalClientOptions.StrictContentType` controls non-HAL response behavior. Default: `false` (return `null`). When `true`, throws `HalResponseException`.
 
@@ -110,6 +110,8 @@ Already uses `Chatter.Rest.Hal` for building HAL documents server-side. Wants to
 **REQ-16:** `AddHalClient(Action<HalClientOptions>)` is an extension method on `IServiceCollection` (available in the `Chatter.Rest.Hal.Client.DependencyInjection` package) that registers `IHalClient` / `HalClient` as a service and manages the `HttpClient` internally.
 
 **REQ-17:** `AddHalOptions(Action<HalClientOptions>)` is an extension method on `IHttpClientBuilder` (available in the `Chatter.Rest.Hal.Client.DependencyInjection` package) that composes `HalClient` with `IHttpClientFactory`, enabling Polly policies, auth `DelegatingHandler`s, and named/typed client lifecycle management. Options are registered as named options keyed by `builder.Name` using `IOptionsMonitor<HalClientOptions>.Get(builder.Name)` for resolution, ensuring that multiple `AddHalOptions` calls on different builders use fully independent options.
+
+> **Note:** Named options registered by `AddHalOptions` are fully isolated. However, `IHalClient` is registered as an unkeyed transient; multiple `AddHalOptions` calls result in multiple registrations and last-registration-wins semantics for `IHalClient`. Applications requiring multiple independent HAL clients should construct `HalClient` directly from `IHttpClientFactory`, or use .NET 8+ keyed services.
 
 **REQ-18:** Both registration paths resolve `IHalClient` to `HalClient` in the DI container.
 
@@ -133,7 +135,11 @@ Already uses `Chatter.Rest.Hal` for building HAL documents server-side. Wants to
 
 **REQ-24a:** Every extension method on `Resource` that returns `Resource?`, `IAsyncEnumerable<Resource?>`, or `Task` (untyped return) has a parallel overload on `Resource<T>` with identical signature except `this Resource<T> resource` replaces `this Resource resource`. These overloads delegate to `resource.Inner`. This covers all untyped-return variants of `FollowLinkAsync`, `FollowLinksAsync`, `PostToAsync`, `PutToAsync`, `PatchToAsync`, and `DeleteToAsync`.
 
-**REQ-24b:** `Resource<T>` exposes typed traversal and mutation as instance methods using an `As`-suffix naming convention: `FollowLinkAsAsync<TResult>`, `FollowLinksAsAsync<TResult>`, `PostToAsAsync<TResult>`, `PutToAsAsync<TResult>`, `PatchToAsAsync<TResult>`. Each is defined as an instance method (not an extension method) so that `TResult` is the only method-level type parameter — callers specify only the response type. These methods delegate to the corresponding typed extension method on `Resource` via `_inner`. Full overload pairs (no-logger / with-logger) and all body variants (typed body, raw `HttpContent`) are provided, matching the pattern in REQ-25 through REQ-27.
+**REQ-24b:** `Resource<T>` exposes typed traversal and mutation as instance methods using an `As`-suffix naming convention: `FollowLinkAsAsync<TResult>`, `FollowLinksAsAsync<TResult>`, `PostToAsAsync<TResult>`, `PutToAsAsync<TResult>`, `PatchToAsAsync<TResult>`. Each is defined as an instance method (not an extension method) so that `TResult` is the only method-level type parameter — callers specify only the response type. These methods delegate to the corresponding typed extension method on `Resource` via `_inner`. Full overload pairs (no-logger / with-logger) and all body variants (typed body, raw `HttpContent`) are provided, matching the pattern in REQ-25 through REQ-27. Mutation "As" methods are provided in two object-body forms:
+- `PostToAsAsync<TBody, TResult>(string rel, TBody body, ...)`: `TBody` is inferred from the argument; only `TResult` is specified explicitly.
+- `PostToAsAsync<TResult>(string rel, object body, ...)`: body as `object`; single explicit type param. Delegates to `PostToAsync<object, TResult>` on `_inner`.
+
+Each `IHalClient`-accepting "As" method has a parallel `HttpClient` overload that wraps the raw client in `new HalClient(client, new HalClientOptions())` with default options and delegates to the `IHalClient` overload. This matches the raw-`HttpClient` overload pattern for untyped traversal (REQ-24).
 
 ### Mutation -- extension methods on `Resource`
 
@@ -220,8 +226,7 @@ Both overloads return `Task` (no body deserialization). Both throw `HalLinkNotFo
 | Rel not found on resource | Throw `HalLinkNotFoundException` (before any HTTP) |
 | Duplicate rels on resource | Throw `InvalidOperationException` (before any HTTP) |
 | HTTP 2xx with body | Deserialize and return |
-| HTTP 204 or explicit `Content-Length: 0` (mutations: POST/PUT/PATCH/DELETE) | Return `null` (no Content-Type check) |
-| HTTP 204 or explicit `Content-Length: 0` (GET) | Proceeds to Content-Type validation → `null` or `HalResponseException` |
+| HTTP 204 or explicit `Content-Length: 0` | Return `null` (no Content-Type check) |
 | HTTP 3xx | `HttpClient` follows redirects; non-redirect throws `HttpRequestException` |
 | HTTP 400 / 401 / 403 / 409 | Throw `HttpRequestException` |
 | HTTP 404 | Return `null` (DELETE completes normally) |
@@ -253,7 +258,7 @@ services.AddHalClient(options =>
 
 ```csharp
 // Full IHttpClientFactory lifecycle: Polly, DelegatingHandlers, named clients
-services.AddHttpClient<HalClient>(c =>
+services.AddHttpClient("hal", c =>
         c.BaseAddress = new Uri("https://api.example.com"))
     .AddHalOptions(options =>
     {
@@ -261,7 +266,7 @@ services.AddHttpClient<HalClient>(c =>
     });
 ```
 
-Both register `IHalClient` -> `HalClient` in DI. Option B uses `IHttpClientFactory` lifecycle.
+Both register `IHalClient` -> `HalClient` in DI. Option B uses a named client `"hal"` to configure the `HttpClient`; `AddHalOptions` registers `IHalClient` via `AddTypedClient<IHalClient>` keyed to that named client.
 
 ---
 

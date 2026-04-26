@@ -176,6 +176,16 @@ public sealed class Resource<T> where T : class
         string rel, TBody body, IHalClient client, ILogger logger, CancellationToken ct = default) where TResult : class
         => _inner.PostToAsync<TBody, TResult>(rel, body, client, logger, ct);
 
+    /// <summary>POSTs an object body to a linked resource as <typeparamref name="TResult"/>. Single explicit type param; body typed as object.</summary>
+    public Task<Resource<TResult>?> PostToAsAsync<TResult>(
+        string rel, object body, IHalClient client, CancellationToken ct = default) where TResult : class
+        => _inner.PostToAsync<object, TResult>(rel, body, client, ct);
+
+    /// <summary>POSTs an object body to a linked resource as <typeparamref name="TResult"/>. With logging.</summary>
+    public Task<Resource<TResult>?> PostToAsAsync<TResult>(
+        string rel, object body, IHalClient client, ILogger logger, CancellationToken ct = default) where TResult : class
+        => _inner.PostToAsync<object, TResult>(rel, body, client, logger, ct);
+
     /// <summary>POSTs raw content to a linked resource and returns the response as <typeparamref name="TResult"/>.</summary>
     public Task<Resource<TResult>?> PostToAsAsync<TResult>(
         string rel, HttpContent content, IHalClient client, CancellationToken ct = default) where TResult : class
@@ -195,6 +205,16 @@ public sealed class Resource<T> where T : class
     public Task<Resource<TResult>?> PutToAsAsync<TBody, TResult>(
         string rel, TBody body, IHalClient client, ILogger logger, CancellationToken ct = default) where TResult : class
         => _inner.PutToAsync<TBody, TResult>(rel, body, client, logger, ct);
+
+    /// <summary>PUTs an object body to a linked resource as <typeparamref name="TResult"/>. Single explicit type param; body typed as object.</summary>
+    public Task<Resource<TResult>?> PutToAsAsync<TResult>(
+        string rel, object body, IHalClient client, CancellationToken ct = default) where TResult : class
+        => _inner.PutToAsync<object, TResult>(rel, body, client, ct);
+
+    /// <summary>PUTs an object body to a linked resource as <typeparamref name="TResult"/>. With logging.</summary>
+    public Task<Resource<TResult>?> PutToAsAsync<TResult>(
+        string rel, object body, IHalClient client, ILogger logger, CancellationToken ct = default) where TResult : class
+        => _inner.PutToAsync<object, TResult>(rel, body, client, logger, ct);
 
     /// <summary>PUTs raw content to a linked resource and returns the response as <typeparamref name="TResult"/>.</summary>
     public Task<Resource<TResult>?> PutToAsAsync<TResult>(
@@ -216,6 +236,16 @@ public sealed class Resource<T> where T : class
         string rel, TBody body, IHalClient client, ILogger logger, CancellationToken ct = default) where TResult : class
         => _inner.PatchToAsync<TBody, TResult>(rel, body, client, logger, ct);
 
+    /// <summary>PATCHes an object body to a linked resource as <typeparamref name="TResult"/>. Single explicit type param; body typed as object.</summary>
+    public Task<Resource<TResult>?> PatchToAsAsync<TResult>(
+        string rel, object body, IHalClient client, CancellationToken ct = default) where TResult : class
+        => _inner.PatchToAsync<object, TResult>(rel, body, client, ct);
+
+    /// <summary>PATCHes an object body to a linked resource as <typeparamref name="TResult"/>. With logging.</summary>
+    public Task<Resource<TResult>?> PatchToAsAsync<TResult>(
+        string rel, object body, IHalClient client, ILogger logger, CancellationToken ct = default) where TResult : class
+        => _inner.PatchToAsync<object, TResult>(rel, body, client, logger, ct);
+
     /// <summary>PATCHes raw content to a linked resource and returns the response as <typeparamref name="TResult"/>.</summary>
     public Task<Resource<TResult>?> PatchToAsAsync<TResult>(
         string rel, HttpContent content, IHalClient client, CancellationToken ct = default) where TResult : class
@@ -225,10 +255,137 @@ public sealed class Resource<T> where T : class
     public Task<Resource<TResult>?> PatchToAsAsync<TResult>(
         string rel, HttpContent content, IHalClient client, ILogger logger, CancellationToken ct = default) where TResult : class
         => _inner.PatchToAsync<TResult>(rel, content, client, logger, ct);
+
+    // ── HttpClient convenience overloads (construct HalClient with default options) ──
+
+    /// <inheritdoc cref="FollowLinkAsAsync{TResult}(string, IHalClient, CancellationToken)"/>
+    public Task<Resource<TResult>?> FollowLinkAsAsync<TResult>(
+        string rel, HttpClient client, CancellationToken ct = default) where TResult : class
+        => FollowLinkAsAsync<TResult>(rel, new HalClient(client, new HalClientOptions()), ct);
+
+    /// <inheritdoc cref="FollowLinkAsAsync{TResult}(string, IHalClient, ILogger, CancellationToken)"/>
+    public Task<Resource<TResult>?> FollowLinkAsAsync<TResult>(
+        string rel, HttpClient client, ILogger logger, CancellationToken ct = default) where TResult : class
+        => FollowLinkAsAsync<TResult>(rel, new HalClient(client, new HalClientOptions()), logger, ct);
+
+    /// <inheritdoc cref="FollowLinkAsAsync{TResult}(string, IHalClient, object, CancellationToken)"/>
+    public Task<Resource<TResult>?> FollowLinkAsAsync<TResult>(
+        string rel, HttpClient client, object variables, CancellationToken ct = default) where TResult : class
+        => FollowLinkAsAsync<TResult>(rel, new HalClient(client, new HalClientOptions()), variables, ct);
+
+    /// <inheritdoc cref="FollowLinkAsAsync{TResult}(string, IHalClient, object, ILogger, CancellationToken)"/>
+    public Task<Resource<TResult>?> FollowLinkAsAsync<TResult>(
+        string rel, HttpClient client, object variables, ILogger logger, CancellationToken ct = default) where TResult : class
+        => FollowLinkAsAsync<TResult>(rel, new HalClient(client, new HalClientOptions()), variables, logger, ct);
+
+    /// <inheritdoc cref="FollowLinksAsAsync{TResult}(string, IHalClient, CancellationToken)"/>
+    public IAsyncEnumerable<Resource<TResult>?> FollowLinksAsAsync<TResult>(
+        string rel, HttpClient client, CancellationToken ct = default) where TResult : class
+        => FollowLinksAsAsync<TResult>(rel, new HalClient(client, new HalClientOptions()), ct);
+
+    /// <inheritdoc cref="FollowLinksAsAsync{TResult}(string, IHalClient, ILogger, CancellationToken)"/>
+    public IAsyncEnumerable<Resource<TResult>?> FollowLinksAsAsync<TResult>(
+        string rel, HttpClient client, ILogger logger, CancellationToken ct = default) where TResult : class
+        => FollowLinksAsAsync<TResult>(rel, new HalClient(client, new HalClientOptions()), logger, ct);
+
+    /// <inheritdoc cref="PostToAsAsync{TBody, TResult}(string, TBody, IHalClient, CancellationToken)"/>
+    public Task<Resource<TResult>?> PostToAsAsync<TBody, TResult>(
+        string rel, TBody body, HttpClient client, CancellationToken ct = default) where TResult : class
+        => PostToAsAsync<TBody, TResult>(rel, body, new HalClient(client, new HalClientOptions()), ct);
+
+    /// <inheritdoc cref="PostToAsAsync{TBody, TResult}(string, TBody, IHalClient, ILogger, CancellationToken)"/>
+    public Task<Resource<TResult>?> PostToAsAsync<TBody, TResult>(
+        string rel, TBody body, HttpClient client, ILogger logger, CancellationToken ct = default) where TResult : class
+        => PostToAsAsync<TBody, TResult>(rel, body, new HalClient(client, new HalClientOptions()), logger, ct);
+
+    /// <inheritdoc cref="PostToAsAsync{TResult}(string, object, IHalClient, CancellationToken)"/>
+    public Task<Resource<TResult>?> PostToAsAsync<TResult>(
+        string rel, object body, HttpClient client, CancellationToken ct = default) where TResult : class
+        => PostToAsAsync<TResult>(rel, body, new HalClient(client, new HalClientOptions()), ct);
+
+    /// <inheritdoc cref="PostToAsAsync{TResult}(string, object, IHalClient, ILogger, CancellationToken)"/>
+    public Task<Resource<TResult>?> PostToAsAsync<TResult>(
+        string rel, object body, HttpClient client, ILogger logger, CancellationToken ct = default) where TResult : class
+        => PostToAsAsync<TResult>(rel, body, new HalClient(client, new HalClientOptions()), logger, ct);
+
+    /// <inheritdoc cref="PostToAsAsync{TResult}(string, HttpContent, IHalClient, CancellationToken)"/>
+    public Task<Resource<TResult>?> PostToAsAsync<TResult>(
+        string rel, HttpContent content, HttpClient client, CancellationToken ct = default) where TResult : class
+        => PostToAsAsync<TResult>(rel, content, new HalClient(client, new HalClientOptions()), ct);
+
+    /// <inheritdoc cref="PostToAsAsync{TResult}(string, HttpContent, IHalClient, ILogger, CancellationToken)"/>
+    public Task<Resource<TResult>?> PostToAsAsync<TResult>(
+        string rel, HttpContent content, HttpClient client, ILogger logger, CancellationToken ct = default) where TResult : class
+        => PostToAsAsync<TResult>(rel, content, new HalClient(client, new HalClientOptions()), logger, ct);
+
+    /// <inheritdoc cref="PutToAsAsync{TBody, TResult}(string, TBody, IHalClient, CancellationToken)"/>
+    public Task<Resource<TResult>?> PutToAsAsync<TBody, TResult>(
+        string rel, TBody body, HttpClient client, CancellationToken ct = default) where TResult : class
+        => PutToAsAsync<TBody, TResult>(rel, body, new HalClient(client, new HalClientOptions()), ct);
+
+    /// <inheritdoc cref="PutToAsAsync{TBody, TResult}(string, TBody, IHalClient, ILogger, CancellationToken)"/>
+    public Task<Resource<TResult>?> PutToAsAsync<TBody, TResult>(
+        string rel, TBody body, HttpClient client, ILogger logger, CancellationToken ct = default) where TResult : class
+        => PutToAsAsync<TBody, TResult>(rel, body, new HalClient(client, new HalClientOptions()), logger, ct);
+
+    /// <inheritdoc cref="PutToAsAsync{TResult}(string, object, IHalClient, CancellationToken)"/>
+    public Task<Resource<TResult>?> PutToAsAsync<TResult>(
+        string rel, object body, HttpClient client, CancellationToken ct = default) where TResult : class
+        => PutToAsAsync<TResult>(rel, body, new HalClient(client, new HalClientOptions()), ct);
+
+    /// <inheritdoc cref="PutToAsAsync{TResult}(string, object, IHalClient, ILogger, CancellationToken)"/>
+    public Task<Resource<TResult>?> PutToAsAsync<TResult>(
+        string rel, object body, HttpClient client, ILogger logger, CancellationToken ct = default) where TResult : class
+        => PutToAsAsync<TResult>(rel, body, new HalClient(client, new HalClientOptions()), logger, ct);
+
+    /// <inheritdoc cref="PutToAsAsync{TResult}(string, HttpContent, IHalClient, CancellationToken)"/>
+    public Task<Resource<TResult>?> PutToAsAsync<TResult>(
+        string rel, HttpContent content, HttpClient client, CancellationToken ct = default) where TResult : class
+        => PutToAsAsync<TResult>(rel, content, new HalClient(client, new HalClientOptions()), ct);
+
+    /// <inheritdoc cref="PutToAsAsync{TResult}(string, HttpContent, IHalClient, ILogger, CancellationToken)"/>
+    public Task<Resource<TResult>?> PutToAsAsync<TResult>(
+        string rel, HttpContent content, HttpClient client, ILogger logger, CancellationToken ct = default) where TResult : class
+        => PutToAsAsync<TResult>(rel, content, new HalClient(client, new HalClientOptions()), logger, ct);
+
+    /// <inheritdoc cref="PatchToAsAsync{TBody, TResult}(string, TBody, IHalClient, CancellationToken)"/>
+    public Task<Resource<TResult>?> PatchToAsAsync<TBody, TResult>(
+        string rel, TBody body, HttpClient client, CancellationToken ct = default) where TResult : class
+        => PatchToAsAsync<TBody, TResult>(rel, body, new HalClient(client, new HalClientOptions()), ct);
+
+    /// <inheritdoc cref="PatchToAsAsync{TBody, TResult}(string, TBody, IHalClient, ILogger, CancellationToken)"/>
+    public Task<Resource<TResult>?> PatchToAsAsync<TBody, TResult>(
+        string rel, TBody body, HttpClient client, ILogger logger, CancellationToken ct = default) where TResult : class
+        => PatchToAsAsync<TBody, TResult>(rel, body, new HalClient(client, new HalClientOptions()), logger, ct);
+
+    /// <inheritdoc cref="PatchToAsAsync{TResult}(string, object, IHalClient, CancellationToken)"/>
+    public Task<Resource<TResult>?> PatchToAsAsync<TResult>(
+        string rel, object body, HttpClient client, CancellationToken ct = default) where TResult : class
+        => PatchToAsAsync<TResult>(rel, body, new HalClient(client, new HalClientOptions()), ct);
+
+    /// <inheritdoc cref="PatchToAsAsync{TResult}(string, object, IHalClient, ILogger, CancellationToken)"/>
+    public Task<Resource<TResult>?> PatchToAsAsync<TResult>(
+        string rel, object body, HttpClient client, ILogger logger, CancellationToken ct = default) where TResult : class
+        => PatchToAsAsync<TResult>(rel, body, new HalClient(client, new HalClientOptions()), logger, ct);
+
+    /// <inheritdoc cref="PatchToAsAsync{TResult}(string, HttpContent, IHalClient, CancellationToken)"/>
+    public Task<Resource<TResult>?> PatchToAsAsync<TResult>(
+        string rel, HttpContent content, HttpClient client, CancellationToken ct = default) where TResult : class
+        => PatchToAsAsync<TResult>(rel, content, new HalClient(client, new HalClientOptions()), ct);
+
+    /// <inheritdoc cref="PatchToAsAsync{TResult}(string, HttpContent, IHalClient, ILogger, CancellationToken)"/>
+    public Task<Resource<TResult>?> PatchToAsAsync<TResult>(
+        string rel, HttpContent content, HttpClient client, ILogger logger, CancellationToken ct = default) where TResult : class
+        => PatchToAsAsync<TResult>(rel, content, new HalClient(client, new HalClientOptions()), logger, ct);
 }
 ```
 
-`Resource<T>` depends on `IHalClient`, `ILogger`, and `HttpContent` — all of which are in the same package. The "As" suffix signals "treat the response as `TResult`" and avoids the generic-inference ambiguity of trying to specify both the receiver type `T` and a return type on the same extension method.
+> **Mutation overload shapes for `PostToAsAsync` / `PutToAsAsync` / `PatchToAsAsync`:**
+> - `PostToAsAsync<TBody, TResult>(string rel, TBody body, ...)` -- strongly-typed body; `TBody` is inferred from the argument; only `TResult` needs to be specified explicitly. Use when the body type is known at the call site.
+> - `PostToAsAsync<TResult>(string rel, object body, ...)` -- body passed as `object`; single explicit type param. Delegates to `_inner.PostToAsync<object, TResult>(...)`. Use when only the response type matters.
+> - `PostToAsAsync<TResult>(string rel, HttpContent content, ...)` -- raw content; single explicit type param.
+
+`Resource<T>` depends on `IHalClient`, `ILogger`, `HttpClient`, and `HttpContent` — all of which are in the same package. The "As" suffix signals "treat the response as `TResult`" and avoids the generic-inference ambiguity of trying to specify both the receiver type `T` and a return type on the same extension method. All `IHalClient`-accepting instance methods have a parallel `HttpClient` overload that wraps the client in `new HalClient(client, new HalClientOptions())` and delegates to the `IHalClient` overload.
 
 `Resource<T>` is a client-side convenience type. It wraps the untyped `Resource` returned by deserialization and provides strongly-typed access to the embedded state via `State()`. The core `Chatter.Rest.Hal` library exposes `Resource.State<T>(JsonSerializerOptions?)` as a public overload, so `Resource<T>.State()` delegates directly — no internal accessor, `InternalsVisibleTo`, or re-serialization path is needed.
 
@@ -285,6 +442,7 @@ public sealed class HalClient : IHalClient
 
 **Constructor behavior:**
 - Stores `httpClient`, `options`, and `logger ?? NullLogger<HalClient>.Instance`.
+- Validates `options.ExpectedMediaType`: throws `ArgumentException` if the value is null, empty, or contains a `';'` character. Message: `"HalClientOptions.ExpectedMediaType must be a bare media type without parameters (e.g., \"application/hal+json\")."`.
 
 > **Note:** The DI companion package resolves `IOptions<HalClientOptions>.Value` before constructing `HalClient`, so the base package has no dependency on `Microsoft.Extensions.Options`.
 
@@ -352,12 +510,8 @@ SendAsync(HttpMethod method, Uri uri, HttpContent? content, CancellationToken ct
     // 4. Ensure success (throws HttpRequestException for non-2xx except 404)
     response.EnsureSuccessStatusCode()
 
-    // 4a. Handle empty / no-content responses (mutations only: POST, PUT, PATCH, DELETE)
-    // GetAsync does not apply this early-exit; a 204 or explicit Content-Length: 0 on GET
-    // proceeds to Content-Type validation (step 5), which treats missing/non-HAL Content-Type
-    // as non-HAL and returns null or throws per StrictContentType.
-    if method is not HttpMethod.Get and
-       (response.StatusCode == HttpStatusCode.NoContent or response.Content.Headers.ContentLength == 0):
+    // 4a. Handle empty / no-content responses (all verbs)
+    if response.StatusCode == HttpStatusCode.NoContent or response.Content.Headers.ContentLength == 0:
         return null
 
     // 5. Validate Content-Type
@@ -468,6 +622,15 @@ public static class HalClientHttpClientBuilderExtensions
    `builder.AddTypedClient<IHalClient>` attaches the typed client registration to the named `HttpClient` managed by this builder. `IOptionsMonitor<HalClientOptions>.Get(builder.Name)` resolves the named options snapshot for this specific client. Multiple `AddHalOptions` calls on different builders are fully isolated — each gets its own named options and its own typed client registration.
 
 3. Return `builder` for chaining
+
+> **Warning: Multiple `AddHalOptions` calls:** Named options are isolated per `builder.Name`, but `AddTypedClient<IHalClient>` registers `IHalClient` as an unkeyed transient. Multiple `AddHalOptions` calls add multiple `IHalClient` transient registrations -- resolving `IHalClient` from the container returns the last-registered implementation. For applications that need multiple independent HAL endpoints, construct `HalClient` instances directly from `IHttpClientFactory`:
+>
+> ```csharp
+> var httpClient = factory.CreateClient("payments-api");
+> IHalClient client = new HalClient(httpClient, paymentsOptions);
+> ```
+>
+> In .NET 8+, keyed DI services (`AddKeyedTransient<IHalClient>("payments-api", ...)`) provide named resolution without manual construction.
 
 ---
 
@@ -871,8 +1034,7 @@ public static class HttpClientHalExtensions
 | Rel not found on resource | Throw before HTTP | `HalLinkNotFoundException` |
 | Duplicate rels on resource | Throw before HTTP | `InvalidOperationException` |
 | HTTP 2xx with body | Deserialize and return | -- |
-| HTTP 204 or explicit `Content-Length: 0` (mutations: POST/PUT/PATCH/DELETE) | Return `null` without Content-Type check | -- |
-| HTTP 204 or explicit `Content-Length: 0` (GET) | Proceeds to Content-Type validation → `null` or `HalResponseException` | -- |
+| HTTP 204 or explicit `Content-Length: 0` | Return `null` without Content-Type check | -- |
 | HTTP 301/302/3xx (redirect) | `HttpClient` follows redirects by default; non-redirect 3xx reaches `EnsureSuccessStatusCode` and throws | `HttpRequestException` |
 | HTTP 400 / 401 / 403 / 409 | Throw | `HttpRequestException` |
 | HTTP 404 | Return `null` (DELETE completes normally) | -- |
@@ -1078,8 +1240,7 @@ When a logger overload is called with a non-null logger, it logs rel resolution 
 - `HalResponseException.Message` does not contain query strings or fragments from `RequestUri`; `RequestUri` property retains raw value
 
 **GET 204 behavior:**
-- `GetAsync` with a 204 response proceeds to Content-Type validation; returns `null` in lenient mode, throws `HalResponseException` in strict mode
-- Contrasting: `PostAsync` / `PutAsync` / `PatchAsync` with 204 return `null` without Content-Type validation
+- `GetAsync` with a 204 or explicit `Content-Length: 0` response returns `null` without Content-Type validation (same behavior as mutations)
 
 ### Integration tests
 
