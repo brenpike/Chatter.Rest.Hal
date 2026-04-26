@@ -189,7 +189,7 @@ Both overloads return `Task` (no body deserialization). Both throw `HalLinkNotFo
 
 **REQ-36:** All log messages use structured logging with named placeholders (e.g., `{Method}`, `{Uri}`, `{StatusCode}`, `{Rel}`, `{ContentType}`) and never string concatenation or string interpolation in log calls.
 
-**REQ-36a:** All `{Uri}` values in log messages must be redacted before logging. Only the scheme, host, and path are included; query strings and URL fragments are stripped. This prevents API keys or tokens embedded in query parameters from appearing in logs.
+**REQ-36a:** All `{Uri}` values in log messages must be redacted before logging. Only the scheme, host, and path are included; query strings and URL fragments are stripped. This prevents API keys or tokens embedded in query parameters from appearing in logs. User info (credentials in the form `user:password@host`) is also stripped from absolute URIs; `GetLeftPart(UriPartial.Path)` is not used because it retains user-info segments.
 
 **REQ-37:** At `Debug` level, `HalClient` logs the HTTP method and request URI before sending each request, and the response status code after receiving the response.
 
@@ -199,7 +199,7 @@ Both overloads return `Task` (no body deserialization). Both throw `HalLinkNotFo
 
 **REQ-40:** At `Error` level, `HalClient` logs deserialization failures, including the exception and the request URI.
 
-**REQ-41:** At `Debug` level, `FollowLinkAsync` and `FollowLinksAsync` extension methods log rel resolution: the rel name, the resolved href, and whether the link is templated. Logging occurs at the extension-method call site (not inside `HalClient`) because the extension has rel context that `HalClient` does not. Extension methods are provided in overload pairs: a no-logger overload (ending in `CancellationToken ct = default`) and a with-logger overload accepting an explicit non-optional `ILogger logger` followed by `CancellationToken ct = default`. Callers that want rel-resolution logging call the with-logger overload explicitly. This avoids the ergonomic problem where a `CancellationToken` argument is silently bound as the logger parameter.
+**REQ-41:** At `Debug` level, `FollowLinkAsync` and `FollowLinksAsync` extension methods log rel resolution: the rel name and whether the link is templated. Logging occurs at the extension-method call site (not inside `HalClient`) because the extension has rel context that `HalClient` does not. Extension methods are provided in overload pairs: a no-logger overload (ending in `CancellationToken ct = default`) and a with-logger overload accepting an explicit non-optional `ILogger logger` followed by `CancellationToken ct = default`. Callers that want rel-resolution logging call the with-logger overload explicitly. This avoids the ergonomic problem where a `CancellationToken` argument is silently bound as the logger parameter.
 
 **REQ-42:** At `Debug` level, `PostToAsync`, `PutToAsync`, `PatchToAsync`, and `DeleteToAsync` extension methods log the rel name and resolved URI before delegating to `IHalClient`. These methods follow the same overload-pair pattern as `FollowLinkAsync` (REQ-41): a no-logger overload and a with-logger overload accepting an explicit `ILogger logger`.
 
@@ -226,7 +226,7 @@ Both overloads return `Task` (no body deserialization). Both throw `HalLinkNotFo
 | Rel not found on resource | Throw `HalLinkNotFoundException` (before any HTTP) |
 | Duplicate rels on resource | Throw `InvalidOperationException` (before any HTTP) |
 | HTTP 2xx with body | Deserialize and return |
-| HTTP 204 or explicit `Content-Length: 0` | Return `null` (no Content-Type check) |
+| HTTP 204 or explicit `Content-Length: 0` | Return `null`; `DeleteAsync` completes normally (no body, no Content-Type check) |
 | HTTP 3xx | `HttpClient` follows redirects; non-redirect throws `HttpRequestException` |
 | HTTP 400 / 401 / 403 / 409 | Throw `HttpRequestException` |
 | HTTP 404 | Return `null` (DELETE completes normally) |

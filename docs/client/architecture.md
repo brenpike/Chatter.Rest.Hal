@@ -1034,7 +1034,7 @@ public static class HttpClientHalExtensions
 | Rel not found on resource | Throw before HTTP | `HalLinkNotFoundException` |
 | Duplicate rels on resource | Throw before HTTP | `InvalidOperationException` |
 | HTTP 2xx with body | Deserialize and return | -- |
-| HTTP 204 or explicit `Content-Length: 0` | Return `null` without Content-Type check | -- |
+| HTTP 204 or explicit `Content-Length: 0` | Return `null`; `DeleteAsync` completes normally (no body, no Content-Type check) | -- |
 | HTTP 301/302/3xx (redirect) | `HttpClient` follows redirects by default; non-redirect 3xx reaches `EnsureSuccessStatusCode` and throws | `HttpRequestException` |
 | HTTP 400 / 401 / 403 / 409 | Throw | `HttpRequestException` |
 | HTTP 404 | Return `null` (DELETE completes normally) | -- |
@@ -1114,8 +1114,15 @@ RedactUri(Uri uri):
         fragmentIndex = uriString.IndexOf('#')
         cutIndex = min of queryIndex and fragmentIndex (ignoring -1)
         return cutIndex >= 0 ? uriString[..cutIndex] : uriString
-    // absolute URI: use scheme + host + path only
-    return new Uri(uri.GetLeftPart(UriPartial.Path)).ToString()
+    // absolute URI: rebuild from scheme + host + port + path only
+    // GetLeftPart(UriPartial.Path) keeps user:password@ — use UriBuilder to exclude it
+    return new UriBuilder
+    {
+        Scheme = uri.Scheme,
+        Host   = uri.Host,
+        Port   = uri.IsDefaultPort ? -1 : uri.Port,
+        Path   = uri.AbsolutePath
+    }.Uri.ToString()
 ```
 
 Log points that accept a `Uri` parameter pass it through `RedactUri` before logging. Raw URIs must never appear in log output.
@@ -1253,7 +1260,7 @@ When a logger overload is called with a non-null logger, it logs rel resolution 
 - Resolves `IHalClient` from container
 - `HttpClient` lifecycle managed by factory
 - Options are applied correctly
-- Named option isolation: multiple `AddHalOptions` calls on different `IHttpClientBuilder` instances use independent named options; a second call does not overwrite the first registration's options or replace the first `IHalClient` registration
+- Named option isolation: multiple `AddHalOptions` calls use independent named options keyed by `builder.Name`; a second call does not affect the first call's options. Note: resolving `IHalClient` from the container returns the last-registered implementation (last-wins behavior for unkeyed transients — see multi-client warning in the registration section).
 
 **End-to-end traversal:**
 - Mock `HttpClient` (via `HttpMessageHandler`) returning HAL JSON
