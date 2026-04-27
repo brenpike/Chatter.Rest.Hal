@@ -40,7 +40,7 @@ jobs:
           VERSION=$(grep -m1 '<Version>' '${{ inputs.csproj-path }}' | sed 's/.*<Version>\(.*\)<\/Version>.*/\1/' | tr -d ' \r')
 
           # Filter out pre-release tags to get latest stable release baseline
-          LATEST_TAG=$(git tag -l '${{ inputs.tag-prefix }}/v*' | grep -v -- '-' | sort -V | tail -1)
+          LATEST_TAG=$(git tag -l '${{ inputs.tag-prefix }}/v*' | grep -v -- '-' | sort -V | tail -1 || true)
 
           if [ -z "$LATEST_TAG" ]; then
             echo "No existing ${{ inputs.tag-prefix }}/v* release tags found. Bootstrapping — version check passes."
