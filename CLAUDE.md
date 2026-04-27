@@ -87,7 +87,7 @@ See [docs/development.md](docs/development.md) for CI/CD workflow details.
 
 ## Package Versions
 
-- `Chatter.Rest.Hal` — v1.0.1
+- `Chatter.Rest.Hal` — v1.1.0
 - `Chatter.Rest.Hal.CodeGenerators` — v0.3.0
 
 External dependency: `Chatter.Rest.UriTemplates` v0.1.0 ([NuGet](https://www.nuget.org/packages/Chatter.Rest.UriTemplates/))
