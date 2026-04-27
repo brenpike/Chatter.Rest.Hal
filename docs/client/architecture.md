@@ -466,7 +466,7 @@ public sealed class HalLinkNotFoundException : Exception
 }
 ```
 
-**Message format:** `"Link relation '{rel}' not found on resource '{RedactUri(selfHref)}'."` The `SelfHref` property retains the raw (unredacted) value for programmatic access. `RedactUri` applied to `selfHref` strips query strings and fragments before embedding in the message text, preventing query-token leakage when exception messages are logged.
+**Message format:** `"Link relation '{rel}' not found on resource '{RedactUri(selfHref)}'."` The `SelfHref` property retains the raw (unredacted) value for programmatic access. `RedactUri` is called via the `string?` overload: a null or empty value produces `"(unknown)"`; a valid absolute URI is redacted to scheme + host + path; any other string has query and fragment stripped from the raw value.
 
 ---
 
@@ -1127,7 +1127,20 @@ RedactUri(Uri uri):
     }.Uri.ToString()
 ```
 
-Log points that accept a `Uri` parameter pass it through `RedactUri` before logging. Raw URIs must never appear in log output.
+```
+RedactUri(string? href):
+    if href is null or empty:
+        return "(unknown)"
+    if Uri.TryCreate(href, UriKind.Absolute, out var uri):
+        return RedactUri(uri)          // delegate to Uri overload for absolute URIs
+    // not a valid absolute URI -- strip query and fragment from raw string
+    queryIndex = href.IndexOf('?')
+    fragmentIndex = href.IndexOf('#')
+    cutIndex = min of queryIndex and fragmentIndex (ignoring -1)
+    return cutIndex >= 0 ? href[..cutIndex] : href
+```
+
+Log points that accept a `Uri` parameter pass it through `RedactUri(Uri)` before logging. `HalLinkNotFoundException` passes `selfHref` through `RedactUri(string?)`. Raw URIs must never appear in log output.
 
 ---
 
