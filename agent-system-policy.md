@@ -102,7 +102,6 @@ Workers must stop and report blocked if required git context is missing or incon
 No agent may treat user silence about branches, commits, or PRs as permission to ignore the canonical workflow.
 
 ## Tool and MCP Policy
-
 | Tool / MCP | orchestrator | planner | coder | designer | Notes |
 |---|---|---|---|---|---|
 | Context7 | optional | use when relevant | use when relevant | use when relevant | current framework/library docs |
@@ -119,20 +118,26 @@ A worker must stop and report instead of guessing when:
 - required git workflow context has not been explicitly established
 
 ## Retry and Timeout Policy
+Failures are execution states, not waiting states.
 
-Agents must not retry indefinitely after tool errors, timeouts, failed delegations, or missing required context.
+After any tool error, timeout, failed delegation, unusable output, or internal runtime failure, the observing agent must immediately do one of:
+
+1. retry once if the failure appears transient
+2. continue with a safe fallback
+3. return `blocked`
 
 Rules:
-- Retry at most once when the failure appears transient.
-- If the same failure repeats, return `blocked` immediately.
-- Do not repeat the same failing action without a changed strategy or new information.
-- Surface blocked status promptly so the orchestrator can retry, re-route, or escalate.
-- Do not remain silent after an internal tool/runtime failure.
+- Do not retry indefinitely.
+- Do not repeat the same failing action more than once without a changed strategy or new information.
+- If the retry fails, return `blocked` promptly.
+- Do not wait for the user to ask what happened.
+- Do not leave delegated-agent failures unresolved silently.
 
 A changed strategy may include:
 - using a fallback read-only method
 - narrowing scope
 - changing tool choice
+- disabling reliance on a non-essential MCP/tool
 - asking the user for missing information
 
 ## Delivery Shape Rules

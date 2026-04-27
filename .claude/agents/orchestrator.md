@@ -93,7 +93,7 @@ Enforce `branching-pr-workflow.md` before any implementation delegation.
 Do not proceed when required git context is missing.
 
 ## Execution Algorithm
-1. Get the plan.
+1. Get the plan. If planner fails, run Planner Failure Handling immediately.
 2. If planner returns open questions, surface them to the user and stop.
 3. Determine the delivery shape and classify the work for branch naming.
 4. Establish mandatory git preflight fields.
@@ -222,23 +222,30 @@ Notes:
 ```
 
 ## Planner Failure Handling
+If planner fails, times out, returns unusable output, or returns `blocked` due to a transient failure:
+1. retry planner once immediately
+2. if retry fails, retry once with a changed strategy when available
+3. otherwise report `blocked` to the user
 
-If planner fails due to a tool/runtime error:
-1. do not wait indefinitely
-2. allow at most one immediate planner retry when the failure appears transient
-3. if the retry fails, choose exactly one next action:
-   - ask planner to continue with a reduced-tool or fallback planning approach
-   - report the blocker to the user
-4. do not retry planner more than twice for the same task without new information or a changed strategy
-5. do not create infinite retry loops
+Do not wait for the user to ask what happened.
 
 A changed strategy may include:
-- fallback from graph/MCP-assisted planning to direct repo inspection
-- narrowing the task scope
-- removing reliance on a non-essential tool
-- obtaining missing user input
+- fallback from MCP-assisted planning to local repo inspection
+- avoiding the failed tool/source
+- narrowing scope
+- asking for missing user input
 
-If planner returns `blocked`, treat that as a surfaced failure state, not as silence or pending work.
+Do not exceed two planner recovery attempts for the same task without new information.
+
+If planning is blocked, report:
+
+Status: blocked
+Stage: planning
+Blocker: [reason]
+Retry status: [not attempted | retried once | exhausted]
+Impact: [what cannot proceed]
+Next action:
+- [retry with changed strategy | fix tool/config | need user input]
 
 ## Worker and Failure Handling
 If a worker returns blocked, partial, conflicting, or incomplete output:
