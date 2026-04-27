@@ -145,3 +145,27 @@ All projects have `<Nullable>enable</Nullable>`. The `netstandard2.0` target of 
 ### Test Assertion Style
 
 FluentAssertions (`Should()` syntax) is the preferred assertion library for new tests. Existing tests using xUnit `Assert.*` should not be migrated retroactively.
+
+---
+
+## Versioning
+
+Package versions follow [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html). See [versioning.md](versioning.md) for the full policy including bump triggers, bump type rules, and orchestrator authority.
+
+### CHANGELOG files
+
+| File | Package |
+|---|---|
+| [`CHANGELOG.md`](../CHANGELOG.md) | `Chatter.Rest.Hal` |
+| [`CHANGELOG-CodeGenerators.md`](../CHANGELOG-CodeGenerators.md) | `Chatter.Rest.Hal.CodeGenerators` |
+
+Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Update the `[Unreleased]` section when making changes that will be included in the next release.
+
+### Git tags
+
+CI automatically creates an annotated tag on each successful deploy to NuGet:
+
+| Package | Tag format | Example |
+|---|---|---|
+| `Chatter.Rest.Hal` | `hal/vX.Y.Z` | `hal/v1.2.0` |
+| `Chatter.Rest.Hal.CodeGenerators` | `codegen/vX.Y.Z` | `codegen/v0.4.0` |

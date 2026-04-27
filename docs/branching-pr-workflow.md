@@ -146,6 +146,45 @@ Examples:
 - Stage only the files that belong to the completed phase or approved milestone.
 - Do not create checkpoint commits on `main`.
 
+## Version Bump Policy
+
+A version bump is **required** when a PR changes non-markdown files under a packable package's `src/` directory. See [docs/versioning.md](versioning.md) for the full policy.
+
+### When a bump is required
+
+| Changed paths | Bump required for |
+|---|---|
+| `src/Chatter.Rest.Hal/**` (non-`.md`) | `Chatter.Rest.Hal` |
+| `src/Chatter.Rest.Hal.CodeGenerators/**` (non-`.md`) | `Chatter.Rest.Hal.CodeGenerators` |
+| `src/Chatter.Rest.Hal.Core/**` (non-`.md`) | Whichever dependent packages are affected |
+
+No bump required for: `docs/**`, `test/**`, `.github/workflows/**`, governance files, `*.md`.
+
+### Bump type
+
+The orchestrator determines the bump type (major/minor/patch) by examining commit types and public API impact. When ambiguous, the orchestrator asks the user to confirm before delegating.
+
+| Commit type | API impact | SemVer increment |
+|---|---|---|
+| `feat` | New API | minor |
+| `feat!` / `BREAKING CHANGE:` | Breaking | major |
+| `fix`, `bugfix`, `refactor` | None | patch |
+| `chore`, `docs`, `test`, `ci` | None | **no bump** |
+
+### Execution
+
+The orchestrator delegates version file edits to the coder agent. The bump is included in the **same PR** as the feature or fix — not a follow-up PR.
+
+Files updated atomically per bump (see [docs/versioning.md](versioning.md) for full list):
+- `.csproj` `<Version>` element (source of truth)
+- `CLAUDE.md` Package Versions table
+- `docs/architecture.md` solution structure table
+- `CHANGELOG.md` or `CHANGELOG-CodeGenerators.md`
+
+### PR readiness gate
+
+A PR that changes non-markdown `src/` files is **not ready to merge** until the version bump is included. The CI `version-check` job enforces this by comparing the `.csproj` version against the latest git tag and failing if they are equal.
+
 ## Pull Request Policy
 
 ### When a PR is opened

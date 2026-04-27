@@ -41,6 +41,8 @@ Owns presentational UI/UX work within assigned file scope.
 | Worktree decision | own | recommend only | no | no |
 | Checkpoint commit | own | no | delegated only | no |
 | PR submission | own | no | no | no |
+| Version bump type decision | own | no | no | no |
+| Version file edits | delegate | no | delegated only | no |
 
 ## Allowed Agent Set
 
