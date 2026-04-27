@@ -91,32 +91,23 @@ Never:
 - use vague file references such as "relevant files"
 
 ## Tool Failure and Blocked-State Rule
+If a planning tool, MCP call, memory lookup, repo inspection, or runtime step fails:
+- retry once if the failure appears transient
+- otherwise use a safe fallback when available
+- if planning cannot continue reliably, return `blocked`
+- never wait silently for the user to notice the failure
 
-If a required planning tool errors, times out, or returns unusable output:
-- do not hang or retry indefinitely
-- retry at most once when the failure appears transient
-- if the retry fails, return a blocked result immediately
-
-When a non-essential tool fails:
-- use one reasonable fallback when available
-- if planning accuracy would become unreliable, return blocked instead of guessing
-
-Do not remain silent after an internal tool/runtime failure.
-Surface the failure promptly so the orchestrator can retry, change strategy, or escalate.
+Do not retry the same failed action more than once.
 
 ## Blocked Report Format
-
 Status: blocked
 Blocker: [tool error | timeout | unavailable context | other]
-Failed step: [what planning activity failed]
+Failed step: [what failed]
 Retry attempted: [yes|no]
 Fallback used: [none | brief fallback]
-Impact: [what planning cannot be completed]
+Impact: [what cannot be planned reliably]
 Need:
-- [retry by orchestrator]
-- [tool fix]
-- [user input]
-- [other]
+- [retry by orchestrator | tool fix | user input | other]
 
 ## Output Mode
 Use compact output when all are true:
@@ -128,7 +119,6 @@ Use compact output when all are true:
 Use full output otherwise.
 
 ### Compact Output
-```text
 Plan
 Summary: [1-2 sentences]
 
@@ -144,10 +134,8 @@ Steps:
 Open questions:
 - [question]
 - None
-```
 
 ### Full Output
-```text
 Plan
 Summary: [1 short paragraph]
 
@@ -177,7 +165,6 @@ Delivery:
 Open questions:
 - [question]
 - None
-```
 
 ## Quality Gate
 Do not finalize until every step has:
