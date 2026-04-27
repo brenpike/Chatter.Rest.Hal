@@ -21,6 +21,7 @@ Chatter.Rest.Hal is a .NET/C# implementation of the HAL (Hypertext Application L
 | [docs/HAL_TEST_PLAN.md](docs/HAL_TEST_PLAN.md) | Spec-to-test mapping; consult when adding tests or evaluating spec compliance |
 | [docs/aspnetcore/requirements.md](docs/aspnetcore/requirements.md) | Package requirements (REQ-01–REQ-37) for `Chatter.Rest.Hal.AspNetCore` |
 | [docs/aspnetcore/architecture.md](docs/aspnetcore/architecture.md) | Architecture, type pseudocode, and test strategy for `Chatter.Rest.Hal.AspNetCore` |
+| [docs/versioning.md](docs/versioning.md) | SemVer rules, bump triggers, CHANGELOG convention, git tag policy |
 
 ## Solution Structure
 
@@ -91,6 +92,8 @@ See [docs/development.md](docs/development.md) for CI/CD workflow details.
 - `Chatter.Rest.Hal.CodeGenerators` — v0.3.0
 
 External dependency: `Chatter.Rest.UriTemplates` v0.1.0 ([NuGet](https://www.nuget.org/packages/Chatter.Rest.UriTemplates/))
+
+See [docs/versioning.md](docs/versioning.md) for full versioning policy, bump rules, and CHANGELOG convention.
 
 ## Memory Usage
 

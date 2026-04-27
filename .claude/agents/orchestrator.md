@@ -107,10 +107,20 @@ Do not proceed when required git context is missing.
    - confirm git workflow remained compliant
    - inspect key outputs for coherence
    - decide whether a checkpoint commit is warranted
-10. After all phases:
+10. Version bump check (after phases complete, before PR readiness):
+   - Determine if any non-markdown files under a packable package's `src/` directory were changed
+   - If yes:
+     - Determine bump type (major/minor/patch) from commit types and API impact
+     - If ambiguous, ask user to confirm bump type before proceeding
+     - Delegate version file edits to coder: `.csproj`, `CLAUDE.md`, `docs/architecture.md`, relevant CHANGELOG
+     - Wait for coder to complete, then verify all four files updated atomically
+     - Checkpoint commit the version bump
+   - If no (docs/tests/CI/governance only): skip version bump
+11. After all phases:
    - verify final coherence
    - confirm validation was performed
    - confirm PR readiness under the workflow
+   - version bump included if non-markdown src/ files changed (CI version-check will enforce)
    - open PR if the approved plan is complete
 
 ## Delegation Template
@@ -168,6 +178,21 @@ Constraints:
 ```
 
 Describe what must be true, not how to implement it, unless a constraint is already fixed by the user, planner, prior phases, or approved design.
+
+### Version bump delegation (compact form)
+
+```text
+Task: Bump [package] version from X.Y.Z to A.B.C
+Files:
+- src/[package]/[package].csproj — <Version>A.B.C</Version>
+- CLAUDE.md — Package Versions table row
+- docs/architecture.md — solution structure table row
+- CHANGELOG.md (or CHANGELOG-CodeGenerators.md) — add ## [A.B.C] - YYYY-MM-DD section above [Unreleased], update comparison link
+
+Done when: All four files updated, version consistent across all.
+Git: [same class as parent branch], no new commit (orchestrator checkpoints)
+Constraints: Do not modify other files. Today's date: [current date].
+```
 
 ## Phase Verification
 After each phase, verify:
