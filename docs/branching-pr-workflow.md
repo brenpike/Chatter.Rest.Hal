@@ -152,11 +152,7 @@ A version bump is **required** when a PR changes non-markdown files under a pack
 
 ### When a bump is required
 
-| Changed paths | Bump required for |
-|---|---|
-| `src/Chatter.Rest.Hal/**` (non-`.md`) | `Chatter.Rest.Hal` |
-| `src/Chatter.Rest.Hal.CodeGenerators/**` (non-`.md`) | `Chatter.Rest.Hal.CodeGenerators` |
-| `src/Chatter.Rest.Hal.Core/**` (non-`.md`) | Whichever dependent packages are affected |
+Non-markdown files under any packable package's `src/` directory trigger a bump for that package. Internal shared library changes may trigger bumps in dependent packages if public API is affected. Refer to `CLAUDE.md` for this project's package list and source paths.
 
 No bump required for: `docs/**`, `test/**`, `.github/workflows/**`, governance files, `*.md`.
 
@@ -179,7 +175,7 @@ Files updated atomically per bump (see [docs/versioning.md](versioning.md) for f
 - `.csproj` `<Version>` element (source of truth)
 - `CLAUDE.md` Package Versions table
 - `docs/architecture.md` solution structure table
-- `CHANGELOG.md` or `CHANGELOG-CodeGenerators.md`
+- Package CHANGELOG file (see `docs/development.md` for filename mapping)
 
 ### PR readiness gate
 

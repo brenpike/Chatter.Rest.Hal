@@ -2,16 +2,11 @@
 
 ## Scope
 
-Two independently versioned NuGet packages:
+Packable packages and their source paths are defined in `CLAUDE.md` under the **Package Versions** and **Solution Structure** sections. The versioning policy applies to each packable package independently.
 
-| Package | Project |
-|---|---|
-| `Chatter.Rest.Hal` | `src/Chatter.Rest.Hal/` |
-| `Chatter.Rest.Hal.CodeGenerators` | `src/Chatter.Rest.Hal.CodeGenerators/` |
+Each package is versioned independently. A change to one package does not require a bump in another unless the change propagates through a public API dependency.
 
-`Chatter.Rest.Hal.Core` is an internal shared library — not packaged independently and has no version.
-
-Each package is versioned independently. A change to one package does not require a bump in the other unless the change propagates through a public API dependency.
+Internal shared libraries that are not packaged independently carry no version.
 
 ## SemVer Rules
 
@@ -25,20 +20,15 @@ Version format: `MAJOR.MINOR.PATCH`
 | MINOR | New backward-compatible public API surface (`feat` commits) |
 | PATCH | Bug fixes or internal refactors with no public API change (`fix`, `bugfix`, `refactor` commits) |
 
-**Pre-1.0 note:** `Chatter.Rest.Hal.CodeGenerators` is currently pre-1.0 (`0.x.y`). In pre-1.0, MINOR increments may include breaking changes per SemVer spec. Document breaking changes clearly in the CHANGELOG regardless.
+**Pre-1.0 note:** For packages at `0.x.y`, MINOR increments may include breaking changes per SemVer spec. Document breaking changes clearly in the CHANGELOG regardless.
 
 Pre-release labels (e.g., `1.2.0-beta.1`) are allowed but must be coordinated with the orchestrator.
 
 ## Bump Trigger
 
-A version bump is **required** when a PR merges changes to non-markdown files under the relevant package's `src/` directory:
+A version bump is **required** when a PR merges changes to non-markdown files under a packable package's `src/` directory (e.g., `src/<package-name>/**` excluding `*.md`). Refer to `CLAUDE.md` for the project's package list and source paths.
 
-| Package | Trigger path |
-|---|---|
-| `Chatter.Rest.Hal` | `src/Chatter.Rest.Hal/**` (excluding `*.md`) |
-| `Chatter.Rest.Hal.CodeGenerators` | `src/Chatter.Rest.Hal.CodeGenerators/**` (excluding `*.md`) |
-
-Changes to `src/Chatter.Rest.Hal.Core/**` may trigger a bump in either or both dependent packages if the change affects their public API surface.
+Changes to internal shared library source directories may trigger a bump in dependent packages if the change affects their public API surface.
 
 **No version bump required for:**
 - `docs/**`
@@ -46,7 +36,7 @@ Changes to `src/Chatter.Rest.Hal.Core/**` may trigger a bump in either or both d
 - `.github/workflows/**`
 - Governance files (`agent-system-policy.md`, `branching-pr-workflow.md`, `orchestrator.md`, etc.)
 - `CLAUDE.md`
-- `CHANGELOG.md` / `CHANGELOG-CodeGenerators.md`
+- CHANGELOG files
 - Any `*.md` file
 
 ## Bump Type Determination
@@ -73,26 +63,14 @@ The orchestrator **delegates version file edits to the coder agent**. The versio
 
 Files to update atomically when bumping version `X.Y.Z` for a package:
 
-**`Chatter.Rest.Hal`:**
-1. `src/Chatter.Rest.Hal/Chatter.Rest.Hal.csproj` — `<Version>X.Y.Z</Version>` (source of truth)
-2. `CLAUDE.md` — Package Versions table row for `Chatter.Rest.Hal`
-3. `docs/architecture.md` — Solution structure table row for `Chatter.Rest.Hal`
-4. `CHANGELOG.md` — Add release section `## [X.Y.Z] - YYYY-MM-DD` above `[Unreleased]`; add link at bottom
-
-**`Chatter.Rest.Hal.CodeGenerators`:**
-1. `src/Chatter.Rest.Hal.CodeGenerators/Chatter.Rest.Hal.CodeGenerators.csproj` — `<Version>X.Y.Z</Version>` (source of truth)
-2. `CLAUDE.md` — Package Versions table row for `Chatter.Rest.Hal.CodeGenerators`
-3. `docs/architecture.md` — Solution structure table row for `Chatter.Rest.Hal.CodeGenerators`
-4. `CHANGELOG-CodeGenerators.md` — Add release section `## [X.Y.Z] - YYYY-MM-DD` above `[Unreleased]`; add link at bottom
+1. `src/<package-name>/<package-name>.csproj` — `<Version>X.Y.Z</Version>` (source of truth)
+2. `CLAUDE.md` — Package Versions table row for the package
+3. Project architecture/docs table entry for the package (if one exists — refer to CLAUDE.md Documentation Index)
+4. Package CHANGELOG file — add release section `## [X.Y.Z] - YYYY-MM-DD` above `[Unreleased]`; update comparison link at bottom
 
 ## CHANGELOG Convention
 
-Each package maintains its own CHANGELOG at the repository root:
-
-| File | Package |
-|---|---|
-| `CHANGELOG.md` | `Chatter.Rest.Hal` |
-| `CHANGELOG-CodeGenerators.md` | `Chatter.Rest.Hal.CodeGenerators` |
+Each package maintains its own CHANGELOG file. Filename conventions and the mapping of CHANGELOG files to packages are defined in project documentation (see `CLAUDE.md` and `docs/development.md`).
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
@@ -108,8 +86,10 @@ Tag format:
 
 | Package | Tag format | Example |
 |---|---|---|
-| `Chatter.Rest.Hal` | `hal/vX.Y.Z` | `hal/v1.2.0` |
-| `Chatter.Rest.Hal.CodeGenerators` | `codegen/vX.Y.Z` | `codegen/v0.4.0` |
+| Package A | `<prefix>/vX.Y.Z` | `mylib/v1.2.0` |
+| Package B | `<prefix>/vX.Y.Z` | `mygen/v0.4.0` |
+
+Each project defines its tag prefixes per package. The CI `tag` job reads the version from the `.csproj` and the prefix from the workflow configuration.
 
 Tags are annotated (not lightweight). The CI `tag` job runs after `deploy` succeeds on `main`, reads the version from the `.csproj`, and creates + pushes the tag if it does not already exist.
 
@@ -120,6 +100,6 @@ These tags serve as:
 
 ## Version Source of Truth
 
-The `<Version>` element in each `.csproj` is the canonical version. All other references (`CLAUDE.md`, `docs/architecture.md`) are informational mirrors that must be kept in sync during every version bump.
+The `<Version>` element in each `.csproj` is the canonical version. All other references (documentation tables, `CLAUDE.md`) are informational mirrors that must be kept in sync during every version bump.
 
 CI reads the `.csproj` version at pack time. The CI version-check job compares the `.csproj` version against the latest matching git tag and fails the PR if they are equal (version not bumped).
