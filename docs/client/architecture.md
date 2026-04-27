@@ -439,9 +439,11 @@ public sealed class HalClient : IHalClient
 - `_httpClient` -- the underlying `HttpClient`
 - `_options` -- resolved `HalClientOptions`
 - `_logger` -- the logger. When `null`, `NullLogger<HalClient>.Instance` is used.
+- `_acceptHeader` -- parsed `MediaTypeWithQualityHeaderValue` from `_options.AcceptMediaType`; computed once in the constructor.
 
 **Constructor behavior:**
 - Stores `httpClient`, `options`, and `logger ?? NullLogger<HalClient>.Instance`.
+- Validates `options.AcceptMediaType`: throws `ArgumentException` if the value is null or empty. Message: `"HalClientOptions.AcceptMediaType must not be null or empty."`. Then calls `MediaTypeWithQualityHeaderValue.Parse(options.AcceptMediaType)` and stores the result as `_acceptHeader`; a malformed value causes `FormatException` to propagate from `Parse()`.
 - Validates `options.ExpectedMediaType`: throws `ArgumentException` if the value is null, empty, or contains a `';'` character. Message: `"HalClientOptions.ExpectedMediaType must be a bare media type without parameters (e.g., \"application/hal+json\")."`.
 
 > **Note:** The DI companion package resolves `IOptions<HalClientOptions>.Value` before constructing `HalClient`, so the base package has no dependency on `Microsoft.Extensions.Options`.
@@ -496,7 +498,7 @@ All HTTP methods in `HalClient` follow the same core flow. The verb-specific beh
 SendAsync(HttpMethod method, Uri uri, HttpContent? content, CancellationToken ct):
     // 1. Build request
     using var request = new HttpRequestMessage(method, uri)
-    request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue(_options.AcceptMediaType))
+    request.Headers.Accept.Add(_acceptHeader)
     if content is not null:
         request.Content = content
 
@@ -1180,6 +1182,10 @@ When a logger overload is called with a non-null logger, it logs rel resolution 
 
 **`HalClient` request behavior:**
 - Sets `Accept` header to `HalClientOptions.AcceptMediaType` on all requests
+- Sets `Accept` header correctly when `AcceptMediaType` includes media type parameters (e.g., `"application/hal+json; profile=\"x\""`)
+- Throws `ArgumentException` on construction when `AcceptMediaType` is null or empty
+- Throws `FormatException` on construction when `AcceptMediaType` is a malformed media type value
+- Throws `ArgumentException` on construction when `ExpectedMediaType` is null, empty, or contains `';'`
 - Sends correct HTTP method for each verb
 - Serializes object body as JSON `StringContent`
 - Passes raw `HttpContent` through unchanged

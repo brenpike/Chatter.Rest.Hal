@@ -97,7 +97,7 @@ Already uses `Chatter.Rest.Hal` for building HAL documents server-side. Wants to
 
 ### Configuration
 
-**REQ-13a:** `HalClientOptions.AcceptMediaType` controls the `Accept` header value sent on all requests. May include media type parameters. Default: `"application/hal+json"`.
+**REQ-13a:** `HalClientOptions.AcceptMediaType` controls the `Accept` header value sent on all requests. May include media type parameters (e.g., `"application/hal+json; profile=\"x\""`). Default: `"application/hal+json"`. **Validation:** `HalClient` constructor throws `ArgumentException` if `AcceptMediaType` is `null` or empty. A malformed media type value causes `FormatException` to propagate from `MediaTypeWithQualityHeaderValue.Parse()`. The parsed header value is stored once at construction and reused on every request.
 
 **REQ-13b:** `HalClientOptions.ExpectedMediaType` controls the bare media type used for response Content-Type validation (REQ-11/REQ-12). Must be a bare media type without parameters (e.g., `"application/hal+json"`, not `"application/hal+json; charset=utf-8"`). Default: `"application/hal+json"`. **Validation:** `HalClient` constructor throws `ArgumentException` if `ExpectedMediaType` is `null`, empty, or contains a `';'` character.
 
