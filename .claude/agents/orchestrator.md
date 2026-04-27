@@ -187,7 +187,7 @@ Files:
 - src/[package]/[package].csproj — <Version>A.B.C</Version>
 - CLAUDE.md — Package Versions table row
 - docs/architecture.md — solution structure table row
-- CHANGELOG.md (or CHANGELOG-CodeGenerators.md) — add ## [A.B.C] - YYYY-MM-DD section above [Unreleased], update comparison link
+- [package-changelog-file] — add ## [A.B.C] - YYYY-MM-DD section above [Unreleased], update comparison link
 
 Done when: All four files updated, version consistent across all.
 Git: [same class as parent branch], no new commit (orchestrator checkpoints)
