@@ -11,6 +11,13 @@ on:
   push:
     branches:
       - 'feature/**'
+      - 'bugfix/**'
+      - 'hotfix/**'
+      - 'refactor/**'
+      - 'chore/**'
+      - 'docs/**'
+      - 'test/**'
+      - 'ci/**'
       - main
     paths:
       - '.github/workflows/codegen-cicd.yml'
@@ -83,6 +90,45 @@ jobs:
           retention-days: 5
           if-no-files-found: error
 
+  version-check:
+    name: version-check
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Check version bump
+        shell: bash
+        run: |
+          CHANGED=$(git diff --name-only "origin/main...HEAD" -- 'src/Chatter.Rest.Hal.CodeGenerators/' | grep -v '\.md$' || true)
+          if [ -z "$CHANGED" ]; then
+            echo "No non-markdown src/ changes detected. Version bump not required."
+            exit 0
+          fi
+          echo "Changed src/ files requiring version bump check:"
+          echo "$CHANGED"
+
+          VERSION=$(grep -m1 '<Version>' src/Chatter.Rest.Hal.CodeGenerators/Chatter.Rest.Hal.CodeGenerators.csproj | sed 's/.*<Version>\(.*\)<\/Version>.*/\1/' | tr -d ' \r')
+
+          LATEST_TAG=$(git tag -l 'codegen/v*' | sort -V | tail -1)
+
+          if [ -z "$LATEST_TAG" ]; then
+            echo "No existing codegen/v* tags found. Bootstrapping — version check passes."
+            exit 0
+          fi
+
+          TAG_VERSION="${LATEST_TAG#codegen/v}"
+
+          if [ "$VERSION" = "$TAG_VERSION" ]; then
+            echo "ERROR: csproj version ($VERSION) equals latest tag ($LATEST_TAG). Bump the version before merging."
+            exit 1
+          fi
+
+          echo "Version check passed: csproj=$VERSION, latest tag=$LATEST_TAG"
+
   deploy:
     name: deploy
     needs: build
@@ -113,3 +159,33 @@ jobs:
             -k "${{ env.NUGET_AUTH_TOKEN }}" \
             -s "${{ env.NUGET_URL }}" \
             --skip-duplicate
+
+  tag:
+    name: tag
+    needs: deploy
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Create version tag
+        shell: bash
+        run: |
+          VERSION=$(grep -m1 '<Version>' src/Chatter.Rest.Hal.CodeGenerators/Chatter.Rest.Hal.CodeGenerators.csproj | sed 's/.*<Version>\(.*\)<\/Version>.*/\1/' | tr -d ' \r')
+          TAG="codegen/v${VERSION}"
+
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists. Skipping."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git tag -a "$TAG" -m "Chatter.Rest.Hal.CodeGenerators v${VERSION}"
+            git push origin "$TAG"
+            echo "Created and pushed tag $TAG"
+          fi
