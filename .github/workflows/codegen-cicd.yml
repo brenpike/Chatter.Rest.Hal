@@ -113,21 +113,41 @@ jobs:
 
           VERSION=$(grep -m1 '<Version>' src/Chatter.Rest.Hal.CodeGenerators/Chatter.Rest.Hal.CodeGenerators.csproj | sed 's/.*<Version>\(.*\)<\/Version>.*/\1/' | tr -d ' \r')
 
-          LATEST_TAG=$(git tag -l 'codegen/v*' | sort -V | tail -1)
+          # Filter out pre-release tags to get latest stable release baseline
+          LATEST_TAG=$(git tag -l 'codegen/v*' | grep -v -- '-' | sort -V | tail -1)
 
           if [ -z "$LATEST_TAG" ]; then
-            echo "No existing codegen/v* tags found. Bootstrapping — version check passes."
+            echo "No existing codegen/v* release tags found. Bootstrapping — version check passes."
             exit 0
           fi
 
           TAG_VERSION="${LATEST_TAG#codegen/v}"
 
-          if [ "$VERSION" = "$TAG_VERSION" ]; then
-            echo "ERROR: csproj version ($VERSION) equals latest tag ($LATEST_TAG). Bump the version before merging."
+          # SemVer-aware strictly-greater comparison (strips pre-release suffix before comparing)
+          version_gt() {
+            local v1 v2
+            v1=$(echo "$1" | sed 's/-.*//')
+            v2=$(echo "$2" | sed 's/-.*//')
+            local IFS=.
+            local i
+            local parts1=($v1) parts2=($v2)
+            local len=${#parts2[@]}
+            [ ${#parts1[@]} -gt "$len" ] && len=${#parts1[@]}
+            for ((i=0; i<len; i++)); do
+              local p1=${parts1[i]:-0}
+              local p2=${parts2[i]:-0}
+              if ((10#$p1 > 10#$p2)); then return 0; fi
+              if ((10#$p1 < 10#$p2)); then return 1; fi
+            done
+            return 1
+          }
+
+          if ! version_gt "$VERSION" "$TAG_VERSION"; then
+            echo "ERROR: Version $VERSION must be greater than latest release tag version $TAG_VERSION. Bump the version before merging."
             exit 1
           fi
 
-          echo "Version check passed: csproj=$VERSION, latest tag=$LATEST_TAG"
+          echo "Version check passed: csproj=$VERSION, latest release tag=$LATEST_TAG"
 
   deploy:
     name: deploy
