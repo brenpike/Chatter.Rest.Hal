@@ -1,0 +1,45 @@
+name: Create Version Tag
+
+on:
+  workflow_call:
+    inputs:
+      csproj-path:
+        description: 'Path to the .csproj file containing <Version>'
+        required: true
+        type: string
+      tag-prefix:
+        description: 'Git tag prefix for this package (e.g., hal, codegen)'
+        required: true
+        type: string
+      package-name:
+        description: 'Human-readable package name for tag annotation (e.g., Chatter.Rest.Hal)'
+        required: true
+        type: string
+
+jobs:
+  tag:
+    name: tag
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Create version tag
+        shell: bash
+        run: |
+          VERSION=$(grep -m1 '<Version>' '${{ inputs.csproj-path }}' | sed 's/.*<Version>\(.*\)<\/Version>.*/\1/' | tr -d ' \r')
+          TAG="${{ inputs.tag-prefix }}/v${VERSION}"
+
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists. Skipping."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git tag -a "$TAG" -m "${{ inputs.package-name }} v${VERSION}"
+            git push origin "$TAG"
+            echo "Created and pushed tag $TAG"
+          fi

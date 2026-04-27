@@ -92,62 +92,12 @@ jobs:
 
   version-check:
     name: version-check
-    runs-on: ubuntu-latest
+    uses: ./.github/workflows/version-check.yml
     if: github.event_name == 'pull_request'
-
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-
-      - name: Check version bump
-        shell: bash
-        run: |
-          CHANGED=$(git diff --name-only "origin/main...HEAD" -- 'src/Chatter.Rest.Hal.CodeGenerators/' | grep -v '\.md$' || true)
-          if [ -z "$CHANGED" ]; then
-            echo "No non-markdown src/ changes detected. Version bump not required."
-            exit 0
-          fi
-          echo "Changed src/ files requiring version bump check:"
-          echo "$CHANGED"
-
-          VERSION=$(grep -m1 '<Version>' src/Chatter.Rest.Hal.CodeGenerators/Chatter.Rest.Hal.CodeGenerators.csproj | sed 's/.*<Version>\(.*\)<\/Version>.*/\1/' | tr -d ' \r')
-
-          # Filter out pre-release tags to get latest stable release baseline
-          LATEST_TAG=$(git tag -l 'codegen/v*' | grep -v -- '-' | sort -V | tail -1)
-
-          if [ -z "$LATEST_TAG" ]; then
-            echo "No existing codegen/v* release tags found. Bootstrapping — version check passes."
-            exit 0
-          fi
-
-          TAG_VERSION="${LATEST_TAG#codegen/v}"
-
-          # SemVer-aware strictly-greater comparison (strips pre-release suffix before comparing)
-          version_gt() {
-            local v1 v2
-            v1=$(echo "$1" | sed 's/-.*//')
-            v2=$(echo "$2" | sed 's/-.*//')
-            local IFS=.
-            local i
-            local parts1=($v1) parts2=($v2)
-            local len=${#parts2[@]}
-            [ ${#parts1[@]} -gt "$len" ] && len=${#parts1[@]}
-            for ((i=0; i<len; i++)); do
-              local p1=${parts1[i]:-0}
-              local p2=${parts2[i]:-0}
-              if ((10#$p1 > 10#$p2)); then return 0; fi
-              if ((10#$p1 < 10#$p2)); then return 1; fi
-            done
-            return 1
-          }
-
-          if ! version_gt "$VERSION" "$TAG_VERSION"; then
-            echo "ERROR: Version $VERSION must be greater than latest release tag version $TAG_VERSION. Bump the version before merging."
-            exit 1
-          fi
-
-          echo "Version check passed: csproj=$VERSION, latest release tag=$LATEST_TAG"
+    with:
+      src-path: 'src/Chatter.Rest.Hal.CodeGenerators/'
+      csproj-path: 'src/Chatter.Rest.Hal.CodeGenerators/Chatter.Rest.Hal.CodeGenerators.csproj'
+      tag-prefix: 'codegen'
 
   deploy:
     name: deploy
@@ -182,30 +132,12 @@ jobs:
 
   tag:
     name: tag
+    uses: ./.github/workflows/create-version-tag.yml
     needs: deploy
-    runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-
     permissions:
       contents: write
-
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-
-      - name: Create version tag
-        shell: bash
-        run: |
-          VERSION=$(grep -m1 '<Version>' src/Chatter.Rest.Hal.CodeGenerators/Chatter.Rest.Hal.CodeGenerators.csproj | sed 's/.*<Version>\(.*\)<\/Version>.*/\1/' | tr -d ' \r')
-          TAG="codegen/v${VERSION}"
-
-          if git rev-parse "$TAG" >/dev/null 2>&1; then
-            echo "Tag $TAG already exists. Skipping."
-          else
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            git tag -a "$TAG" -m "Chatter.Rest.Hal.CodeGenerators v${VERSION}"
-            git push origin "$TAG"
-            echo "Created and pushed tag $TAG"
-          fi
+    with:
+      csproj-path: 'src/Chatter.Rest.Hal.CodeGenerators/Chatter.Rest.Hal.CodeGenerators.csproj'
+      tag-prefix: 'codegen'
+      package-name: 'Chatter.Rest.Hal.CodeGenerators'

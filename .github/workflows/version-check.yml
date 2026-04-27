@@ -1,0 +1,76 @@
+name: Version Check
+
+on:
+  workflow_call:
+    inputs:
+      src-path:
+        description: 'Source directory to check for non-markdown changes (e.g., src/MyPackage/)'
+        required: true
+        type: string
+      csproj-path:
+        description: 'Path to the .csproj file containing <Version>'
+        required: true
+        type: string
+      tag-prefix:
+        description: 'Git tag prefix for this package (e.g., hal, codegen)'
+        required: true
+        type: string
+
+jobs:
+  version-check:
+    name: version-check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Check version bump
+        shell: bash
+        run: |
+          CHANGED=$(git diff --name-only "origin/main...HEAD" -- '${{ inputs.src-path }}' | grep -v '\.md$' || true)
+          if [ -z "$CHANGED" ]; then
+            echo "No non-markdown src/ changes detected. Version bump not required."
+            exit 0
+          fi
+          echo "Changed src/ files requiring version bump check:"
+          echo "$CHANGED"
+
+          VERSION=$(grep -m1 '<Version>' '${{ inputs.csproj-path }}' | sed 's/.*<Version>\(.*\)<\/Version>.*/\1/' | tr -d ' \r')
+
+          # Filter out pre-release tags to get latest stable release baseline
+          LATEST_TAG=$(git tag -l '${{ inputs.tag-prefix }}/v*' | grep -v -- '-' | sort -V | tail -1)
+
+          if [ -z "$LATEST_TAG" ]; then
+            echo "No existing ${{ inputs.tag-prefix }}/v* release tags found. Bootstrapping — version check passes."
+            exit 0
+          fi
+
+          TAG_VERSION="${LATEST_TAG#${{ inputs.tag-prefix }}/v}"
+
+          # SemVer-aware strictly-greater comparison (strips pre-release suffix before comparing)
+          version_gt() {
+            local v1 v2
+            v1=$(echo "$1" | sed 's/-.*//')
+            v2=$(echo "$2" | sed 's/-.*//')
+            local IFS=.
+            local i
+            local parts1=($v1) parts2=($v2)
+            local len=${#parts2[@]}
+            [ ${#parts1[@]} -gt "$len" ] && len=${#parts1[@]}
+            for ((i=0; i<len; i++)); do
+              local p1=${parts1[i]:-0}
+              local p2=${parts2[i]:-0}
+              if ((10#$p1 > 10#$p2)); then return 0; fi
+              if ((10#$p1 < 10#$p2)); then return 1; fi
+            done
+            return 1
+          }
+
+          if ! version_gt "$VERSION" "$TAG_VERSION"; then
+            echo "ERROR: Version $VERSION must be greater than latest release tag version $TAG_VERSION. Bump the version before merging."
+            exit 1
+          fi
+
+          echo "Version check passed: csproj=$VERSION, latest release tag=$LATEST_TAG"
