@@ -402,7 +402,7 @@ Chatter.Rest.Hal.sln
 │   ├── Chatter.Rest.Hal/            # Core library
 │   │   ├── depends on: System.Text.Json (inbox on net8.0, NuGet on netstandard2.0)
 │   │   ├── depends on: Chatter.Rest.UriTemplates (external NuGet package)
-│   │   └── NuGet: Chatter.Rest.Hal v1.0.1
+│   │   └── NuGet: Chatter.Rest.Hal v1.1.0
 │   │
 │   ├── Chatter.Rest.Hal.Core/       # Shared attribute
 │   │   ├── contains: HalResponseAttribute only
