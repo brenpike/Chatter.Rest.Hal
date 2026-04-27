@@ -1258,6 +1258,7 @@ When a logger overload is called with a non-null logger, it logs rel resolution 
 - `FollowLinkAsAsync<TResult>` accepts a single explicit type param; `T` of the receiver is already known
 - `FollowLinksAsAsync<TResult>` yields `IAsyncEnumerable<Resource<TResult>?>`
 - `PostToAsAsync<TBody, TResult>`: both type arguments must be specified explicitly (C# does not allow partial type argument specification)
+- `PostToAsAsync<TResult>(rel, object body, ...)`: single explicit type param; delegates to `PostToAsync<object, TResult>` on `_inner`
 - `PostToAsAsync<TResult>(..., HttpContent, ...)` returns `Resource<TResult>?`
 - Untyped-return `Resource<T>` extension overloads delegate correctly to `.Inner` for all verbs
 

@@ -54,7 +54,7 @@ Already uses `Chatter.Rest.Hal` for building HAL documents server-side. Wants to
 
 **REQ-02:** `IHalClient` exposes async methods for all standard HTTP verbs: `GetAsync`, `PostAsync`, `PutAsync`, `PatchAsync`, and `DeleteAsync`. All methods accept a `Uri` parameter and a `CancellationToken` with a default value.
 
-**REQ-03:** `GetAsync` returns `Resource?` (untyped) or `Resource<T>?` (typed, where `Resource<T>` is a thin wrapper defined in this package that provides strongly-typed access to state via `State()`). Both overloads return `null` when the server responds with HTTP 404.
+**REQ-03:** `GetAsync` returns `Resource?` (untyped) or `Resource<T>?` (typed, where `Resource<T>` is a typed resource facade defined in this package that provides strongly-typed access to state via `State()` and exposes typed traversal and mutation methods). Both overloads return `null` when the server responds with HTTP 404.
 
 **REQ-04:** `PostAsync`, `PutAsync`, and `PatchAsync` each have four overloads:
 - (a) Non-generic, object body: accepts `object` (serialized as JSON), returns `Resource?`
@@ -107,7 +107,7 @@ Already uses `Chatter.Rest.Hal` for building HAL documents server-side. Wants to
 
 ### DI registration (requires `Chatter.Rest.Hal.Client.DependencyInjection`)
 
-**REQ-16:** `AddHalClient(Action<HalClientOptions>)` is an extension method on `IServiceCollection` (available in the `Chatter.Rest.Hal.Client.DependencyInjection` package) that registers `IHalClient` / `HalClient` as a service and manages the `HttpClient` internally.
+**REQ-16:** `AddHalClient(Action<HalClientOptions>)` is an extension method on `IServiceCollection` (available in the `Chatter.Rest.Hal.Client.DependencyInjection` package) that registers `IHalClient` (backed by `HalClient`) as a service and manages the `HttpClient` internally.
 
 **REQ-17:** `AddHalOptions(Action<HalClientOptions>)` is an extension method on `IHttpClientBuilder` (available in the `Chatter.Rest.Hal.Client.DependencyInjection` package) that composes `HalClient` with `IHttpClientFactory`, enabling Polly policies, auth `DelegatingHandler`s, and named/typed client lifecycle management. Options are registered as named options keyed by `builder.Name` using `IOptionsMonitor<HalClientOptions>.Get(builder.Name)` for resolution, ensuring that multiple `AddHalOptions` calls on different builders use fully independent options.
 
