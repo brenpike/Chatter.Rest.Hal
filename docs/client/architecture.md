@@ -132,7 +132,10 @@ public sealed class Resource<T> where T : class
     /// Delegates to <c>Resource.State&lt;T&gt;(JsonSerializerOptions?)</c>, which
     /// accepts options directly. No internal accessor or re-serialization is needed.
     /// </summary>
-    public T? State() => _inner.State<T>(_jsonOptions);
+    /// When _jsonOptions is null, delegates to parameterless State<T>() on inner
+    /// Resource (uses resource's own captured JsonSerializerOptions from deserialization).
+    /// When non-null, passes options explicitly.
+    public T? State() => _jsonOptions is null ? _inner.State<T>() : _inner.State<T>(_jsonOptions);
 
     // ── Typed traversal (single explicit type param; T of receiver is already known) ──
 
@@ -437,14 +440,20 @@ public sealed class HalClient : IHalClient
 
 **Fields stored:**
 - `_httpClient` -- the underlying `HttpClient`
-- `_options` -- resolved `HalClientOptions`
+- `_expectedMediaType` -- `string`, copied from `options.ExpectedMediaType`
+- `_strictContentType` -- `bool`, copied from `options.StrictContentType`
+- `_jsonOptions` -- `JsonSerializerOptions?`, copied from `options.JsonOptions`
 - `_logger` -- the logger. When `null`, `NullLogger<HalClient>.Instance` is used.
-- `_acceptHeader` -- parsed `MediaTypeWithQualityHeaderValue` from `_options.AcceptMediaType`; computed once in the constructor.
+- `_acceptHeader` -- parsed `MediaTypeWithQualityHeaderValue` from `options.AcceptMediaType`; computed once in the constructor.
 
 **Constructor behavior:**
-- Stores `httpClient`, `options`, and `logger ?? NullLogger<HalClient>.Instance`.
+- Copies all relevant fields from options into private readonly fields; no live reference to the passed-in `HalClientOptions` is retained.
+- Stores `httpClient` and `logger ?? NullLogger<HalClient>.Instance`.
 - Validates `options.AcceptMediaType`: throws `ArgumentException` if the value is null or empty. Message: `"HalClientOptions.AcceptMediaType must not be null or empty."`. Then calls `MediaTypeWithQualityHeaderValue.Parse(options.AcceptMediaType)` and stores the result as `_acceptHeader`; a malformed value causes `FormatException` to propagate from `Parse()`.
 - Validates `options.ExpectedMediaType`: throws `ArgumentException` if the value is null, empty, or contains a `';'` character. Message: `"HalClientOptions.ExpectedMediaType must be a bare media type without parameters (e.g., \"application/hal+json\")."`.
+- Snapshots `_expectedMediaType = options.ExpectedMediaType`, `_strictContentType = options.StrictContentType`, and `_jsonOptions = options.JsonOptions`.
+
+> **Rationale:** `HalClientOptions` is a mutable POCO. Snapshotting prevents post-construction mutation from altering client behavior.
 
 > **Note:** The DI companion package resolves `IOptions<HalClientOptions>.Value` before constructing `HalClient`, so the base package has no dependency on `Microsoft.Extensions.Options`.
 
@@ -517,19 +526,19 @@ SendAsync(HttpMethod method, Uri uri, HttpContent? content, CancellationToken ct
         return null
 
     // 5. Validate Content-Type
-    // HAL media type: compare MediaType (no parameters) case-insensitively to _options.ExpectedMediaType
+    // HAL media type: compare MediaType (no parameters) case-insensitively to _expectedMediaType
     // Null ContentType header is treated as non-HAL
     responseContentType = response.Content.Headers.ContentType?.MediaType
     isHal = responseContentType is not null &&
-            string.Equals(responseContentType, _options.ExpectedMediaType, StringComparison.OrdinalIgnoreCase)
+            string.Equals(responseContentType, _expectedMediaType, StringComparison.OrdinalIgnoreCase)
     if not isHal:
-        if _options.StrictContentType:
+        if _strictContentType:
             throw new HalResponseException(uri, responseContentType)
         return null
 
     // 6. Deserialize
     stream = await response.Content.ReadAsStreamAsync(ct)
-    jsonOptions = _options.JsonOptions ?? defaultHalJsonOptions
+    jsonOptions = _jsonOptions ?? defaultHalJsonOptions
     return await JsonSerializer.DeserializeAsync<Resource>(stream, jsonOptions, ct)
 ```
 
@@ -547,9 +556,9 @@ SendAsync(HttpMethod method, Uri uri, HttpContent? content, CancellationToken ct
 - **`PatchAsync<T>`:** Same pattern with `HttpMethod.Patch`; wraps deserialized `Resource` in `new Resource<T>(resource, jsonOptions)`.
 - **`DeleteAsync`:** `method = HttpMethod.Delete`, no content, no response deserialization. Calls `EnsureSuccessStatusCode()` and returns. Returns normally on 404.
 
-Where `jsonOptions` is `_options.JsonOptions ?? defaultHalJsonOptions` (already resolved earlier in `SendAsync`).
+Where `jsonOptions` is `_jsonOptions ?? defaultHalJsonOptions` (already resolved earlier in `SendAsync`).
 
-**Object body serialization:** When a method accepts `object body`, the body is serialized via `JsonSerializer.Serialize(body, _options.JsonOptions ?? defaultHalJsonOptions)` and wrapped in `StringContent` with media type `"application/json"` and `UTF-8` encoding.
+**Object body serialization:** When a method accepts `object body`, the body is serialized via `JsonSerializer.Serialize(body, _jsonOptions ?? defaultHalJsonOptions)` and wrapped in `StringContent` with media type `"application/json"` and `UTF-8` encoding.
 
 > **`HttpContent` ownership:** When a caller passes raw `HttpContent` to a method overload (e.g., `PostAsync(Uri, HttpContent, CT)`), `HalClient` attaches it to the `HttpRequestMessage`. Disposing the `HttpRequestMessage` (via `using var`) also disposes the attached content. **Callers must not reuse `HttpContent` instances after passing them to `HalClient`.** Callers who need to send the same content to multiple endpoints must create a new `HttpContent` for each call.
 
@@ -752,8 +761,9 @@ public static Task<Resource<T>?> FollowLinkAsync<T>(
 **Non-templated flow:**
 1. Call `ResolveLink(resource, rel)` to get the `Link`
 2. Extract `linkObject = link.LinkObjects[0]`
-3. Construct `Uri` from `linkObject.Href` via `new Uri(linkObject.Href, UriKind.RelativeOrAbsolute)`
-4. Call `client.GetAsync(uri, ct)` or `client.GetAsync<T>(uri, ct)`
+3. If `linkObject.Templated == true`, throw `InvalidOperationException`: `"Link relation '{rel}' is templated; use the overload that accepts variables."` This check occurs before any HTTP call.
+4. Construct `Uri` from `linkObject.Href` via `new Uri(linkObject.Href, UriKind.RelativeOrAbsolute)`
+5. Call `client.GetAsync(uri, ct)` or `client.GetAsync<T>(uri, ct)`
 
 > **Relative URI handling:** `Uri(href, UriKind.RelativeOrAbsolute)` accepts both absolute and relative URIs. Relative URIs (e.g., `/orders/42`) are resolved against `HttpClient.BaseAddress` by the underlying `HttpClient`. If `BaseAddress` is null and the URI is relative, `HttpClient.SendAsync` throws `InvalidOperationException`. Callers navigating HAL APIs with relative links must configure `BaseAddress` on the `HttpClient`.
 
@@ -774,7 +784,7 @@ public static IAsyncEnumerable<Resource?> FollowLinksAsync(
     this Resource resource,
     string rel,
     IHalClient client,
-    CancellationToken ct = default);
+    [EnumeratorCancellation] CancellationToken ct = default);
 
 // With logger
 public static IAsyncEnumerable<Resource?> FollowLinksAsync(
@@ -782,14 +792,14 @@ public static IAsyncEnumerable<Resource?> FollowLinksAsync(
     string rel,
     IHalClient client,
     ILogger logger,
-    CancellationToken ct = default);
+    [EnumeratorCancellation] CancellationToken ct = default);
 
 // Typed — no logger
 public static IAsyncEnumerable<Resource<T>?> FollowLinksAsync<T>(
     this Resource resource,
     string rel,
     IHalClient client,
-    CancellationToken ct = default) where T : class;
+    [EnumeratorCancellation] CancellationToken ct = default) where T : class;
 
 // Typed — with logger
 public static IAsyncEnumerable<Resource<T>?> FollowLinksAsync<T>(
@@ -797,19 +807,24 @@ public static IAsyncEnumerable<Resource<T>?> FollowLinksAsync<T>(
     string rel,
     IHalClient client,
     ILogger logger,
-    CancellationToken ct = default) where T : class;
+    [EnumeratorCancellation] CancellationToken ct = default) where T : class;
 ```
+
+> `[EnumeratorCancellation]` ensures `.WithCancellation(ct)` on the returned `IAsyncEnumerable` propagates the token to the iterator's `ct` parameter. Without this attribute, compiler warning CS8425 is emitted and `WithCancellation` tokens are silently ignored.
+
+> **Test note:** Tests must verify `.WithCancellation(token)` propagates cancellation -- i.e., passing a pre-cancelled token via `WithCancellation` causes the iterator to throw `OperationCanceledException`.
 
 **Flow:**
 1. Call `ResolveLink(resource, rel)` to get the `Link`
-2. Launch all fetches concurrently:
+2. For each `LinkObject` in `link.LinkObjects`, if `lo.Templated == true`, throw `InvalidOperationException`: `"Link relation '{rel}' contains a templated link; use FollowLinkAsync with variables for templated rels."` This check occurs before any HTTP call -- the entire batch is rejected if any entry is templated.
+3. Launch all fetches concurrently:
    ```
    tasks = link.LinkObjects
        .Select(lo => client.GetAsync(new Uri(lo.Href, UriKind.RelativeOrAbsolute), ct))
        .ToArray()
    ```
-3. Await all: `results = await Task.WhenAll(tasks)`
-4. Yield results sequentially:
+4. Await all: `results = await Task.WhenAll(tasks)`
+5. Yield results sequentially:
    ```
    foreach (var result in results)
        yield return result
@@ -817,7 +832,9 @@ public static IAsyncEnumerable<Resource<T>?> FollowLinksAsync<T>(
 
 All links are fetched concurrently via `Task.WhenAll`. Results are buffered and then yielded sequentially. The caller still consumes results via `await foreach` over `IAsyncEnumerable<Resource?>`.
 
-**Typed flow (`FollowLinksAsync<T>`):** Identical to the untyped flow except step 2 calls `client.GetAsync<T>(new Uri(lo.Href, UriKind.RelativeOrAbsolute), ct)` for each link object, producing `Task<Resource<T>?>[]` results.
+**Typed flow (`FollowLinksAsync<T>`):** Identical to the untyped flow except step 3 calls `client.GetAsync<T>(new Uri(lo.Href, UriKind.RelativeOrAbsolute), ct)` for each link object, producing `Task<Resource<T>?>[]` results.
+
+> **Test coverage:** Tests must cover: non-templated overload throws `InvalidOperationException` when `Templated==true`; templated overload works normally for `Templated==true` links; non-templated overload works normally for `Templated==false` links.
 
 ---
 
@@ -900,8 +917,9 @@ public static Task<Resource<TResponse>?> PostToAsync<TResponse>(
 **Flow (all mutation methods):**
 1. Call `ResolveLink(resource, rel)` to get the `Link`
 2. Extract `linkObject = link.LinkObjects[0]`
-3. Construct `Uri` from `linkObject.Href` via `new Uri(linkObject.Href, UriKind.RelativeOrAbsolute)`
-4. Call the appropriate `client.PostAsync` / `client.PutAsync` / `client.PatchAsync` overload (typed overload calls `client.PostAsync<TResponse>` / `client.PutAsync<TResponse>` / `client.PatchAsync<TResponse>` for the typed extension method; the typed `HttpContent` overload calls `client.PostAsync<TResponse>(uri, content, ct)` and returns the result directly)
+3. If `linkObject.Templated == true`, throw `InvalidOperationException`: `"Link relation '{rel}' is templated; use URI template expansion before calling mutation methods."` This check occurs before any HTTP call.
+4. Construct `Uri` from `linkObject.Href` via `new Uri(linkObject.Href, UriKind.RelativeOrAbsolute)`
+5. Call the appropriate `client.PostAsync` / `client.PutAsync` / `client.PatchAsync` overload (typed overload calls `client.PostAsync<TResponse>` / `client.PutAsync<TResponse>` / `client.PatchAsync<TResponse>` for the typed extension method; the typed `HttpContent` overload calls `client.PostAsync<TResponse>(uri, content, ct)` and returns the result directly)
 
 ---
 
@@ -927,8 +945,9 @@ public static Task DeleteToAsync(
 **Flow:**
 1. Call `ResolveLink(resource, rel)` to get the `Link`
 2. Extract `linkObject = link.LinkObjects[0]`
-3. Construct `Uri` from `linkObject.Href` via `new Uri(linkObject.Href, UriKind.RelativeOrAbsolute)`
-4. Call `client.DeleteAsync(uri, ct)`
+3. If `linkObject.Templated == true`, throw `InvalidOperationException`: `"Link relation '{rel}' is templated; use URI template expansion before calling mutation methods."` This check occurs before any HTTP call.
+4. Construct `Uri` from `linkObject.Href` via `new Uri(linkObject.Href, UriKind.RelativeOrAbsolute)`
+5. Call `client.DeleteAsync(uri, ct)`
 
 Returns `Task`, not `Task<Resource?>`. No response body is deserialized.
 

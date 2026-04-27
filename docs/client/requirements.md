@@ -121,6 +121,8 @@ Already uses `Chatter.Rest.Hal` for building HAL documents server-side. Wants to
 
 **REQ-19a:** When resolving a rel, if the resource contains duplicate `Link` entries with the same rel, the resolution throws `InvalidOperationException`. This is consistent with `LinkCollectionExtensions.GetLinkOrDefault`, which uses `SingleOrDefault` internally. This check occurs before any HTTP request is made.
 
+**REQ-19b:** Non-templated traversal overloads (`FollowLinkAsync` without variables, `FollowLinksAsync`) must throw `InvalidOperationException` before any HTTP call when the selected `LinkObject` has `Templated == true`. The error message must identify the rel and instruct the caller to use the templated overload.
+
 **REQ-20:** `FollowLinkAsync<T>(string rel, IHalClient client)` performs the same resolution as REQ-19 but deserializes the response as `Resource<T>?`.
 
 **REQ-21:** `FollowLinkAsync(string rel, IHalClient client, object variables)` resolves a templated link by delegating to `LinkObject.Expand()` with the provided variables, then performs an HTTP GET. Returns `Resource?`. Throws `HalLinkNotFoundException` if the rel is absent. (The `object variables` parameter is converted to `IDictionary<string, string>` via an internal `ObjectToDictionary` helper that reflects public properties before calling `LinkObject.Expand()`.)
@@ -164,6 +166,8 @@ All overloads throw `HalLinkNotFoundException` if the rel is absent. `TBody` has
 - (b) `DeleteToAsync(string rel, IHalClient client, ILogger logger, CancellationToken ct = default)` — with explicit logger
 
 Both overloads return `Task` (no body deserialization). Both throw `HalLinkNotFoundException` if the rel is absent.
+
+**REQ-28a:** Non-templated mutation overloads (`PostToAsync`, `PutToAsync`, `PatchToAsync`, `DeleteToAsync`) must throw `InvalidOperationException` before any HTTP call when the resolved `LinkObject` has `Templated == true`.
 
 **REQ-29:** Raw `HttpClient` overloads exist for every `PostToAsync`, `PutToAsync`, `PatchToAsync`, and `DeleteToAsync` signature.
 
@@ -225,6 +229,7 @@ Both overloads return `Task` (no body deserialization). Both throw `HalLinkNotFo
 |---|---|
 | Rel not found on resource | Throw `HalLinkNotFoundException` (before any HTTP) |
 | Duplicate rels on resource | Throw `InvalidOperationException` (before any HTTP) |
+| Templated link with non-templated overload | Throw `InvalidOperationException` (before any HTTP) |
 | HTTP 2xx with body | Deserialize and return |
 | HTTP 204 or explicit `Content-Length: 0` | Return `null`; `DeleteAsync` completes normally (no body, no Content-Type check) |
 | HTTP 3xx | `HttpClient` follows redirects; non-redirect throws `HttpRequestException` |
@@ -361,7 +366,7 @@ These scenarios describe end-to-end behavior for test derivation.
 ### Scenario: Convenience extension on raw HttpClient
 
 1. Caller has an `HttpClient` but no `HalClient`
-2. Caller calls `httpClient.GetHalAsync(new Uri("/orders"))`
+2. Caller calls `httpClient.GetHalAsync(new Uri("/orders", UriKind.Relative))`
 3. Extension sends `GET /orders` with `Accept: application/hal+json`
 4. Server responds with `200 OK` and a HAL resource
 5. Method returns the deserialized `Resource`
