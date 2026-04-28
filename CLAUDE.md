@@ -127,3 +127,11 @@ For code review, debugging, and refactoring:
 
 - Use `remediate-pr-comment` for generic PR comments or ambiguous reviewer feedback.
 - Use `remediate-codex-review` only for explicit Codex review remediation or Codex re-review loops.
+
+
+## PR Feedback Monitoring
+
+- Use `watch-pr-feedback` only when explicitly asked to watch, monitor, wait for, poll, loop on, or continue handling PR feedback as it appears.
+- Prefer dynamic `/loop` invocation so Monitor can be used when available.
+- Use `remediate-pr-comment` for one-time generic PR comments.
+- Use `remediate-codex-review` only for explicit Codex review remediation or Codex re-review loops.

@@ -184,6 +184,24 @@ A changed strategy may include:
 - disabling reliance on a non-essential MCP/tool
 - asking the user for missing information
 
+
+
+## PR Feedback Monitoring Policy
+
+A remediation skill performs work when invoked. It is not, by itself, a monitor.
+
+Use `watch-pr-feedback` only when the user explicitly asks to watch, monitor, wait for, poll, loop on, or continue handling PR feedback as it appears.
+
+Monitoring must:
+- prefer Claude Code dynamic `/loop` / Monitor behavior when available
+- be bounded by max remediation cycles
+- maintain a session-local ledger of seen comments and routed items
+- avoid reprocessing the same comment unless new activity appears
+- route work to remediation skills instead of editing files directly
+- stop on PR merge, PR closure, unsafe git state, repeated findings, required user input, or remediation failure
+
+Do not use monitoring for one-time requests such as `fix PR comment on PR #80`; use `remediate-pr-comment` instead.
+
 ## Delivery Shape Rules
 
 ### single-plan

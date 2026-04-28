@@ -12,27 +12,19 @@ gh api graphql `
   -f repo="REPO" `
   -F pr=123 `
   -f query='
-query($owner: String!, $repo: String!, $pr: Int!, $after: String, $commentsAfter: String) {
+query($owner: String!, $repo: String!, $pr: Int!) {
   repository(owner: $owner, name: $repo) {
     pullRequest(number: $pr) {
       number
       url
-      reviewThreads(first: 100, after: $after) {
-        pageInfo {
-          hasNextPage
-          endCursor
-        }
+      reviewThreads(first: 100) {
         nodes {
           id
           isResolved
           isOutdated
           path
           line
-          comments(first: 20, after: $commentsAfter) {
-            pageInfo {
-              hasNextPage
-              endCursor
-            }
+          comments(first: 20) {
             nodes {
               id
               author {
@@ -52,10 +44,6 @@ query($owner: String!, $repo: String!, $pr: Int!, $after: String, $commentsAfter
   }
 }'
 ```
-
-If `pageInfo.hasNextPage` is `true`, repeat the query with `-F after="END_CURSOR"` (using the `endCursor` value) until `hasNextPage` is `false`.
-
-To paginate comments within a thread, repeat the query with `-F commentsAfter="END_CURSOR"` (using the comments `pageInfo.endCursor` value) until `pageInfo.hasNextPage` is `false`.
 
 ## Reply to a review thread
 
@@ -105,14 +93,10 @@ gh api graphql `
   -f repo="REPO" `
   -F pr=123 `
   -f query='
-query($owner: String!, $repo: String!, $pr: Int!, $after: String) {
+query($owner: String!, $repo: String!, $pr: Int!) {
   repository(owner: $owner, name: $repo) {
     pullRequest(number: $pr) {
-      comments(first: 100, after: $after) {
-        pageInfo {
-          hasNextPage
-          endCursor
-        }
+      comments(first: 100) {
         nodes {
           id
           author {
@@ -127,44 +111,6 @@ query($owner: String!, $repo: String!, $pr: Int!, $after: String) {
   }
 }'
 ```
-
-If `pageInfo.hasNextPage` is `true`, repeat the query with `-F after="END_CURSOR"` (using the `endCursor` value) until `hasNextPage` is `false`.
-
-## Fetch review summaries
-
-Review summaries are distinct from inline review thread comments. A `PullRequestReview` contains a top-level `body` submitted alongside the review verdict. These are accessed through the `reviews` connection on a pull request, not through `reviewThreads` or `comments`. The `state` field indicates the review verdict: `APPROVED`, `CHANGES_REQUESTED`, `COMMENTED`, or `DISMISSED`.
-
-```powershell
-gh api graphql `
-  -f owner="OWNER" `
-  -f repo="REPO" `
-  -F pr=123 `
-  -f query='
-query($owner: String!, $repo: String!, $pr: Int!, $after: String) {
-  repository(owner: $owner, name: $repo) {
-    pullRequest(number: $pr) {
-      reviews(first: 100, after: $after) {
-        pageInfo {
-          hasNextPage
-          endCursor
-        }
-        nodes {
-          id
-          author {
-            login
-          }
-          body
-          state
-          submittedAt
-          url
-        }
-      }
-    }
-  }
-}'
-```
-
-If `pageInfo.hasNextPage` is `true`, repeat the query with `-F after="END_CURSOR"` (using the `endCursor` value) until `hasNextPage` is `false`.
 
 ## Author Filtering
 
