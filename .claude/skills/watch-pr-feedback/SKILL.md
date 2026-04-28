@@ -55,6 +55,7 @@ If not specified:
 - reviewer filter: Codex-only after a Codex review request; otherwise all unresolved comments
 - max remediation cycles: 3
 - max speculative fix attempts per thread: 1
+- max watch duration: 4 hours
 - stop on user/product decision
 - stop on repeated finding
 - stop on unsafe git state
@@ -143,6 +144,7 @@ query($owner: String!, $repo: String!, $pr: Int!) {
     pullRequest(number: $pr) {
       state
       reviewThreads(first: 100) {
+        pageInfo { hasNextPage endCursor }
         nodes {
           id
           isResolved
@@ -150,6 +152,7 @@ query($owner: String!, $repo: String!, $pr: Int!) {
           path
           line
           comments(first: 20) {
+            pageInfo { hasNextPage endCursor }
             nodes {
               id
               author { login }
@@ -161,6 +164,7 @@ query($owner: String!, $repo: String!, $pr: Int!) {
         }
       }
       comments(first: 100) {
+        pageInfo { hasNextPage endCursor }
         nodes {
           id
           author { login }
@@ -170,6 +174,7 @@ query($owner: String!, $repo: String!, $pr: Int!) {
         }
       }
       reviews(first: 100) {
+        pageInfo { hasNextPage endCursor }
         nodes {
           id
           author { login }
@@ -184,6 +189,8 @@ query($owner: String!, $repo: String!, $pr: Int!) {
   Start-Sleep -Seconds 60
 }
 ```
+
+> **Pagination requirement:** Implementations must iterate each paginated connection (`reviewThreads`, thread `comments`, top-level `comments`, and `reviews`) until `hasNextPage` is `false` before classifying watch results. Failing to page will silently miss feedback on PRs with many threads, comments, or reviews.
 
 Prefer the GraphQL operations documented in `github-pr-review-graphql.md` when this skill is colocated with that reference, or in the repository's review GraphQL reference if stored elsewhere.
 
