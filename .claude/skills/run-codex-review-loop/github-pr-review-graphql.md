@@ -45,8 +45,6 @@ query($owner: String!, $repo: String!, $pr: Int!) {
 }'
 ```
 
-> **Note on thread comment pagination:** The `comments` connection in the batch reviewThreads query uses a fixed `first: 20` cap. Comment cursors are connection-specific and cannot be shared across threads in a single query. To paginate comments beyond the first 20 for a specific thread, issue a separate query for that thread by ID using the GitHub GraphQL `node` root field and its `comments` connection with its own `$after` cursor.
-
 ## Reply to a review thread
 
 ```powershell

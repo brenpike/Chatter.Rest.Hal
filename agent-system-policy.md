@@ -200,7 +200,7 @@ Monitoring must:
 - route work to remediation skills instead of editing files directly
 - stop on PR merge, PR closure, unsafe git state, repeated findings, required user input, or remediation failure
 
-Do not use monitoring for one-time requests such as `fix PR comment on PR #80`; use `remediate-pr-comment` instead.
+Do not use monitoring for one-time requests such as `fix PR comment on PR #80`; use `address-pr-feedback` instead.
 
 ## Delivery Shape Rules
 
@@ -270,8 +270,8 @@ The invoking agent must not:
 - invoke a broader, riskier, or less-specific skill unless the user's request matches that skill's invocation boundary
 
 For ambiguous PR feedback:
-- use `remediate-pr-comment` for generic PR comments, reviewer comments, or unresolved PR feedback
-- use `remediate-codex-review` only when Codex is explicitly named or the user explicitly requests the Codex review loop, Codex review threads, or Codex re-review
+- use `address-pr-feedback` for generic PR comments, reviewer comments, or unresolved PR feedback
+- use `run-codex-review-loop` only when Codex is explicitly named or the user explicitly requests the Codex review loop, Codex review threads, or Codex re-review
 
 Blocked skill reports must use this shape:
 
