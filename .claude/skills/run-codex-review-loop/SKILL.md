@@ -142,17 +142,27 @@ For each actionable item:
 
 ### 6. Reply and Resolve
 
-For each fixed thread:
+Post-fix actions depend on the feedback source type:
+
+**Review threads** — for each fixed thread:
 - reply with a concise explanation
 - include the commit SHA
 - resolve the thread
 
-Do not resolve:
-- unresolved questions
-- rejected feedback requiring reviewer/user agreement
-- items not actually fixed
-- items not yet pushed
-- items not validated when validation is required
+**Top-level PR comments** — for each fixed comment:
+- reply with a concise explanation using `gh pr comment`
+- include the commit SHA
+
+**Review summaries** — for each fixed finding:
+- post a reply comment on the PR acknowledging the finding using `gh pr comment`
+- include the commit SHA
+
+Do not resolve review threads when:
+- unresolved questions remain
+- rejected feedback requires reviewer/user agreement
+- items are not actually fixed
+- items are not yet pushed
+- items are not validated when validation is required
 
 ### 7. Request Re-review
 
