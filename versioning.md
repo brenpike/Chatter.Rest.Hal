@@ -1,105 +1,126 @@
 # Versioning Policy
 
+## Purpose
+
+This file defines the generic SemVer workflow for repositories that publish versioned artifacts.
+
+Project-specific package names, artifact paths, version-file locations, changelog locations, tag prefixes, and validation commands must be defined in `CLAUDE.md` or project documentation referenced by `CLAUDE.md`.
+
 ## Scope
 
-Packable packages and their source paths are defined in `CLAUDE.md` under the **Package Versions** and **Solution Structure** sections. The versioning policy applies to each packable package independently.
+This policy applies to every independently versioned artifact defined by the project. Examples include packages, libraries, applications, plugins, containers, or distributable binaries.
 
-Each package is versioned independently. A change to one package does not require a bump in another unless the change propagates through a public API dependency.
+Each artifact is versioned independently unless the project documentation says otherwise. A change to one artifact does not require a bump in another unless the change propagates through a public API, compatibility contract, runtime contract, or distribution dependency.
 
-Internal shared libraries that are not packaged independently carry no version.
+Internal shared components that are not published independently carry no version unless the project defines one.
 
 ## SemVer Rules
 
-This repository follows [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html).
+This repository follows Semantic Versioning 2.0.0.
 
 Version format: `MAJOR.MINOR.PATCH`
 
 | Increment | When |
 |---|---|
-| MAJOR | Breaking change to the public API (removal, rename, signature change, behavior contract change) |
-| MINOR | New backward-compatible public API surface (`feat` commits) |
-| PATCH | Bug fixes or internal refactors with no public API change (`fix`, `bugfix`, `refactor` commits) |
+| MAJOR | Breaking change to public API, compatibility contract, data format, runtime behavior contract, or documented consumer expectation |
+| MINOR | New backward-compatible public API, capability, option, behavior, or artifact surface |
+| PATCH | Bug fix, internal refactor, or implementation change with no public compatibility impact |
 
-**Pre-1.0 note:** For packages at `0.x.y`, MINOR increments may include breaking changes per SemVer spec. Document breaking changes clearly in the CHANGELOG regardless.
+Pre-release labels such as `1.2.0-beta.1` are allowed only when coordinated by the orchestrator and supported by the project release workflow.
 
-Pre-release labels (e.g., `1.2.0-beta.1`) are allowed but must be coordinated with the orchestrator.
+For artifacts at `0.x.y`, SemVer allows minor increments to include breaking changes. Breaking changes must still be documented clearly in release notes or changelog entries.
 
 ## Bump Trigger
 
-A version bump is **required** when a PR merges changes to non-markdown files under a packable package's `src/` directory (e.g., `src/<package-name>/**` excluding `*.md`). Refer to `CLAUDE.md` for the project's package list and source paths.
+A version bump is required when a PR changes files that affect a published artifact's runtime behavior, public API, compatibility contract, generated output, packaged output, or distribution metadata.
 
-Changes to internal shared library source directories may trigger a bump in dependent packages if the change affects their public API surface.
+The exact paths that trigger a bump are project-specific and must be defined in `CLAUDE.md` or project documentation referenced by `CLAUDE.md`.
 
-**No version bump required for:**
-- `docs/**`
-- `test/**`
-- `.github/workflows/**`
-- Governance files (`agent-system-policy.md`, `branching-pr-workflow.md`, `orchestrator.md`, etc.)
-- `CLAUDE.md`
-- CHANGELOG files
-- Any `*.md` file
+No version bump is required by default for:
+- documentation-only changes
+- test-only changes
+- CI-only changes
+- agent framework/governance changes
+- changelog-only maintenance
+- markdown-only changes
+
+Project-specific documentation may define additional no-bump or bump-required paths.
 
 ## Bump Type Determination
 
-The **orchestrator** determines the bump type by examining:
-1. The conventional commit type(s) on the branch (`feat`, `fix`, `refactor`, etc.)
-2. Whether any public API surface was added, changed, or removed
-3. Whether any breaking changes are present (indicated by `!` suffix or `BREAKING CHANGE:` footer)
+The orchestrator determines the bump type by examining:
+1. conventional commit type(s) on the branch
+2. whether public API, compatibility contract, runtime behavior, data format, generated output, package contents, or documented behavior changed
+3. whether breaking changes are present through `!` suffix, `BREAKING CHANGE:` footer, or actual compatibility impact
 
-| Commit type | Public API impact | SemVer increment |
+| Commit type | Compatibility impact | SemVer increment |
 |---|---|---|
-| `feat` | New API surface | MINOR |
-| `feat!` or `BREAKING CHANGE:` footer | Breaking change | MAJOR |
-| `fix` / `bugfix` | No API change | PATCH |
-| `refactor` | No API change | PATCH |
+| `feat` | Backward-compatible new public capability | MINOR |
+| `feat!` or `BREAKING CHANGE:` | Breaking change | MAJOR |
+| `fix` / `bugfix` | No breaking change | PATCH |
+| `refactor` | No public compatibility impact | PATCH |
 | `refactor!` | Breaking change | MAJOR |
-| `chore` / `docs` / `test` / `ci` | None | **No bump** |
+| `chore` / `docs` / `test` / `ci` | None | No bump |
 
-When in doubt, the orchestrator asks the user to confirm the bump type before delegating the version edit.
+When in doubt, the orchestrator asks the user to confirm the bump type before delegating version edits.
 
 ## Bump Execution
 
-The orchestrator **delegates version file edits to the coder agent**. The version bump is included in the same PR as the feature or fix — not as a follow-up PR.
+The orchestrator delegates version/release file edits to the coder agent.
 
-Files to update atomically when bumping version `X.Y.Z` for a package:
+The version bump is included in the same PR as the feature or fix — not as a follow-up PR — unless the user explicitly directs otherwise.
 
-1. `src/<package-name>/<package-name>.csproj` — `<Version>X.Y.Z</Version>` (source of truth)
-2. `CLAUDE.md` — Package Versions table row for the package
-3. Project architecture/docs table entry for the package (if one exists — refer to CLAUDE.md Documentation Index)
-4. Package CHANGELOG file — add release section `## [X.Y.Z] - YYYY-MM-DD` above `[Unreleased]`; update comparison link at bottom
+Project-specific documentation must define the exact files to update atomically for each artifact. Common examples include:
+- artifact manifest or project file containing the canonical version
+- root project instruction file if it mirrors package versions
+- package or release changelog
+- release notes
+- artifact metadata file
+- documentation tables that mirror current versions
 
-## CHANGELOG Convention
+The canonical version source must be defined by the project. If undefined, the orchestrator must inspect the repository and ask for user confirmation before editing version metadata.
 
-Each package maintains its own CHANGELOG file. Filename conventions and the mapping of CHANGELOG files to packages are defined in project documentation (see `CLAUDE.md` and `docs/development.md`).
+## CHANGELOG / Release Notes Convention
 
-Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+Each versioned artifact should maintain release notes or a changelog unless the project explicitly uses another release documentation mechanism.
 
-Each release section uses these subsections as needed: `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Security`.
+Recommended format follows Keep a Changelog:
+- `Added`
+- `Changed`
+- `Deprecated`
+- `Removed`
+- `Fixed`
+- `Security`
 
-The `[Unreleased]` section at the top accumulates entries for the next release. When the orchestrator bumps the version, it converts `[Unreleased]` entries into a dated release section and resets `[Unreleased]` to empty.
+When bumping a version, convert pending unreleased entries into a dated release section and reset the unreleased section according to project convention.
 
 ## Git Tags
 
-A git tag is created automatically by CI after each successful deploy to NuGet.
+Tags are created according to the project release workflow.
 
-Tag format:
+Project-specific documentation must define:
+- whether tags are created manually or by CI
+- tag format
+- tag prefix per artifact when multiple artifacts exist
+- whether tags are annotated or lightweight
+- whether tags are created before or after publish/deploy
 
-| Package | Tag format | Example |
-|---|---|---|
-| Package A | `<prefix>/vX.Y.Z` | `mylib/v1.2.0` |
-| Package B | `<prefix>/vX.Y.Z` | `mygen/v0.4.0` |
-
-Each project defines its tag prefixes per package. The CI `tag` job reads the version from the `.csproj` and the prefix from the workflow configuration.
-
-Tags are annotated (not lightweight). The CI `tag` job runs after `deploy` succeeds on `main`, reads the version from the `.csproj`, and creates + pushes the tag if it does not already exist.
-
-These tags serve as:
-- The version anchor for CI version-check validation on future PRs
-- GitHub Releases anchors
-- NuGet package traceability points
+Recommended generic format:
+- single artifact: `vX.Y.Z`
+- multiple artifacts: `<artifact-prefix>/vX.Y.Z`
 
 ## Version Source of Truth
 
-The `<Version>` element in each `.csproj` is the canonical version. All other references (documentation tables, `CLAUDE.md`) are informational mirrors that must be kept in sync during every version bump.
+Each versioned artifact must have one canonical version source.
 
-CI reads the `.csproj` version at pack time. The CI version-check job compares the `.csproj` version against the latest matching git tag and fails the PR if they are equal (version not bumped).
+All mirrored references are informational and must be kept in sync during every version bump.
+
+CI or release validation should fail when a version-required PR does not include the necessary version bump.
+
+## Agent Rules
+
+- The orchestrator owns version bump detection and bump type decisions.
+- The planner may recommend versioning implications but must not edit files.
+- The coder may edit version/release files only when explicitly delegated.
+- The designer never edits version/release files unless the file is purely presentational documentation explicitly assigned by the orchestrator.
+- If project-specific version paths or canonical version source are unclear, stop and ask the user.

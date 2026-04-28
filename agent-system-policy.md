@@ -1,28 +1,33 @@
 # Agent System Policy
 
 ## Purpose
+
 This file is the canonical source of truth for cross-agent rules in the multi-agent system.
 
 Agent files contain role-specific rules and enforcement details. Repository-wide workflow and governance rules defined here are mandatory.
 
-## Canonical Workflow Rule
-`branching-pr-workflow.md` is the canonical source of truth for branching, checkpoint commits, pull requests, merge path, and trunk-based delivery rules.
+## Canonical Workflow Rules
 
-All agents must treat that workflow as **mandatory**.
-It is not optional guidance.
+The following files are mandatory governance files:
 
-If any task prompt, delegation wording, or local instruction is silent about git workflow, agents must still follow `branching-pr-workflow.md`.
+- `branching-pr-workflow.md` — branching, checkpoint commits, pull requests, merge path, and trunk-based delivery
+- `versioning.md` — SemVer, version bump, release metadata, changelog, and tag policy
+- `pr-review-remediation-loop.md` — external pull request review feedback loop
+
+All agents must treat these workflows as mandatory. They are not optional guidance.
+
+If any task prompt, delegation wording, or local instruction is silent about git workflow, versioning, or review remediation, agents must still follow the canonical workflow files.
 
 ## Agent Topology
 
 ### orchestrator
-Owns coordination, scheduling, delegation, branch/worktree decisions, checkpoint-commit decisions, and PR submission.
+Owns coordination, scheduling, delegation, branch/worktree decisions, checkpoint-commit decisions, PR submission, version bump decisions, and external review remediation.
 
 ### planner
 Owns research and implementation planning only. Read-only.
 
 ### coder
-Owns implementation, debugging, refactoring, integration, tests, and runtime behavior within assigned file scope.
+Owns implementation, debugging, refactoring, integration, tests, runtime behavior, and assigned release/version file edits within assigned file scope.
 
 ### designer
 Owns presentational UI/UX work within assigned file scope.
@@ -41,18 +46,25 @@ Owns presentational UI/UX work within assigned file scope.
 | Worktree decision | own | recommend only | no | no |
 | Checkpoint commit | own | no | delegated only | no |
 | PR submission | own | no | no | no |
-| Version bump type decision | own | no | no | no |
-| Version file edits | delegate | no | delegated only | no |
+| Version bump type decision | own | recommend only | no | no |
+| Version/release file edits | delegate | no | delegated only | no |
+| External review request | own | no | no | no |
+| Review feedback classification | own | recommend when delegated | no | no |
+| Review remediation planning | coordinate | own when delegated | no | no |
+| Review remediation implementation | no | no | own | presentational only |
+| Review thread replies/resolution | own | no | no | no |
 
 ## Allowed Agent Set
 
-Only the follow agent types are allowed:
+Only the following agent types are allowed:
 - `orchestrator`
 - `planner`
 - `coder`
 - `designer`
 
 No agent may call, request, delegate to, or assume the existence of any other agent type.
+
+External reviewers, tools, CI systems, and services are not Claude Code subagents.
 
 ## File Ownership Rules
 
@@ -93,6 +105,7 @@ If such a file is assigned to `designer`, the assignment must explicitly state t
 - runtime accessibility behavior tied to business logic or app state
 
 ## Git Workflow Enforcement
+
 `branching-pr-workflow.md` is mandatory for all agents.
 
 No implementation delegation may begin until the orchestrator has established required git context.
@@ -101,14 +114,42 @@ Workers must stop and report blocked if required git context is missing or incon
 
 No agent may treat user silence about branches, commits, or PRs as permission to ignore the canonical workflow.
 
+## Versioning Enforcement
+
+`versioning.md` is mandatory for all agents.
+
+The orchestrator owns version bump decisions.
+
+The coder may edit version/release metadata files only when explicitly delegated by the orchestrator.
+
+No PR that requires a version bump is ready for merge until the required version/release metadata updates are included.
+
+## External Review Policy
+
+`pr-review-remediation-loop.md` is mandatory for external review feedback.
+
+Codex or any other external AI reviewer is an external PR reviewer, not a Claude Code subagent.
+
+Only the orchestrator may:
+- request external AI review
+- classify external review feedback for routing
+- reply to review threads
+- resolve review threads
+- request re-review
+
+Workers may fix assigned feedback within explicit file scope, but they must not resolve review threads unless explicitly delegated by the orchestrator and allowed by policy.
+
 ## Tool and MCP Policy
+
 | Tool / MCP | orchestrator | planner | coder | designer | Notes |
 |---|---|---|---|---|---|
 | Context7 | optional | use when relevant | use when relevant | use when relevant | current framework/library docs |
 | claude-mem | optional | default first step for planning context | use when relevant | use when relevant | prior project/session context |
 | local repo tools | minimal | read-only only | full role-appropriate use | role-appropriate use | respect role boundaries |
+| GitHub CLI/API | orchestration only | read-only only | delegated only | no | respect review and PR ownership |
 
 ## Escalation Rules
+
 A worker must stop and report instead of guessing when:
 - required scope exceeds assigned files
 - ownership boundary would be crossed
@@ -116,8 +157,11 @@ A worker must stop and report instead of guessing when:
 - runtime behavior changes are required in a designer-owned task
 - repository/worktree/git state blocks safe progress
 - required git workflow context has not been explicitly established
+- versioning or release metadata scope is ambiguous
+- external review feedback requires product, architecture, public API, security, or release decision
 
 ## Retry and Timeout Policy
+
 Failures are execution states, not waiting states.
 
 After any tool error, timeout, failed delegation, unusable output, or internal runtime failure, the observing agent must immediately do one of:
@@ -149,16 +193,18 @@ Default. Use one branch and one PR for the whole approved plan.
 Use only when the planner explicitly determines the work contains independently reviewable and independently shippable deliverables.
 
 ## Communication Standard
+
 Agent-to-agent communication must be concise and field-based.
 
 Rules:
 - prefer short labeled fields over prose
 - include only required sections
 - omit optional sections unless relevant
-- report facts, blockers, scope needs, validation, and git state directly
+- report facts, blockers, scope needs, validation, versioning, review state, and git state directly
 - do not restate policy or workflow rules inside routine reports
 
 ## Reporting Contract
+
 Worker completion reports should be concise by default and use this structure:
 
 ```text
@@ -185,32 +231,39 @@ Optional lines only when relevant:
 - `Refs: ...`
 - `States handled: ...`
 - `Commit: ...`
+- `Version: ...`
+- `Review item: ...`
 - `Git issue: ...`
-## External Review Policy
 
-Codex is an external GitHub pull request reviewer, not a Claude Code subagent.
+## Skill Failure Policy
 
-No agent may delegate to Codex as if Codex were part of the Claude agent topology.
+A failed skill invocation is an execution failure, not a waiting state.
 
-The orchestrator owns the Codex review-remediation loop. The loop must follow `pr-review-remediation-loop.md`.
+If a skill errors, crashes, times out, returns unusable output, lacks required permissions, or cannot safely complete, the invoking agent must immediately do one of:
 
-Only the orchestrator may:
-- request Codex review
-- classify Codex feedback for routing
-- reply to Codex review threads
-- resolve Codex review threads
-- request Codex re-review
+1. retry once if the failure appears transient
+2. use a safe fallback workflow
+3. return `blocked`
 
-Workers may fix assigned feedback within explicit file scope, but they must not resolve GitHub review threads unless explicitly delegated by the orchestrator and allowed by policy.
+The invoking agent must not:
+- wait silently
+- abandon the task without a blocked report
+- retry indefinitely
+- invoke a broader, riskier, or less-specific skill unless the user's request matches that skill's invocation boundary
 
-Because no architect agent is included, architecture-style Codex feedback must be routed to planner for analysis and then either escalated to the user or delegated to coder/designer with explicit bounded scope.
+For ambiguous PR feedback:
+- use `remediate-pr-comment` for generic PR comments, reviewer comments, or unresolved PR feedback
+- use `remediate-codex-review` only when Codex is explicitly named or the user explicitly requests the Codex review loop, Codex review threads, or Codex re-review
 
-### External Review Authority Addendum
+Blocked skill reports must use this shape:
 
-| Area | orchestrator | planner | coder | designer |
-|---|---|---|---|---|
-| Codex review request | own | no | no | no |
-| Codex feedback classification | own | recommend when delegated | no | no |
-| Review remediation planning | coordinate | own when delegated | no | no |
-| Review remediation implementation | no | no | own | presentational only |
-| Review-thread replies/resolution | own | no | no | no |
+```text
+Status: blocked
+Stage: [skill selection | pr lookup | feedback fetch | classification | delegation | validation | git | reply | resolve | rereview]
+Blocker: [one-line reason]
+Retry status: [not attempted | retried once | exhausted]
+Fallback used: [none | description]
+Impact: [what cannot proceed]
+Next action:
+- [specific next step]
+```

@@ -1,25 +1,27 @@
 # Branching and Pull Request Workflow
 
 ## Purpose
-This repository follows **trunk-based development**. The canonical trunk is `main`.
 
-This workflow is **mandatory** for all agent activity unless the user explicitly overrides it for a specific task. It is not optional guidance.
+This repository follows trunk-based development. The canonical trunk is `main`.
 
-The **approved plan** is the unit of:
+This workflow is mandatory for all agent activity unless the user explicitly overrides it for a specific task. It is not optional guidance.
+
+The approved plan is the unit of:
 - branch ownership
 - implementation execution
 - checkpoint-commit decisions
-- PR submission
+- pull request submission
+- external review remediation
 
 ## Non-Optional Rules
 
-1. **Never commit directly to `main`.**
-2. **Never push directly to `main`.**
+1. Never commit directly to `main`.
+2. Never push directly to `main`.
 3. All changes must be developed on a non-`main` working branch.
-4. **One approved plan = one working branch by default.**
-5. **One successfully completed plan = one pull request by default.**
+4. One approved plan = one working branch by default.
+5. One successfully completed plan = one pull request by default.
 6. PRs target `main` unless the user explicitly instructs otherwise.
-7. Merges to `main` use **squash merge**.
+7. Merges to `main` use squash merge.
 8. Direct pushes to other non-protected working branches are allowed when they are part of the approved workflow, but checkpoint-commit policy still applies.
 
 ## Trunk-Based Development Standard
@@ -33,7 +35,7 @@ The **approved plan** is the unit of:
 
 ### Protected Branches
 - `main` is protected.
-- Branch protection rules in GitHub reinforce this workflow, but agents must follow this workflow even if technical protections are absent or misconfigured.
+- Branch protection rules reinforce this workflow, but agents must follow this workflow even if technical protections are absent or misconfigured.
 
 ## Branch Taxonomy
 
@@ -57,10 +59,10 @@ Use one of these formats:
 - `<prefix>/<ticket>-<topic>`
 
 Examples:
-- `feature/add-hal-link-builder`
-- `bugfix/123-fix-null-link-serialization`
+- `feature/add-resource-builder`
+- `bugfix/123-fix-null-serialization`
 - `hotfix/456-restore-package-publish`
-- `ci/update-dotnet-workflow`
+- `ci/update-build-workflow`
 
 ### Naming constraints
 - lowercase only
@@ -80,7 +82,7 @@ Examples:
 One approved plan maps to one working branch.
 
 ### Exceptions
-Only allow multiple branches or PRs for one user request when the planner explicitly decomposes the work into **independently reviewable and independently shippable plans**.
+Only allow multiple branches or PRs for one user request when the planner explicitly decomposes the work into independently reviewable and independently shippable plans.
 
 If the planner does not explicitly split the work, assume exactly one branch and one PR.
 
@@ -89,7 +91,7 @@ If the planner does not explicitly split the work, assume exactly one branch and
 ### When a branch is created
 Create the working branch only after:
 - the planner has returned a complete plan
-- the planner's **Open Questions** section is `None`
+- the planner's open questions are `None`
 - the orchestrator has accepted the plan
 - implementation is ready to begin
 
@@ -97,7 +99,7 @@ Create the working branch only after:
 The orchestrator creates or explicitly confirms the working branch.
 
 Before implementation begins, all of the following must be explicitly defined:
-- work classification (`feature`, `bugfix`, `hotfix`, `refactor`, `chore`, `docs`, `test`, `ci`)
+- work classification
 - base branch
 - working branch name
 - whether worktrees are used
@@ -109,18 +111,19 @@ If any item is undefined, implementation must not begin.
 ## Commit Policy
 
 ### Default
-Workers do **not** commit automatically after every task.
+Workers do not commit automatically after every task.
 
 ### Checkpoint commits
 Checkpoint commits are allowed only when:
 - a phase is complete
 - a meaningful self-contained milestone is complete
 - the orchestrator wants a recovery point before a higher-risk next phase
+- a review-remediation fix is complete, validated, and ready to push
 
 ### Who commits
-- **Default owner:** orchestrator
-- **Exception:** coder may commit only when explicitly instructed by orchestrator
-- **Designer never commits**
+- Default owner: orchestrator
+- Exception: coder may commit only when explicitly instructed by orchestrator
+- Designer never commits
 
 ### Commit message convention
 Use conventional-style commit messages.
@@ -136,50 +139,25 @@ Allowed types:
 - `ci`
 
 Examples:
-- `feat: add embedded resource builder overload`
-- `fix: prevent null link serialization failure`
+- `feat: add resource builder overload`
+- `fix: prevent null serialization failure`
 - `hotfix: restore package publish path`
 - `ci: update workflow trigger filters`
 
 ### Commit hygiene
 - Do not mix unrelated changes in one commit.
-- Stage only the files that belong to the completed phase or approved milestone.
+- Stage only the files that belong to the completed phase, approved milestone, or review-remediation item.
 - Do not create checkpoint commits on `main`.
 
 ## Version Bump Policy
 
-A version bump is **required** when a PR changes non-markdown files under a packable package's `src/` directory. See [versioning.md](versioning.md) for the full policy.
+`versioning.md` is the canonical source for SemVer and version bump rules.
 
-### When a bump is required
+A PR is not ready to merge until any required version/release metadata changes are included.
 
-Non-markdown files under any packable package's `src/` directory trigger a bump for that package. Internal shared library changes may trigger bumps in dependent packages if public API is affected. Refer to `CLAUDE.md` for this project's package list and source paths.
+The orchestrator determines whether a version bump is required and delegates version/release file edits to coder.
 
-No bump required for: `docs/**`, `test/**`, `.github/workflows/**`, governance files, `*.md`.
-
-### Bump type
-
-The orchestrator determines the bump type (major/minor/patch) by examining commit types and public API impact. When ambiguous, the orchestrator asks the user to confirm before delegating.
-
-| Commit type | API impact | SemVer increment |
-|---|---|---|
-| `feat` | New API | minor |
-| `feat!` / `BREAKING CHANGE:` | Breaking | major |
-| `fix`, `bugfix`, `refactor` | None | patch |
-| `chore`, `docs`, `test`, `ci` | None | **no bump** |
-
-### Execution
-
-The orchestrator delegates version file edits to the coder agent. The bump is included in the **same PR** as the feature or fix — not a follow-up PR.
-
-Files updated atomically per bump (see [versioning.md](versioning.md) for full list):
-- `.csproj` `<Version>` element (source of truth)
-- `CLAUDE.md` Package Versions table
-- `docs/architecture.md` solution structure table
-- Package CHANGELOG file (see `docs/development.md` for filename mapping)
-
-### PR readiness gate
-
-A PR that changes non-markdown `src/` files is **not ready to merge** until the version bump is included. The CI `version-check` job enforces this by comparing the `.csproj` version against the latest git tag and failing if they are equal.
+Version bump changes must be included in the same PR as the triggering change unless the user explicitly directs otherwise.
 
 ## Pull Request Policy
 
@@ -188,10 +166,11 @@ Open a PR only when:
 - the approved plan is complete
 - required validation has passed
 - outputs are coherent and within scope
+- required version/release metadata changes are included
 - the branch is ready to merge into `main`
 
 ### Who opens the PR
-The **orchestrator** opens the PR.
+The orchestrator opens the PR.
 
 ### Branch-to-PR mapping
 - One working branch produces one PR.
@@ -214,10 +193,32 @@ The PR must include:
 - concise summary of what changed
 - key files or areas affected
 - validation performed
+- version/release metadata notes when relevant
 - notable implementation or design constraints
 - unresolved issues, if any
-  
-Never include "co-authored by..." or "Generated by..." or similar text.
+
+Never include "co-authored by...", "Generated by...", or similar text.
+
+## External Review Policy
+
+After a PR is opened, the orchestrator may request external AI review.
+
+External review remediation stays on the same PR branch unless:
+- the feedback is materially outside the approved plan
+- the feedback requires a separate independently shippable change
+- the PR has already been merged or closed
+
+Review-remediation commits are allowed on the existing PR branch when they directly address PR feedback.
+
+The orchestrator remains responsible for:
+- confirming the PR branch is current
+- verifying working tree state before remediation
+- ensuring remediation commits are scoped to review feedback
+- pushing remediation commits to the PR branch
+- replying to and resolving review threads according to policy
+- requesting re-review only after new commits or a clear written rationale
+
+Do not open a new PR solely to address review comments on an active PR unless the feedback is outside the approved plan.
 
 ## Merge Policy
 
@@ -225,7 +226,7 @@ Never include "co-authored by..." or "Generated by..." or similar text.
 Changes reach `main` only through a pull request.
 
 ### Merge method
-Use **squash merge** for PRs merged into `main`.
+Use squash merge for PRs merged into `main`.
 
 ### Review requirement
 At least one human review is required before merge to `main`.
@@ -240,6 +241,7 @@ Before PR creation, the orchestrator must confirm that all relevant required che
 Minimum expectation:
 - relevant build checks passed
 - relevant tests passed
+- required version/release metadata checks passed when applicable
 
 Do not invent missing validation.
 Do not open a PR if validation is incomplete.
@@ -306,27 +308,3 @@ If the orchestrator has not explicitly established:
 then implementation must not begin.
 
 Failure to follow this workflow is a non-compliant execution state and must be treated as a blocker rather than ignored.
-## External Review and Codex Remediation Policy
-
-After a PR is opened, the orchestrator may request Codex review.
-
-Codex review is advisory and external. Codex must not be treated as an internal Claude agent.
-
-Review remediation stays on the same PR branch unless:
-- the feedback is materially outside the approved plan
-- the feedback requires a separate independently shippable change
-- the PR has already been merged or closed
-
-Codex remediation commits are allowed on the existing PR branch when they directly address PR feedback.
-
-The orchestrator remains responsible for:
-- confirming the PR branch is current
-- verifying working tree state before remediation
-- ensuring remediation commits are scoped to review feedback
-- preserving required SemVer/version-bump changes when remediation modifies packable package source
-- pushing remediation commits to the PR branch
-- requesting re-review only after new commits or a clear written rationale
-
-Do not open a new PR solely to address review comments on an active PR unless the feedback is outside the approved plan.
-
-Follow `pr-review-remediation-loop.md` for classification, thread replies, thread resolution, stop conditions, and re-review rules.
