@@ -36,7 +36,7 @@ The orchestrator must check:
 - unresolved pull request review threads
 - inline pull request review comments
 - top-level PR comments
-- requested-changes review summaries
+- review summaries with state `COMMENTED` or `CHANGES_REQUESTED` (exclude `APPROVED`, `DISMISSED`)
 - CI failures when relevant to the review feedback
 
 ## Feedback Classification
