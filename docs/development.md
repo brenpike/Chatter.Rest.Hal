@@ -150,7 +150,7 @@ FluentAssertions (`Should()` syntax) is the preferred assertion library for new 
 
 ## Versioning
 
-Package versions follow [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html). See [versioning.md](versioning.md) for the full policy including bump triggers, bump type rules, and orchestrator authority.
+Package versions follow [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html). See [versioning.md](../versioning.md) for the full policy including bump triggers, bump type rules, and orchestrator authority.
 
 ### CHANGELOG files
 

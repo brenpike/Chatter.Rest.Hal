@@ -32,17 +32,18 @@ For artifacts at `0.x.y`, SemVer allows minor increments to include breaking cha
 
 ## Bump Trigger
 
-A version bump is required when a PR changes files that affect a published artifact's runtime behavior, public API, compatibility contract, generated output, packaged output, or distribution metadata.
+A version bump is required whenever a PR changes any non-markdown file under a packable package's `src/` directory. The CI version-check gate enforces this rule mechanically and is the authoritative trigger — behavioral judgment does not override it.
 
-The exact paths that trigger a bump are project-specific and must be defined in `CLAUDE.md` or project documentation referenced by `CLAUDE.md`.
+Behavioral analysis (public API change, runtime behavior change, compatibility impact) determines the *type* of bump (major/minor/patch), not whether a bump is required.
+
+The exact `src/` paths and tag prefixes for each packable artifact are project-specific and must be defined in `CLAUDE.md` or project documentation referenced by `CLAUDE.md`.
 
 No version bump is required by default for:
-- documentation-only changes
+- documentation-only changes (markdown and non-src docs)
 - test-only changes
 - CI-only changes
 - agent framework/governance changes
 - changelog-only maintenance
-- markdown-only changes
 
 Project-specific documentation may define additional no-bump or bump-required paths.
 
