@@ -73,8 +73,10 @@ For each actionable item:
 6. Run relevant validation.
 7. Commit with a clear conventional commit message.
 8. Push to the PR branch.
-9. Reply to the review thread with the fix summary and commit SHA.
-10. Resolve the thread only after the fix is pushed and validated.
+9. For review threads: reply with the fix summary and commit SHA.
+   For top-level PR comments: reply with the fix summary and commit SHA.
+   For review summaries: reply to the summary with the fix summary and commit SHA (cannot be resolved as a thread).
+10. Resolve the thread only after the fix is pushed and validated. Top-level PR comments and review summaries do not have resolvable threads — reply only.
 
 ## Rejected Feedback
 
@@ -95,7 +97,7 @@ Default Codex request:
 
 The loop must stop when any of the following is true:
 
-- no unresolved actionable review threads remain
+- no actionable items remain across all feedback sources (review threads, top-level PR comments, and review summaries)
 - the reviewer approves or posts no new actionable findings
 - the maximum loop count is reached
 - the same finding appears twice after attempted remediation
