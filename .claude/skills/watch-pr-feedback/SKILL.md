@@ -133,8 +133,18 @@ The exact command may vary by shell and repository, but it must be read-only and
 Conceptual shape:
 
 ```powershell
+$startTime = Get-Date
+$maxDuration = New-TimeSpan -Hours 4
+$seenIds = @()
+
 while ($true) {
-  gh api graphql `
+  # Break if elapsed time exceeds max watch duration
+  if ((Get-Date) - $startTime -gt $maxDuration) {
+    Write-Host "Max watch duration (4 hours) exceeded. Stopping."
+    break
+  }
+
+  $result = gh api graphql `
     -f owner="OWNER" `
     -f repo="REPO" `
     -F pr=123 `
@@ -186,6 +196,24 @@ query($owner: String!, $repo: String!, $pr: Int!) {
     }
   }
 }'
+
+  # Break if PR is no longer open
+  $prState = ($result | ConvertFrom-Json).data.repository.pullRequest.state
+  if ($prState -ne "OPEN") {
+    Write-Host "PR state is $prState. Stopping."
+    break
+  }
+
+  # Collect all IDs from threads, comments, and reviews
+  $currentIds = # ... extract IDs from $result
+
+  # Emit output only when new IDs are detected
+  $newIds = $currentIds | Where-Object { $_ -notin $seenIds }
+  if ($newIds.Count -gt 0) {
+    Write-Host "New feedback detected: $($newIds -join ', ')"
+    $seenIds += $newIds
+  }
+
   Start-Sleep -Seconds 60
 }
 ```
