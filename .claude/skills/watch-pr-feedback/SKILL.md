@@ -132,22 +132,23 @@ The exact command may vary by shell and repository, but it must be read-only and
 
 Conceptual shape:
 
-```powershell
-$startTime = Get-Date
-$maxDuration = New-TimeSpan -Hours 4
-$seenIds = @()
+```bash
+START=$(date +%s)
+MAX_SECONDS=14400  # 4 hours
+SEEN_IDS=""
 
-while ($true) {
+while true; do
   # Break if elapsed time exceeds max watch duration
-  if ((Get-Date) - $startTime -gt $maxDuration) {
-    Write-Host "Max watch duration (4 hours) exceeded. Stopping."
+  NOW=$(date +%s)
+  if [ $((NOW - START)) -ge $MAX_SECONDS ]; then
+    echo "Max watch duration (4 hours) exceeded. Stopping."
     break
-  }
+  fi
 
-  $result = gh api graphql `
-    -f owner="OWNER" `
-    -f repo="REPO" `
-    -F pr=123 `
+  RESULT=$(gh api graphql \
+    -f owner="OWNER" \
+    -f repo="REPO" \
+    -F pr=123 \
     -f query='
 query($owner: String!, $repo: String!, $pr: Int!) {
   repository(owner: $owner, name: $repo) {
@@ -195,32 +196,31 @@ query($owner: String!, $repo: String!, $pr: Int!) {
       }
     }
   }
-}'
+}' 2>&1) || { echo "FETCH_ERROR"; sleep 60; continue; }
 
   # Break if PR is no longer open
-  $prState = ($result | ConvertFrom-Json).data.repository.pullRequest.state
-  if ($prState -ne "OPEN") {
-    Write-Host "PR state is $prState. Stopping."
+  PR_STATE=$(echo "$RESULT" | grep -o '"state":"[^"]*"' | head -1 | cut -d'"' -f4)
+  if [ "$PR_STATE" != "OPEN" ]; then
+    echo "PR state is $PR_STATE. Stopping."
     break
-  }
+  fi
 
-  # Collect all IDs from threads, comments, and reviews
-  $currentIds = # ... extract IDs from $result
+  # Collect all IDs (threads, comments, reviews)
+  CURRENT_IDS=$(echo "$RESULT" | grep -o '"id":"[^"]*"' | cut -d'"' -f4 | sort -u)
 
   # Emit output only when new IDs are detected
-  $newIds = $currentIds | Where-Object { $_ -notin $seenIds }
-  if ($newIds.Count -gt 0) {
-    Write-Host "New feedback detected: $($newIds -join ', ')"
-    $seenIds += $newIds
-  }
+  for ID in $CURRENT_IDS; do
+    if ! echo "$SEEN_IDS" | grep -qw "$ID"; then
+      echo "NEW_FEEDBACK: $ID"
+      SEEN_IDS="$SEEN_IDS $ID"
+    fi
+  done
 
-  Start-Sleep -Seconds 60
-}
+  sleep 60
+done
 ```
 
 > **Pagination requirement:** Implementations must iterate each paginated connection (`reviewThreads`, thread `comments`, top-level `comments`, and `reviews`) until `hasNextPage` is `false` before classifying watch results. Failing to page will silently miss feedback on PRs with many threads, comments, or reviews.
-
-Prefer the GraphQL operations documented in `github-pr-review-graphql.md` when this skill is colocated with that reference, or in the repository's review GraphQL reference if stored elsewhere.
 
 ## State Tracking
 
