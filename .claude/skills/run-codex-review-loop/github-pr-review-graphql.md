@@ -6,18 +6,19 @@ Resolvable pull request review threads are GraphQL objects. Do not try to resolv
 
 ## Fetch review threads
 
-```powershell
-gh api graphql `
-  -f owner="OWNER" `
-  -f repo="REPO" `
-  -F pr=123 `
+```bash
+gh api graphql \
+  -f owner="OWNER" \
+  -f repo="REPO" \
+  -F pr=123 \
   -f query='
-query($owner: String!, $repo: String!, $pr: Int!) {
+query($owner: String!, $repo: String!, $pr: Int!, $threadCursor: String) {
   repository(owner: $owner, name: $repo) {
     pullRequest(number: $pr) {
       number
       url
-      reviewThreads(first: 100) {
+      reviewThreads(first: 100, after: $threadCursor) {
+        pageInfo { hasNextPage endCursor }
         nodes {
           id
           isResolved
@@ -25,11 +26,10 @@ query($owner: String!, $repo: String!, $pr: Int!) {
           path
           line
           comments(first: 20) {
+            pageInfo { hasNextPage endCursor }
             nodes {
               id
-              author {
-                login
-              }
+              author { login }
               body
               createdAt
               url
@@ -45,12 +45,39 @@ query($owner: String!, $repo: String!, $pr: Int!) {
 }'
 ```
 
+## Fetch comments for a review thread
+
+```bash
+gh api graphql \
+  -f threadId="THREAD_ID" \
+  -f query='
+query($threadId: ID!, $cursor: String) {
+  node(id: $threadId) {
+    ... on PullRequestReviewThread {
+      comments(first: 20, after: $cursor) {
+        pageInfo { hasNextPage endCursor }
+        nodes {
+          id
+          author { login }
+          body
+          createdAt
+          url
+          path
+          line
+          diffHunk
+        }
+      }
+    }
+  }
+}'
+```
+
 ## Reply to a review thread
 
-```powershell
-gh api graphql `
-  -f threadId="THREAD_ID" `
-  -f body="Fixed in COMMIT_SHA. Summary: ..." `
+```bash
+gh api graphql \
+  -f threadId="THREAD_ID" \
+  -f body="Fixed in COMMIT_SHA. Summary: ..." \
   -f query='
 mutation($threadId: ID!, $body: String!) {
   addPullRequestReviewThreadReply(
@@ -69,9 +96,9 @@ mutation($threadId: ID!, $body: String!) {
 
 ## Resolve a review thread
 
-```powershell
-gh api graphql `
-  -f threadId="THREAD_ID" `
+```bash
+gh api graphql \
+  -f threadId="THREAD_ID" \
   -f query='
 mutation($threadId: ID!) {
   resolveReviewThread(input: { threadId: $threadId }) {
@@ -87,21 +114,20 @@ mutation($threadId: ID!) {
 
 Top-level PR comments are issue comments because every PR is also an issue. Use `gh pr view` or GitHub GraphQL issue comments when needed.
 
-```powershell
-gh api graphql `
-  -f owner="OWNER" `
-  -f repo="REPO" `
-  -F pr=123 `
+```bash
+gh api graphql \
+  -f owner="OWNER" \
+  -f repo="REPO" \
+  -F pr=123 \
   -f query='
-query($owner: String!, $repo: String!, $pr: Int!) {
+query($owner: String!, $repo: String!, $pr: Int!, $commentCursor: String) {
   repository(owner: $owner, name: $repo) {
     pullRequest(number: $pr) {
-      comments(first: 100) {
+      comments(first: 100, after: $commentCursor) {
+        pageInfo { hasNextPage endCursor }
         nodes {
           id
-          author {
-            login
-          }
+          author { login }
           body
           createdAt
           url
@@ -111,6 +137,20 @@ query($owner: String!, $repo: String!, $pr: Int!) {
   }
 }'
 ```
+
+## Pagination
+
+### Review threads
+Paginate `reviewThreads` using `$threadCursor` until `pageInfo.hasNextPage` is `false`. Accumulate all thread nodes before classifying.
+
+### Thread comments
+The initial thread fetch retrieves up to 20 comments per thread inline. If a thread's `comments.pageInfo.hasNextPage` is `true`, use **Fetch comments for a review thread** with that thread's node ID and `comments.pageInfo.endCursor` to retrieve subsequent pages. Each thread requires its own cursor — do not reuse cursors across threads.
+
+### Top-level PR comments
+Paginate `comments` using `$commentCursor` until `pageInfo.hasNextPage` is `false`. Accumulate all comment nodes before classifying.
+
+### General rule
+Do not classify or route feedback from a partial (first-page-only) result set.
 
 ## Author Filtering
 
