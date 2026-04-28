@@ -99,6 +99,36 @@ External dependency: `Chatter.Rest.UriTemplates` v0.1.0 ([NuGet](https://www.nug
 
 See [versioning.md](versioning.md) for full versioning policy, bump rules, and CHANGELOG convention.
 
+## Versioning Configuration
+
+### Packages
+
+| Package | Bump trigger path | Canonical version source | CHANGELOG | Tag prefix |
+|---|---|---|---|---|
+| `Chatter.Rest.Hal` | `src/Chatter.Rest.Hal/**` (non-`.md`) | `src/Chatter.Rest.Hal/Chatter.Rest.Hal.csproj` | `CHANGELOG.md` | `hal` |
+| `Chatter.Rest.Hal.CodeGenerators` | `src/Chatter.Rest.Hal.CodeGenerators/**` (non-`.md`) | `src/Chatter.Rest.Hal.CodeGenerators/Chatter.Rest.Hal.CodeGenerators.csproj` | `CHANGELOG-CodeGenerators.md` | `codegen` |
+
+`src/Chatter.Rest.Hal.Core/**` is a shared internal component (no standalone package). Changes there may trigger a bump in dependent packages if the change propagates through a public API.
+
+### Atomic Version Bump Files
+
+When bumping version `X.Y.Z` for a package, update all of these atomically:
+
+1. `src/<package>/<package>.csproj` — `<Version>X.Y.Z</Version>` (source of truth)
+2. `CLAUDE.md` — Package Versions table row for the package
+3. Package CHANGELOG file — add `## [X.Y.Z] - YYYY-MM-DD` section above `[Unreleased]`; update comparison link at bottom
+
+### Git Tag Format
+
+CI creates annotated tags after each successful deploy to NuGet (post-`main` merge). Tag format:
+
+| Package | Tag format | Example |
+|---|---|---|
+| `Chatter.Rest.Hal` | `hal/vX.Y.Z` | `hal/v1.2.0` |
+| `Chatter.Rest.Hal.CodeGenerators` | `codegen/vX.Y.Z` | `codegen/v0.4.0` |
+
+Tags serve as the version anchor for CI `version-check` validation on future PRs.
+
 ## Memory Usage
 
 - Use `claude-mem` first when prior context, earlier decisions, constraints, risks, or continuity may materially improve accuracy, efficiency, or consistency.
