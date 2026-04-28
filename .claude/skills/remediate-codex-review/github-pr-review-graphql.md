@@ -1,6 +1,6 @@
 # GitHub PR Review GraphQL Reference
 
-Use these GraphQL operations through `gh api graphql` for Codex PR review remediation.
+Use these GraphQL operations for pull request review remediation.
 
 Resolvable pull request review threads are GraphQL objects. Do not try to resolve review threads using REST review-comment IDs.
 
@@ -17,8 +17,6 @@ query($owner: String!, $repo: String!, $pr: Int!) {
     pullRequest(number: $pr) {
       number
       url
-      headRefName
-      baseRefName
       reviewThreads(first: 100) {
         nodes {
           id
@@ -29,7 +27,9 @@ query($owner: String!, $repo: String!, $pr: Int!) {
           comments(first: 20) {
             nodes {
               id
-              author { login }
+              author {
+                login
+              }
               body
               createdAt
               url
@@ -54,9 +54,15 @@ gh api graphql `
   -f query='
 mutation($threadId: ID!, $body: String!) {
   addPullRequestReviewThreadReply(
-    input: { pullRequestReviewThreadId: $threadId, body: $body }
+    input: {
+      pullRequestReviewThreadId: $threadId,
+      body: $body
+    }
   ) {
-    comment { id url }
+    comment {
+      id
+      url
+    }
   }
 }'
 ```
@@ -69,14 +75,17 @@ gh api graphql `
   -f query='
 mutation($threadId: ID!) {
   resolveReviewThread(input: { threadId: $threadId }) {
-    thread { id isResolved }
+    thread {
+      id
+      isResolved
+    }
   }
 }'
 ```
 
 ## Fetch top-level PR comments
 
-Top-level PR comments are issue comments because every PR is also an issue. Use this when Codex leaves non-inline comments.
+Top-level PR comments are issue comments because every PR is also an issue. Use `gh pr view` or GitHub GraphQL issue comments when needed.
 
 ```powershell
 gh api graphql `
@@ -90,7 +99,9 @@ query($owner: String!, $repo: String!, $pr: Int!) {
       comments(first: 100) {
         nodes {
           id
-          author { login }
+          author {
+            login
+          }
           body
           createdAt
           url
@@ -101,15 +112,14 @@ query($owner: String!, $repo: String!, $pr: Int!) {
 }'
 ```
 
-## Request Codex re-review
+## Author Filtering
 
-```powershell
-gh pr comment 123 --body "@codex review the latest changes and verify the prior findings were addressed. Focus only on remaining regressions, missing tests, public API compatibility, security issues, package behavior, versioning/SemVer issues, and HAL/HATEOAS behavior."
-```
+When processing Codex-only feedback, include comments whose author login matches the repository's Codex reviewer identity. If the identity is unclear, report the candidate authors and ask the user before processing non-human or ambiguous reviewers.
 
-## Safety rules
+## Safety Rules
 
-- Resolve only after the fix is committed, pushed, and validated.
-- Include the commit SHA in the reply.
+- Resolve only threads that were actually fixed, pushed, and validated.
+- Reply before resolving.
+- Include commit SHA in the reply when a code change was made.
 - Do not resolve unresolved questions.
-- Do not repeatedly request re-review without new commits or a written rationale.
+- Do not resolve rejected P0/P1, security, public API, compatibility, versioning, or release feedback without user approval unless project policy explicitly permits it.

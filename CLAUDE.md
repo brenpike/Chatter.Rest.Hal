@@ -21,7 +21,7 @@ Chatter.Rest.Hal is a .NET/C# implementation of the HAL (Hypertext Application L
 | [docs/HAL_TEST_PLAN.md](docs/HAL_TEST_PLAN.md) | Spec-to-test mapping; consult when adding tests or evaluating spec compliance |
 | [docs/aspnetcore/requirements.md](docs/aspnetcore/requirements.md) | Package requirements (REQ-01–REQ-37) for `Chatter.Rest.Hal.AspNetCore` |
 | [docs/aspnetcore/architecture.md](docs/aspnetcore/architecture.md) | Architecture, type pseudocode, and test strategy for `Chatter.Rest.Hal.AspNetCore` |
-| [docs/versioning.md](docs/versioning.md) | SemVer rules, bump triggers, CHANGELOG convention, git tag policy |
+| [versioning.md](versioning.md) | SemVer rules, bump triggers, CHANGELOG convention, git tag policy |
 
 ## Solution Structure
 
@@ -41,15 +41,19 @@ This repository uses a constrained multi-agent workflow.
 
 Canonical governance files:
 - `agent-system-policy.md` — shared agent roles, authority, tool policy, escalation, and reporting
-- `branching-pr-workflow.md` — MANDATORY branching, commit, PR, merge, and validation workflow
+- `branching-pr-workflow.md` — mandatory branching, commit, PR, merge, and validation workflow
+- `versioning.md` — mandatory SemVer, release metadata, CHANGELOG, and tag workflow
+- `pr-review-remediation-loop.md` — mandatory external PR review feedback loop
 
 These files must ALWAYS be respected unless the user says otherwise.
 
 Role-specific behavior is defined in:
-- `orchestrator.md`
-- `planner.md`
-- `coder.md`
-- `designer.md`
+- `.claude/agents/orchestrator.md`
+- `.claude/agents/planner.md`
+- `.claude/agents/coder.md`
+- `.claude/agents/designer.md`
+
+Reusable Claude Code workflows are defined in `.claude/skills/`.
 
 ## Build and Test Commands
 
@@ -119,23 +123,7 @@ For code review, debugging, and refactoring:
 2. widen scope only when necessary
 3. validate conclusions with the actual files being changed
 
-## Codex Review Loop
+## PR Feedback Skill Selection
 
-Additional canonical governance files:
-- `pr-review-remediation-loop.md` — mandatory Codex PR review remediation workflow
-- `AGENTS.md` — Codex/OpenAI review guidance
-
-Claude Code agent definitions live under `.claude/agents/`:
-- `.claude/agents/orchestrator.md`
-- `.claude/agents/planner.md`
-- `.claude/agents/coder.md`
-- `.claude/agents/designer.md`
-
-Codex is an external GitHub PR reviewer, not a Claude Code subagent. Claude agents implement and remediate. Codex reviews. The orchestrator coordinates the feedback loop.
-
-Use:
-- `.claude/skills/request-codex-review/SKILL.md` to request initial Codex review
-- `.claude/skills/remediate-codex-review/SKILL.md` to process Codex feedback
-- `pr-review-remediation-loop.md` for mandatory remediation policy
-
-Codex review-thread operations use GitHub GraphQL through `gh api graphql`; do not resolve review threads through REST review-comment IDs.
+- Use `remediate-pr-comment` for generic PR comments or ambiguous reviewer feedback.
+- Use `remediate-codex-review` only for explicit Codex review remediation or Codex re-review loops.
