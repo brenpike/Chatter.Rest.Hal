@@ -186,3 +186,31 @@ Optional lines only when relevant:
 - `States handled: ...`
 - `Commit: ...`
 - `Git issue: ...`
+## External Review Policy
+
+Codex is an external GitHub pull request reviewer, not a Claude Code subagent.
+
+No agent may delegate to Codex as if Codex were part of the Claude agent topology.
+
+The orchestrator owns the Codex review-remediation loop. The loop must follow `pr-review-remediation-loop.md`.
+
+Only the orchestrator may:
+- request Codex review
+- classify Codex feedback for routing
+- reply to Codex review threads
+- resolve Codex review threads
+- request Codex re-review
+
+Workers may fix assigned feedback within explicit file scope, but they must not resolve GitHub review threads unless explicitly delegated by the orchestrator and allowed by policy.
+
+Because no architect agent is included, architecture-style Codex feedback must be routed to planner for analysis and then either escalated to the user or delegated to coder/designer with explicit bounded scope.
+
+### External Review Authority Addendum
+
+| Area | orchestrator | planner | coder | designer |
+|---|---|---|---|---|
+| Codex review request | own | no | no | no |
+| Codex feedback classification | own | recommend when delegated | no | no |
+| Review remediation planning | coordinate | own when delegated | no | no |
+| Review remediation implementation | no | no | own | presentational only |
+| Review-thread replies/resolution | own | no | no | no |

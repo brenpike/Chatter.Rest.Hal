@@ -148,7 +148,7 @@ Examples:
 
 ## Version Bump Policy
 
-A version bump is **required** when a PR changes non-markdown files under a packable package's `src/` directory. See [docs/versioning.md](versioning.md) for the full policy.
+A version bump is **required** when a PR changes non-markdown files under a packable package's `src/` directory. See [versioning.md](versioning.md) for the full policy.
 
 ### When a bump is required
 
@@ -171,7 +171,7 @@ The orchestrator determines the bump type (major/minor/patch) by examining commi
 
 The orchestrator delegates version file edits to the coder agent. The bump is included in the **same PR** as the feature or fix — not a follow-up PR.
 
-Files updated atomically per bump (see [docs/versioning.md](versioning.md) for full list):
+Files updated atomically per bump (see [versioning.md](versioning.md) for full list):
 - `.csproj` `<Version>` element (source of truth)
 - `CLAUDE.md` Package Versions table
 - `docs/architecture.md` solution structure table
@@ -306,3 +306,27 @@ If the orchestrator has not explicitly established:
 then implementation must not begin.
 
 Failure to follow this workflow is a non-compliant execution state and must be treated as a blocker rather than ignored.
+## External Review and Codex Remediation Policy
+
+After a PR is opened, the orchestrator may request Codex review.
+
+Codex review is advisory and external. Codex must not be treated as an internal Claude agent.
+
+Review remediation stays on the same PR branch unless:
+- the feedback is materially outside the approved plan
+- the feedback requires a separate independently shippable change
+- the PR has already been merged or closed
+
+Codex remediation commits are allowed on the existing PR branch when they directly address PR feedback.
+
+The orchestrator remains responsible for:
+- confirming the PR branch is current
+- verifying working tree state before remediation
+- ensuring remediation commits are scoped to review feedback
+- preserving required SemVer/version-bump changes when remediation modifies packable package source
+- pushing remediation commits to the PR branch
+- requesting re-review only after new commits or a clear written rationale
+
+Do not open a new PR solely to address review comments on an active PR unless the feedback is outside the approved plan.
+
+Follow `pr-review-remediation-loop.md` for classification, thread replies, thread resolution, stop conditions, and re-review rules.

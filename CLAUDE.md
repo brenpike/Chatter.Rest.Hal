@@ -93,7 +93,7 @@ See [docs/development.md](docs/development.md) for CI/CD workflow details.
 
 External dependency: `Chatter.Rest.UriTemplates` v0.1.0 ([NuGet](https://www.nuget.org/packages/Chatter.Rest.UriTemplates/))
 
-See [docs/versioning.md](docs/versioning.md) for full versioning policy, bump rules, and CHANGELOG convention.
+See [versioning.md](versioning.md) for full versioning policy, bump rules, and CHANGELOG convention.
 
 ## Memory Usage
 
@@ -118,3 +118,24 @@ For code review, debugging, and refactoring:
 1. start with the smallest local inspection that can answer the question
 2. widen scope only when necessary
 3. validate conclusions with the actual files being changed
+
+## Codex Review Loop
+
+Additional canonical governance files:
+- `pr-review-remediation-loop.md` — mandatory Codex PR review remediation workflow
+- `AGENTS.md` — Codex/OpenAI review guidance
+
+Claude Code agent definitions live under `.claude/agents/`:
+- `.claude/agents/orchestrator.md`
+- `.claude/agents/planner.md`
+- `.claude/agents/coder.md`
+- `.claude/agents/designer.md`
+
+Codex is an external GitHub PR reviewer, not a Claude Code subagent. Claude agents implement and remediate. Codex reviews. The orchestrator coordinates the feedback loop.
+
+Use:
+- `.claude/skills/request-codex-review/SKILL.md` to request initial Codex review
+- `.claude/skills/remediate-codex-review/SKILL.md` to process Codex feedback
+- `pr-review-remediation-loop.md` for mandatory remediation policy
+
+Codex review-thread operations use GitHub GraphQL through `gh api graphql`; do not resolve review threads through REST review-comment IDs.

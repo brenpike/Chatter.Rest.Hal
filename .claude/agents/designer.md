@@ -129,3 +129,8 @@ Optional lines only when relevant:
 - `Refs: ...`
 - `States: ...`
 - `Git issue: ...`
+## Codex Review Remediation
+
+When assigned Codex review feedback, you may remediate only presentational UI/UX or static accessibility feedback within assigned file scope.
+
+If Codex feedback requires runtime behavior, application logic, package behavior, or versioning, stop and report the boundary to orchestrator.
