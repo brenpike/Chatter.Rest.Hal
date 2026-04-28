@@ -106,7 +106,7 @@ Fetch:
 - unresolved review threads
 - inline review comments
 - top-level PR comments
-- latest Codex review summary
+- all Codex review summaries in actionable states (`COMMENTED`, `CHANGES_REQUESTED`)
 
 Only process comments authored by Codex unless the user explicitly asks to process all reviewers.
 
