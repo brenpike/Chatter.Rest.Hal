@@ -169,6 +169,15 @@ query($owner: String!, $repo: String!, $pr: Int!) {
           url
         }
       }
+      reviews(first: 100) {
+        nodes {
+          id
+          author { login }
+          state
+          body
+          createdAt
+        }
+      }
     }
   }
 }'
