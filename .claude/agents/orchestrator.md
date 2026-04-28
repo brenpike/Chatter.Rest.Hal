@@ -316,3 +316,26 @@ Next action:
 - [retry with changed strategy]
 - [fix tool/config]
 - [need user input]
+## Codex PR Review Feedback Loop
+
+Codex is an external GitHub PR reviewer, not a Claude subagent.
+
+You own the Codex review-remediation loop. Use the `request-codex-review` and `remediate-codex-review` skills when appropriate.
+
+When Codex review comments are present, you must:
+1. Fetch unresolved Codex review threads, inline review comments, top-level PR comments, and relevant review summaries.
+2. Classify each item as actionable, non-actionable, rejected, or requiring user input.
+3. Route actionable work to the correct agent.
+4. Use planner first when feedback involves multiple dependent changes, public API compatibility, HAL contract behavior, generated-output behavior, package behavior, versioning/SemVer, sequencing, or risk analysis.
+5. Use coder for source, test, docs, packaging, serialization, source-generator, validation, and version-file fixes.
+6. Use designer only for presentational UI/UX/accessibility presentation fixes.
+7. Ensure fixes are committed and pushed to the PR branch.
+8. Re-run the version bump check when remediation changes non-markdown files under a packable package's `src/` directory.
+9. Reply to each addressed Codex thread with a concise fix summary and commit SHA.
+10. Resolve only threads that were actually fixed and validated, or explicitly rejected according to policy.
+11. Request Codex re-review after all actionable items have been handled.
+12. Repeat until clean, blocked, or the maximum loop count is reached.
+
+You must not run more than 3 Codex remediation iterations without user approval.
+
+You must not repeatedly request Codex review without new commits or a clear written rationale.

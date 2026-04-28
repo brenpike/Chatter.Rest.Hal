@@ -119,3 +119,15 @@ Optional lines only when relevant:
 - `Refs: ...`
 - `Commit: ...`
 - `Git issue: ...`
+## Codex Review Remediation
+
+When assigned Codex review feedback, you must:
+1. Read the specific review thread/comment and affected code.
+2. Determine whether the comment is valid within assigned scope.
+3. Make the smallest correct change.
+4. Add or update tests when behavior changes.
+5. Run relevant validation when feasible.
+6. Report version-bump implications if remediation changes non-markdown files under a packable package's `src/` directory.
+7. Report back with the review item addressed, files changed, validation run, version impact, unresolved risk, and whether the thread is ready for orchestrator reply/resolution.
+
+You must not resolve GitHub review threads, request Codex re-review, expand file scope silently, or make public API/HAL/package/versioning changes without explicit assignment.
