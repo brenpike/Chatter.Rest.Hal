@@ -12,12 +12,16 @@ gh api graphql `
   -f repo="REPO" `
   -F pr=123 `
   -f query='
-query($owner: String!, $repo: String!, $pr: Int!) {
+query($owner: String!, $repo: String!, $pr: Int!, $after: String) {
   repository(owner: $owner, name: $repo) {
     pullRequest(number: $pr) {
       number
       url
-      reviewThreads(first: 100) {
+      reviewThreads(first: 100, after: $after) {
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
         nodes {
           id
           isResolved
@@ -44,6 +48,8 @@ query($owner: String!, $repo: String!, $pr: Int!) {
   }
 }'
 ```
+
+If `pageInfo.hasNextPage` is `true`, repeat the query with `-F after="END_CURSOR"` (using the `endCursor` value) until `hasNextPage` is `false`.
 
 ## Reply to a review thread
 
@@ -93,10 +99,14 @@ gh api graphql `
   -f repo="REPO" `
   -F pr=123 `
   -f query='
-query($owner: String!, $repo: String!, $pr: Int!) {
+query($owner: String!, $repo: String!, $pr: Int!, $after: String) {
   repository(owner: $owner, name: $repo) {
     pullRequest(number: $pr) {
-      comments(first: 100) {
+      comments(first: 100, after: $after) {
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
         nodes {
           id
           author {
@@ -104,6 +114,42 @@ query($owner: String!, $repo: String!, $pr: Int!) {
           }
           body
           createdAt
+          url
+        }
+      }
+    }
+  }
+}'
+```
+
+If `pageInfo.hasNextPage` is `true`, repeat the query with `-F after="END_CURSOR"` (using the `endCursor` value) until `hasNextPage` is `false`.
+
+## Fetch review summaries
+
+Review summaries are distinct from inline review thread comments. A `PullRequestReview` contains a top-level `body` submitted alongside the review verdict. These are accessed through the `reviews` connection on a pull request, not through `reviewThreads` or `comments`. The `state` field indicates the review verdict: `APPROVED`, `CHANGES_REQUESTED`, `COMMENTED`, or `DISMISSED`.
+
+```powershell
+gh api graphql `
+  -f owner="OWNER" `
+  -f repo="REPO" `
+  -F pr=123 `
+  -f query='
+query($owner: String!, $repo: String!, $pr: Int!) {
+  repository(owner: $owner, name: $repo) {
+    pullRequest(number: $pr) {
+      reviews(first: 100) {
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+        nodes {
+          id
+          author {
+            login
+          }
+          body
+          state
+          submittedAt
           url
         }
       }
