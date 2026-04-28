@@ -36,7 +36,7 @@ The orchestrator must check:
 - unresolved pull request review threads
 - inline pull request review comments
 - top-level PR comments
-- review summaries with state `COMMENTED` or `CHANGES_REQUESTED` (exclude `APPROVED`, `DISMISSED`)
+- requested-changes review summaries
 - CI failures when relevant to the review feedback
 
 ## Feedback Classification
@@ -150,3 +150,40 @@ Use the narrowest matching skill for the user's request.
 - Use `remediate-codex-review` only for explicit Codex review feedback, Codex review threads, Codex re-review, or the bounded Codex review remediation loop.
 
 Ambiguous requests such as `fix PR comment on PR #80` must not trigger the Codex loop by default.
+
+
+## Monitoring and Monitor-Based Review Handling
+
+A remediation skill is not a monitor. It handles feedback that is already known or fetched during a remediation pass.
+
+Use `watch-pr-feedback` only when the user explicitly asks to watch, monitor, wait for, poll, loop on, or continue handling new comments as they appear.
+
+Preferred active-watch pattern:
+
+```text
+/loop /watch-pr-feedback PR #[number] Codex-only max 3 cycles
+```
+
+When invoked through dynamic `/loop`, the watch flow should prefer Monitor when available so the session can react to review activity without repeatedly re-running a full polling prompt.
+
+Allowed monitoring patterns:
+- manual one-shot remediation
+- active dynamic `/loop` watch using Monitor when available
+- fixed-interval scheduled checks when Monitor is unavailable
+- Desktop scheduled task when local recurring checks are needed
+- remote routine or GitHub-triggered automation for durable unattended handling
+
+Monitoring must be bounded by:
+- max remediation cycles
+- max speculative fix attempts per thread
+- PR state
+- user decision requirements
+- repeated-finding stop conditions
+- unsafe git state
+- API/tool failure handling
+
+The monitor must not directly implement fixes. It must route to the appropriate remediation skill:
+- `remediate-pr-comment` for generic or human PR feedback
+- `remediate-codex-review` for explicit Codex loop remediation
+
+If Monitor, `/loop`, or scheduling support is unavailable, the orchestrator must fall back to manual remediation or return `blocked`.

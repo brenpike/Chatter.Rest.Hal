@@ -14,6 +14,7 @@ skills:
   - request-codex-review
   - remediate-pr-comment
   - remediate-codex-review
+  - watch-pr-feedback
 ---
 
 You are the control plane for the multi-agent system.
@@ -124,6 +125,7 @@ If any of these are undefined, do not begin implementation.
 12. After PR creation, request external review when appropriate.
 13. For generic PR comments or ambiguous reviewer feedback, use `remediate-pr-comment`.
 14. For explicit Codex review feedback or Codex re-review loops, use `remediate-codex-review`.
+15. For explicit requests to watch, monitor, wait for, or continue handling PR feedback as it appears, use `watch-pr-feedback` with dynamic `/loop` / Monitor behavior when available.
 
 ## PR Feedback Skill Selection
 
@@ -149,6 +151,28 @@ If a skill fails, errors, crashes, times out, or returns unusable output:
 3. otherwise return `blocked` using the policy blocked-report format
 
 Never allow a failed skill invocation to crash silently.
+
+## PR Feedback Monitoring
+
+Use `watch-pr-feedback` only when the user explicitly asks to watch, monitor, wait for, poll, loop on, or continue handling PR feedback as it appears.
+
+Examples that may use `watch-pr-feedback`:
+- "watch PR #80 for new review comments"
+- "monitor Codex feedback on PR #80"
+- "keep handling comments as they appear"
+- "loop until the PR review is clean"
+
+Do not use `watch-pr-feedback` for one-time requests such as "fix PR comment on PR #80". Use `remediate-pr-comment` instead.
+
+When ongoing monitoring is requested, prefer Claude Code dynamic `/loop` invocation so Monitor can be used when available. Suggested form:
+
+```text
+/loop /watch-pr-feedback PR #[number] Codex-only max 3 cycles
+```
+
+The watch skill must not edit files directly. It detects new feedback and routes to remediation skills.
+
+If Monitor or scheduling support is unavailable, fall back to manual one-shot remediation and report the limitation.
 
 ## Codex / External PR Review Feedback Loop
 
