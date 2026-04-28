@@ -12,7 +12,7 @@ gh api graphql `
   -f repo="REPO" `
   -F pr=123 `
   -f query='
-query($owner: String!, $repo: String!, $pr: Int!, $after: String) {
+query($owner: String!, $repo: String!, $pr: Int!, $after: String, $commentsAfter: String) {
   repository(owner: $owner, name: $repo) {
     pullRequest(number: $pr) {
       number
@@ -28,7 +28,11 @@ query($owner: String!, $repo: String!, $pr: Int!, $after: String) {
           isOutdated
           path
           line
-          comments(first: 20) {
+          comments(first: 20, after: $commentsAfter) {
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
             nodes {
               id
               author {
@@ -50,6 +54,8 @@ query($owner: String!, $repo: String!, $pr: Int!, $after: String) {
 ```
 
 If `pageInfo.hasNextPage` is `true`, repeat the query with `-F after="END_CURSOR"` (using the `endCursor` value) until `hasNextPage` is `false`.
+
+To paginate comments within a thread, repeat the query with `-F commentsAfter="END_CURSOR"` (using the comments `pageInfo.endCursor` value) until `pageInfo.hasNextPage` is `false`.
 
 ## Reply to a review thread
 
@@ -134,10 +140,10 @@ gh api graphql `
   -f repo="REPO" `
   -F pr=123 `
   -f query='
-query($owner: String!, $repo: String!, $pr: Int!) {
+query($owner: String!, $repo: String!, $pr: Int!, $after: String) {
   repository(owner: $owner, name: $repo) {
     pullRequest(number: $pr) {
-      reviews(first: 100) {
+      reviews(first: 100, after: $after) {
         pageInfo {
           hasNextPage
           endCursor
@@ -157,6 +163,8 @@ query($owner: String!, $repo: String!, $pr: Int!) {
   }
 }'
 ```
+
+If `pageInfo.hasNextPage` is `true`, repeat the query with `-F after="END_CURSOR"` (using the `endCursor` value) until `hasNextPage` is `false`.
 
 ## Author Filtering
 
