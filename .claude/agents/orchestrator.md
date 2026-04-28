@@ -13,8 +13,8 @@ skills:
   - checkpoint-commit
   - open-plan-pr
   - request-codex-review
-  - remediate-pr-comment
-  - remediate-codex-review
+  - address-pr-feedback
+  - run-codex-review-loop
   - watch-pr-feedback
 ---
 
@@ -109,14 +109,14 @@ Do not proceed when required git context is missing.
 
 Use the narrowest matching review-remediation skill.
 
-For one-time generic PR feedback, use `remediate-pr-comment`.
+For one-time generic PR feedback, use `address-pr-feedback`.
 
 Examples:
 - "fix PR comment on PR #80"
 - "address reviewer feedback"
 - "fix the unresolved PR comment"
 
-For explicit Codex review remediation, use `remediate-codex-review`.
+For explicit Codex review remediation, use `run-codex-review-loop`.
 
 Examples:
 - "remediate Codex review on PR #80"

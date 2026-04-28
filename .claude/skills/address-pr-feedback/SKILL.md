@@ -1,5 +1,5 @@
 ---
-name: remediate-pr-comment
+name: address-pr-feedback
 description: Fix a specific generic GitHub PR comment or reviewer comment on an existing pull request. Use for non-Codex or ambiguous PR feedback requests.
 disable-model-invocation: false
 allowed-tools:
@@ -21,7 +21,7 @@ allowed-tools:
 shell: powershell
 ---
 
-# Remediate PR Comment
+# Address PR Feedback
 
 Fix a specific GitHub PR comment or reviewer comment.
 
@@ -31,7 +31,7 @@ Use this skill for requests like:
 - "fix the unresolved comment on my PR"
 - "handle the comment from reviewer X"
 
-Do not use this skill for the full Codex review loop. Use `remediate-codex-review` only when the user explicitly asks for Codex review remediation.
+Do not use this skill for the full Codex review loop. Use `run-codex-review-loop` only when the user explicitly asks for Codex review remediation.
 
 Follow:
 - `agent-system-policy.md`

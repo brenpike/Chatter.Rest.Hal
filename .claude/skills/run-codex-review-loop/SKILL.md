@@ -1,5 +1,5 @@
 ---
-name: remediate-codex-review
+name: run-codex-review-loop
 description: Run the bounded Codex GitHub PR review remediation loop only when the user explicitly asks to handle Codex review feedback, Codex review threads, or Codex re-review.
 disable-model-invocation: false
 allowed-tools:
@@ -38,7 +38,7 @@ Do not use this skill for generic PR comments, generic reviewer comments, human 
 - "address review feedback"
 - "fix the reviewer comment"
 
-For generic or ambiguous PR feedback, use `remediate-pr-comment` if available.
+For generic or ambiguous PR feedback, use `address-pr-feedback` if available.
 
 If this skill was invoked for a generic or ambiguous PR feedback request, stop and return:
 
@@ -50,7 +50,7 @@ Retry status: not attempted
 Fallback used: none
 Impact: Cannot safely run the Codex review loop for a non-Codex-specific request.
 Next action:
-- Use `remediate-pr-comment`
+- Use `address-pr-feedback`
 - Or ask the user whether they meant Codex review feedback
 ```
 
@@ -106,7 +106,7 @@ Fetch:
 - unresolved review threads
 - inline review comments
 - top-level PR comments
-- all Codex review summaries in actionable states (`COMMENTED`, `CHANGES_REQUESTED`)
+- latest Codex review summary
 
 Only process comments authored by Codex unless the user explicitly asks to process all reviewers.
 

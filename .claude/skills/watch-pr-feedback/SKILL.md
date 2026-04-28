@@ -33,8 +33,8 @@ Do not use this skill for one-time requests like:
 - "fix PR comment on PR #80"
 - "address the reviewer comment on PR #80"
 
-Use `remediate-pr-comment` for one-time generic PR comment remediation.
-Use `remediate-codex-review` for explicit Codex review remediation.
+Use `address-pr-feedback` for one-time generic PR comment remediation.
+Use `run-codex-review-loop` for explicit Codex review remediation.
 
 ## Required Inputs
 
@@ -183,7 +183,6 @@ Prefer the GraphQL operations documented in `github-pr-review-graphql.md` when t
 Maintain a session-local ledger of:
 - seen comment IDs
 - seen review thread IDs
-- seen review summary IDs
 - comments already remediated
 - comments skipped as non-actionable
 - comments requiring user input
@@ -213,11 +212,11 @@ Classify new feedback as:
 ## Routing
 
 For new Codex review feedback:
-- invoke `remediate-codex-review` only if the user requested Codex loop behavior
-- otherwise invoke `remediate-pr-comment`
+- invoke `run-codex-review-loop` only if the user requested Codex loop behavior
+- otherwise invoke `address-pr-feedback`
 
 For generic or human reviewer feedback:
-- invoke `remediate-pr-comment`
+- invoke `address-pr-feedback`
 
 If multiple unrelated comments arrive at once:
 - group them into one remediation batch only when safe
@@ -277,8 +276,8 @@ Watch:
 - New actionable comments:
 
 Routed:
-- remediate-pr-comment: [count]
-- remediate-codex-review: [count]
+- address-pr-feedback: [count]
+- run-codex-review-loop: [count]
 - None
 
 Stopped because:
