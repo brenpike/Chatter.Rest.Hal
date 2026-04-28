@@ -135,12 +135,17 @@ For actionable feedback:
 
 ### 7. Reply
 
-After the fix is committed and pushed, reply to the PR comment or review thread with:
-- concise fix summary
-- validation run
-- commit SHA
+After the fix is committed and pushed, post a reply appropriate to the feedback source type:
 
-Do not resolve a review thread unless policy allows it and the fix is actually pushed and validated.
+**Review thread (inline or conversation thread):**
+- Reply directly to the review thread with concise fix summary, validation run, and commit SHA.
+- Do not resolve the thread unless policy allows it and the fix is actually pushed and validated.
+
+**Top-level PR comment (issue comment):**
+- Post a reply using `gh pr comment` with concise fix summary, validation run, and commit SHA.
+
+**Review summary (`PullRequestReview` with `CHANGES_REQUESTED` or `COMMENTED` state, no inline thread):**
+- Post a PR-level acknowledgement comment using `gh pr comment` referencing the review author and review state, with concise fix summary, validation run, and commit SHA. Review summaries cannot be resolved as threads.
 
 Do not request Codex re-review from this skill unless the user explicitly asks.
 
