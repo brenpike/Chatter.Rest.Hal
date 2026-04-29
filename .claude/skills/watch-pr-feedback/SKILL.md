@@ -14,44 +14,46 @@ shell: powershell
 
 # Watch PR Feedback
 
-Watch a specific GitHub pull request for new unresolved review feedback.
+Watch a specific PR for new unresolved review feedback and route to remediation skills.
 
-This skill detects feedback and routes to remediation skills. It does not directly edit files, commit, push, reply, resolve threads, approve PRs, or merge PRs.
+This skill detects and routes. It must not directly edit files, commit, push, reply, resolve threads, approve PRs, or merge PRs.
+
+Follow:
+
+- `agent-system-policy.md`
+- `pr-review-remediation-loop.md`
+- `.claude/references/github-pr-review-graphql.md`
 
 ## Invocation Boundary
 
-Use this skill only when the user explicitly asks to:
-- watch a PR for comments
-- monitor review feedback
-- keep checking for new comments
-- continue the review loop as comments appear
-- wait for Codex review feedback
-- loop until review is clean
+Use only when the user explicitly asks to:
+
+- watch or monitor PR comments
+- wait for review feedback
+- poll/check repeatedly
+- keep handling feedback as it appears
+- loop on Codex/human review feedback
 - use Monitor for PR feedback
 
-Do not use this skill for one-time requests like:
-- "fix PR comment on PR #80"
-- "address the reviewer comment on PR #80"
-
-Use `address-pr-feedback` for one-time generic PR comment remediation.
-Use `run-codex-review-loop` for explicit Codex review remediation.
+Do not use for one-time requests like `fix PR comment on PR #N`; use `address-pr-feedback`.
 
 ## Required Inputs
 
 At minimum:
+
 - PR number or PR URL
 
 Optional:
+
 - reviewer filter: Codex-only | all reviewers | specific author
 - max watch duration
 - polling interval
 - max remediation cycles
-- whether to stop on human-reviewer comments
-- whether to stop on P0/P1 findings
+- stop-on-human-reviewer-comments
+- stop-on-P0/P1-findings
 
-## Safety Defaults
+## Defaults
 
-If not specified:
 - reviewer filter: Codex-only after a Codex review request; otherwise all unresolved comments
 - max remediation cycles: 3
 - max speculative fix attempts per thread: 1
@@ -61,170 +63,48 @@ If not specified:
 - stop on unsafe git state
 - do not merge PR
 - do not approve PR
-- do not claim active monitoring unless Monitor or another real background trigger starts successfully
 
-## Monitor Requirement
+## Procedure
 
-Use `Monitor` for active watch behavior when available.
+1. Confirm PR exists and is open using `gh pr view --json state --jq .state`.
+2. Confirm GitHub CLI access works.
+3. Confirm current branch and working tree state.
+4. Start Monitor when available using one deterministic, read-only feedback-detection command based on `.claude/references/github-pr-review-graphql.md`.
+5. Track seen comment/thread/review IDs in a session-local ledger.
+6. When new feedback appears, classify source:
+   - Codex feedback
+   - human reviewer feedback
+   - CI/system feedback
+   - ambiguous
+7. Route:
+   - explicit Codex loop request → `run-codex-review-loop`
+   - generic/human/ambiguous feedback → `address-pr-feedback`
+8. Stop on policy stop conditions.
 
-A Monitor-backed watch may run a safe GitHub CLI polling command that emits output only when relevant PR review feedback changes.
+## Monitor Rules
 
-The monitored command must be read-only.
+Monitor commands must be:
 
-Allowed monitored actions:
-- inspect PR state
-- inspect unresolved review threads
-- inspect PR comments
-- inspect review comments
-- emit newly detected comment/thread identifiers
+- read-only
+- deterministic
+- bounded
+- parser-stable
+- based on `gh --json/--jq` or `gh api graphql --jq`
 
-Disallowed monitored actions:
-- edit files
-- commit
-- push
-- reply to comments
-- resolve review threads
-- request re-review
-- approve or merge PRs
+Do not probe or fallback through Python, Node, standalone `jq`, PowerShell, or shell translations.
 
-## Monitoring Truthfulness Rule
+If Monitor startup or parser strategy fails:
 
-Do not say:
-- "watching"
-- "ping on next comment"
-- "monitoring"
-- "I will catch the next comment"
-- "I will notify you when the next comment appears"
-
-unless a Monitor, scheduled task, routine, channel, or other real background trigger has been successfully created.
-
-If Monitor is unavailable, not exposed, denied, or fails to start, report:
-
-```text
-Status: complete | blocked
-Mode: manual
-Monitoring: not active
-Next action:
-- User must invoke this skill again when new feedback appears
-```
-
-Do not imply ongoing background work is happening in manual mode.
-
-## Monitor Startup
-
-When active monitoring is requested:
-
-1. Confirm the PR exists.
-2. Confirm the PR is open.
-3. Confirm GitHub CLI access works.
-4. Confirm the current branch and working tree state.
-5. Start Monitor with a read-only feedback-detection command.
-6. Report whether monitoring started successfully.
-
-If Monitor startup fails:
-1. retry once if the failure appears transient
-2. fall back to one manual feedback check
+1. retry once only if transient
+2. perform one manual feedback check when safe
 3. report `Monitoring: not active`
 
-## Suggested Monitor Command Shape
+Do not start a second Monitor with a different parser strategy unless the user explicitly approves.
 
-The exact command may vary by shell and repository, but it must be read-only and should emit stable identifiers for newly observed feedback.
+## State Ledger
 
-Conceptual shape:
+Track session-local:
 
-```bash
-START=$(date +%s)
-MAX_SECONDS=14400  # 4 hours
-SEEN_IDS=""
-
-while true; do
-  # Break if elapsed time exceeds max watch duration
-  NOW=$(date +%s)
-  if [ $((NOW - START)) -ge $MAX_SECONDS ]; then
-    echo "Max watch duration (4 hours) exceeded. Stopping."
-    break
-  fi
-
-  RESULT=$(gh api graphql \
-    -f owner="OWNER" \
-    -f repo="REPO" \
-    -F pr=123 \
-    -f query='
-query($owner: String!, $repo: String!, $pr: Int!) {
-  repository(owner: $owner, name: $repo) {
-    pullRequest(number: $pr) {
-      state
-      reviewThreads(first: 100) {
-        pageInfo { hasNextPage endCursor }
-        nodes {
-          id
-          isResolved
-          isOutdated
-          path
-          line
-          comments(first: 20) {
-            pageInfo { hasNextPage endCursor }
-            nodes {
-              id
-              author { login }
-              body
-              createdAt
-              url
-            }
-          }
-        }
-      }
-      comments(first: 100) {
-        pageInfo { hasNextPage endCursor }
-        nodes {
-          id
-          author { login }
-          body
-          createdAt
-          url
-        }
-      }
-      reviews(first: 100) {
-        pageInfo { hasNextPage endCursor }
-        nodes {
-          id
-          author { login }
-          state
-          body
-          createdAt
-        }
-      }
-    }
-  }
-}' 2>&1) || { echo "FETCH_ERROR"; sleep 60; continue; }
-
-  # Break if PR is no longer open
-  PR_STATE=$(echo "$RESULT" | grep -o '"state":"[^"]*"' | head -1 | cut -d'"' -f4)
-  if [ "$PR_STATE" != "OPEN" ]; then
-    echo "PR state is $PR_STATE. Stopping."
-    break
-  fi
-
-  # Collect all IDs (threads, comments, reviews)
-  CURRENT_IDS=$(echo "$RESULT" | grep -o '"id":"[^"]*"' | cut -d'"' -f4 | sort -u)
-
-  # Emit output only when new IDs are detected
-  for ID in $CURRENT_IDS; do
-    if ! echo "$SEEN_IDS" | grep -qw "$ID"; then
-      echo "NEW_FEEDBACK: $ID"
-      SEEN_IDS="$SEEN_IDS $ID"
-    fi
-  done
-
-  sleep 60
-done
-```
-
-> **Pagination requirement:** Implementations must iterate each paginated connection (`reviewThreads`, thread `comments`, top-level `comments`, and `reviews`) until `hasNextPage` is `false` before classifying watch results. Failing to page will silently miss feedback on PRs with many threads, comments, or reviews.
-
-## State Tracking
-
-Maintain a session-local ledger of:
 - seen comment IDs
 - seen review thread IDs
 - comments already remediated
@@ -233,73 +113,7 @@ Maintain a session-local ledger of:
 - remediation cycle count
 - monitor startup status
 
-Do not reprocess the same comment unless:
-- the thread received a new reply
-- the comment became unresolved again
-- the user explicitly asks to retry
-
-## Feedback Fetch
-
-Use GitHub CLI / GraphQL to fetch:
-- PR state
-- unresolved review threads
-- review comments
-- top-level PR comments
-- review summaries when available
-
-Classify new feedback as:
-- Codex feedback
-- human reviewer feedback
-- CI/system feedback
-- ambiguous
-
-## Routing
-
-For new Codex review feedback:
-- invoke `run-codex-review-loop` only if the user requested Codex loop behavior
-- otherwise invoke `address-pr-feedback`
-
-For generic or human reviewer feedback:
-- invoke `address-pr-feedback`
-
-If multiple unrelated comments arrive at once:
-- group them into one remediation batch only when safe
-- otherwise stop and summarize candidate items
-
-## Stop Conditions
-
-Stop when:
-- PR is merged or closed
-- no new actionable feedback appears before the watch limit
-- max remediation cycles is reached
-- feedback requires user input
-- feedback requires an out-of-scope architecture/product decision
-- the same finding repeats after attempted remediation
-- unsafe git state is detected
-- remediation skill returns blocked
-- GitHub API access fails after one retry
-- Monitor fails or exits unexpectedly and no safe fallback exists
-
-## Failure Contract
-
-This skill must not crash or wait silently.
-
-If a fetch, parse, skill invocation, Monitor startup, Monitor runtime, or GitHub API call fails:
-1. retry once if transient
-2. use a safe fallback when available
-3. otherwise return blocked
-
-Blocked format:
-
-```text
-Status: blocked
-Stage: watch | monitor-start | monitor-runtime | fetch | classify | route | remediation
-Blocker: [one-line reason]
-Retry status: [not attempted | retried once | exhausted]
-Impact: [what cannot proceed]
-Next action:
-- [specific next step]
-```
+Do not reprocess the same item unless new activity appears or the user explicitly asks to retry.
 
 ## Output
 
@@ -315,6 +129,7 @@ PR:
 Watch:
 - Mode: Monitor | scheduled | manual
 - Monitoring: active | not active
+- Parser: gh --jq | other-approved | unavailable
 - Cycles:
 - Seen comments:
 - New actionable comments:
@@ -335,3 +150,5 @@ Issues:
 - [issue]
 - None
 ```
+
+Use the blocked report contract from `agent-system-policy.md` for blocked states.

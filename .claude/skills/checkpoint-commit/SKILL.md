@@ -14,20 +14,33 @@ shell: powershell
 
 Create a checkpoint commit for the current approved plan.
 
-Requirements:
-1. Confirm the current branch name.
-2. Review the staged and unstaged diff.
-3. Stage only the files that belong to the completed phase, approved milestone, version bump, or review remediation item.
-4. Create a clear commit message using conventional-style format.
-5. Return:
-   - branch name
-   - commit hash
-   - commit message
-   - files included
-   - any warnings
+Follow `branching-pr-workflow.md`.
 
-Do not:
+## Requirements
+
+1. Confirm current branch is not `main`.
+2. Review staged and unstaged diff.
+3. Stage only files that belong to the completed phase, milestone, version bump, or review-remediation item.
+4. Create a clear conventional-style commit message.
+
+## Do Not
+
 - create a branch
 - push
 - open a PR
 - include unrelated files
+- commit on `main`
+
+## Output
+
+```text
+Status: complete | blocked
+Branch:
+Commit:
+Message:
+Files included:
+- [file]
+Warnings:
+- [warning]
+- None
+```

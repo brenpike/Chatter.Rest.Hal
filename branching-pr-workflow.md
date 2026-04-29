@@ -4,131 +4,98 @@
 
 This repository follows trunk-based development. The canonical trunk is `main`.
 
-This workflow is mandatory for all agent activity unless the user explicitly overrides it for a specific task. It is not optional guidance.
+This workflow is mandatory for all agent activity unless the user explicitly overrides it for a specific task.
 
-The approved plan is the unit of:
-- branch ownership
-- implementation execution
-- checkpoint-commit decisions
-- pull request submission
-- external review remediation
+The approved plan is the unit of branch ownership, execution, checkpoint-commit decisions, PR submission, and external review remediation.
 
 ## Non-Optional Rules
 
 1. Never commit directly to `main`.
 2. Never push directly to `main`.
-3. All changes must be developed on a non-`main` working branch.
+3. Develop all changes on a non-`main` working branch.
 4. One approved plan = one working branch by default.
-5. One successfully completed plan = one pull request by default.
-6. PRs target `main` unless the user explicitly instructs otherwise.
+5. One completed approved plan = one PR by default.
+6. PRs target `main` unless the user explicitly says otherwise.
 7. Merges to `main` use squash merge.
-8. Direct pushes to other non-protected working branches are allowed when they are part of the approved workflow, but checkpoint-commit policy still applies.
-
-## Trunk-Based Development Standard
-
-### Trunk
-- The trunk branch is `main`.
-- `main` must remain deployable and stable.
-- Work is integrated through short-lived branches and pull requests.
-- Long-lived feature branches are discouraged.
-- Release branches are not part of the default workflow.
-
-### Protected Branches
-- `main` is protected.
-- Branch protection rules reinforce this workflow, but agents must follow this workflow even if technical protections are absent or misconfigured.
+8. Main must remain stable and deployable.
 
 ## Branch Taxonomy
 
-Use exactly one of these prefixes:
+Use exactly one prefix:
 
-- `feature/<topic>` for new user-facing or internal features
-- `bugfix/<topic>` for defect fixes that are not emergency production hotfixes
-- `hotfix/<topic>` for urgent production fixes
-- `refactor/<topic>` for structural code improvement without intended behavior change
-- `chore/<topic>` for maintenance tasks
-- `docs/<topic>` for documentation-only work
-- `test/<topic>` for test-only work
-- `ci/<topic>` for CI/CD or workflow changes
+- `feature/<topic>` — features or new capabilities
+- `bugfix/<topic>` — non-emergency defects
+- `hotfix/<topic>` — urgent production fixes
+- `refactor/<topic>` — structural improvement without intended behavior change
+- `chore/<topic>` — maintenance
+- `docs/<topic>` — documentation-only
+- `test/<topic>` — test-only
+- `ci/<topic>` — CI/CD or workflow changes
 
-## Branch Naming Rules
-
-### Format
-Use one of these formats:
+Branch format:
 
 - `<prefix>/<topic>`
 - `<prefix>/<ticket>-<topic>`
 
-Examples:
-- `feature/add-resource-builder`
-- `bugfix/123-fix-null-serialization`
-- `hotfix/456-restore-package-publish`
-- `ci/update-build-workflow`
+Naming constraints:
 
-### Naming constraints
 - lowercase only
 - numbers allowed
 - words separated by hyphens
 - no spaces
 - no underscores
 - no extra slashes beyond the prefix separator
-
-### Ticket IDs
-- If a ticket or issue identifier exists, include it in the branch name.
-- If no ticket exists, omit it.
+- include ticket/issue ID when one exists
 
 ## Plan-to-Branch Mapping
 
-### Default
-One approved plan maps to one working branch.
+Default: one approved plan maps to one branch and one PR.
 
-### Exceptions
-Only allow multiple branches or PRs for one user request when the planner explicitly decomposes the work into independently reviewable and independently shippable plans.
+Use multiple branches/PRs only when the planner explicitly decomposes the request into independently reviewable and independently shippable plans.
 
-If the planner does not explicitly split the work, assume exactly one branch and one PR.
+## Required Git Preflight
 
-## Branch Creation
+Before implementation begins, the orchestrator must define:
 
-### When a branch is created
-Create the working branch only after:
-- the planner has returned a complete plan
-- the planner's open questions are `None`
-- the orchestrator has accepted the plan
-- implementation is ready to begin
-
-### Branch authority and required decisions
-The orchestrator creates or explicitly confirms the working branch.
-
-Before implementation begins, all of the following must be explicitly defined:
 - work classification
 - base branch
 - working branch name
+- whether the branch exists or must be created
 - whether worktrees are used
-- whether checkpoint commits are expected during execution
-- intended PR target branch
+- checkpoint commit policy
+- intended PR target
 
 If any item is undefined, implementation must not begin.
 
+## Branch Creation
+
+The orchestrator creates or confirms the working branch only after:
+
+- the planner returns a complete plan or the planner-skip exception applies
+- open questions are resolved
+- implementation is ready to begin
+- repo state is safe
+
+Use the `create-working-branch` skill when creating/switching branches.
+
 ## Commit Policy
 
-### Default
-Workers do not commit automatically after every task.
+Workers do not commit automatically.
 
-### Checkpoint commits
 Checkpoint commits are allowed only when:
+
 - a phase is complete
-- a meaningful self-contained milestone is complete
-- the orchestrator wants a recovery point before a higher-risk next phase
+- a meaningful milestone is complete
+- a recovery point is needed before higher-risk work
 - a review-remediation fix is complete, validated, and ready to push
+- a version bump is complete and verified
 
-### Who commits
-- Default owner: orchestrator
-- Exception: coder may commit only when explicitly instructed by orchestrator
-- Designer never commits
+Default commit owner: orchestrator through `checkpoint-commit`.
 
-### Commit message convention
-Use conventional-style commit messages.
+Coder may commit only when explicitly delegated. Designer never commits.
 
-Allowed types:
+Commit messages use conventional-style types:
+
 - `feat`
 - `fix`
 - `hotfix`
@@ -138,173 +105,102 @@ Allowed types:
 - `chore`
 - `ci`
 
-Examples:
-- `feat: add resource builder overload`
-- `fix: prevent null serialization failure`
-- `hotfix: restore package publish path`
-- `ci: update workflow trigger filters`
+Do not mix unrelated changes. Stage only files that belong to the completed phase, milestone, version bump, or review-remediation item.
 
-### Commit hygiene
-- Do not mix unrelated changes in one commit.
-- Stage only the files that belong to the completed phase, approved milestone, or review-remediation item.
-- Do not create checkpoint commits on `main`.
+## Version Bumps
 
-## Version Bump Policy
+`versioning.md` is canonical.
 
-`versioning.md` is the canonical source for SemVer and version bump rules.
+A PR is not ready to merge until required version/release metadata changes are included.
 
-A PR is not ready to merge until any required version/release metadata changes are included.
+Version bumps are included in the same PR as the triggering change unless the user explicitly directs otherwise.
 
-The orchestrator determines whether a version bump is required and delegates version/release file edits to coder.
+## Pull Requests
 
-Version bump changes must be included in the same PR as the triggering change unless the user explicitly directs otherwise.
+The orchestrator opens PRs using `open-plan-pr` only when:
 
-## Pull Request Policy
-
-### When a PR is opened
-Open a PR only when:
 - the approved plan is complete
-- required validation has passed
-- outputs are coherent and within scope
-- required version/release metadata changes are included
-- the branch is ready to merge into `main`
+- required validation passed
+- outputs are coherent and in scope
+- required version/release metadata is included
+- the branch is ready to merge into the target branch
 
-### Who opens the PR
-The orchestrator opens the PR.
+Default target: `main`.
 
-### Branch-to-PR mapping
-- One working branch produces one PR.
-- After merge or closure, the branch is considered complete.
-- Follow-up work should use a new branch unless the PR is merely paused and immediately resumed.
+Use draft PRs only when explicitly requested or when the planner split staged reviewable deliverables.
 
-### PR target
-- Default target: `main`
-- Any different target branch requires explicit user direction
+PR content must include:
 
-### PR type
-Default to a normal PR.
-
-Use a draft PR only when:
-- the user explicitly requests it, or
-- the planner explicitly split the work into staged reviewable deliverables
-
-### PR content
-The PR must include:
-- concise summary of what changed
-- key files or areas affected
+- concise summary
+- key files/areas changed
 - validation performed
-- version/release metadata notes when relevant
-- notable implementation or design constraints
-- unresolved issues, if any
+- version/release notes when relevant
+- notable constraints or unresolved issues
 
-Never include "co-authored by...", "Generated by...", or similar text.
+Never include `co-authored by`, `Generated by`, or similar generated-content signatures.
 
-## External Review Policy
-
-After a PR is opened, the orchestrator may request external AI review.
+## External Review Remediation
 
 External review remediation stays on the same PR branch unless:
-- the feedback is materially outside the approved plan
-- the feedback requires a separate independently shippable change
-- the PR has already been merged or closed
 
-Review-remediation commits are allowed on the existing PR branch when they directly address PR feedback.
+- feedback is outside the approved plan
+- feedback requires a separate independently shippable change
+- the PR is already merged or closed
 
-The orchestrator remains responsible for:
-- confirming the PR branch is current
-- verifying working tree state before remediation
-- ensuring remediation commits are scoped to review feedback
-- pushing remediation commits to the PR branch
-- replying to and resolving review threads according to policy
-- requesting re-review only after new commits or a clear written rationale
-
-Do not open a new PR solely to address review comments on an active PR unless the feedback is outside the approved plan.
+The orchestrator owns review replies, resolution, re-review requests, remediation commits, and pushes.
 
 ## Merge Policy
 
-### Required path to trunk
-Changes reach `main` only through a pull request.
+Changes reach `main` only through PR.
 
-### Merge method
-Use squash merge for PRs merged into `main`.
+Before merge readiness:
 
-### Review requirement
-At least one human review is required before merge to `main`.
-
-### CI requirement
-Required validation must pass before the PR is considered ready to merge.
-
-## Validation Gate
-
-Before PR creation, the orchestrator must confirm that all relevant required checks completed successfully.
-
-Minimum expectation:
-- relevant build checks passed
-- relevant tests passed
-- required version/release metadata checks passed when applicable
-
-Do not invent missing validation.
-Do not open a PR if validation is incomplete.
+- required CI passes
+- required validation passes
+- required version/release metadata is present
+- at least one human review is obtained
 
 ## Syncing With Trunk
 
-When a working branch falls behind `main`:
-- prefer rebasing the working branch onto `main` when practical
-- avoid unnecessary merge commits from `main` into the working branch
-- if conflict resolution materially changes scope or risk, stop and reassess before continuing
+When a branch falls behind `main`, prefer rebase when practical. Avoid unnecessary merge commits.
+
+If conflict resolution changes scope or risk materially, stop and reassess.
 
 ## Hotfix Standard
 
 For urgent production fixes:
-- create a `hotfix/<topic>` branch from `main`
-- implement the minimal safe change
-- validate the hotfix
-- open a PR back to `main`
-- merge via squash after required review/approval path unless the user explicitly directs a different emergency process
 
-## Parallel Work and Worktrees
+1. create `hotfix/<topic>` from `main`
+2. implement minimal safe change
+3. validate
+4. open PR to `main`
+5. squash merge after required approval unless the user explicitly directs a different emergency process
+
+## Worktrees
 
 Worktrees are optional.
 
-Use git worktrees only when all are true:
-1. the orchestrator has identified parallelizable phases
+Use worktrees only when all are true:
+
+1. orchestrator identifies parallelizable phases
 2. file scopes do not overlap
 3. separate Claude sessions are actually being used
-4. the added complexity is justified
+4. complexity is justified
 
 Do not create one worktree per agent by default.
-Do not use worktrees when a simple sequential flow is safer.
 
 ## Branch Cleanup
 
-After a PR is merged:
-- delete the working branch
+After PR merge, delete the working branch.
 
-After a PR is closed unmerged:
-- create a new branch for follow-up work unless the same PR is being resumed immediately
+After PR closure without merge, create a new branch for follow-up unless the same PR is immediately resumed.
 
-## Scope Drift and Replanning
+## Scope Drift
 
-If implementation reveals extra work not covered by the approved plan:
+If implementation reveals extra work outside the approved plan:
+
 1. stop
-2. re-evaluate scope
+2. reassess scope
 3. replan if needed
 
-Remain on the same branch only if the added work is still within the same approved deliverable.
-If the new work is materially distinct, create a new approved plan and a new branch.
-
-## Enforcement Rule
-
-This workflow is mandatory.
-
-If the orchestrator has not explicitly established:
-- branch classification
-- base branch
-- working branch
-- worktree decision
-- commit policy
-- PR path
-
-then implementation must not begin.
-
-Failure to follow this workflow is a non-compliant execution state and must be treated as a blocker rather than ignored.
+Remain on the same branch only if the added work is within the same approved deliverable.

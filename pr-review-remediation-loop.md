@@ -2,46 +2,48 @@
 
 ## Purpose
 
-This policy defines how Claude agents respond to external pull request review feedback, including Codex GitHub reviews.
+Defines how Claude agents respond to external pull request review feedback, including Codex GitHub reviews.
 
 Codex and other external AI reviewers are external reviewers, not Claude Code subagents.
 
 ## Ownership
 
-The orchestrator owns the review-remediation loop.
+The orchestrator owns the loop:
 
-The orchestrator may delegate remediation work, but remains responsible for:
-- requesting external review
-- checking PR review feedback
-- identifying unresolved review threads
-- classifying feedback
-- routing work to the correct agent
-- verifying fixes were committed and pushed
-- replying to review threads
-- resolving review threads
-- requesting follow-up review
-- stopping the loop safely
+- request external review
+- check feedback
+- identify unresolved review threads/comments
+- classify and route feedback
+- verify fixes are committed and pushed
+- reply to review threads/comments
+- resolve review threads
+- request re-review
+- stop safely
 
-## Loop Entry Criteria
+Skills may execute loop steps only when invoked by the orchestrator. Ownership remains with the orchestrator.
 
-The loop may start only after:
-- a pull request exists
+## Entry Criteria
+
+Start only after:
+
+- a PR exists
 - the PR branch has been pushed
-- required validation has completed or is known to be in progress
-- external review has been requested or external review feedback already exists
+- required validation completed or is known to be in progress
+- external review was requested or feedback already exists
 
 ## Feedback Sources
 
-The orchestrator must check:
-- unresolved pull request review threads
-- inline pull request review comments
+Check:
+
+- unresolved PR review threads
+- inline PR review comments
 - top-level PR comments
-- requested-changes review summaries
+- requested-changes or commented review summaries
 - CI failures when relevant to the review feedback
 
-## Feedback Classification
+## Classification
 
-Each review item must be classified as one of:
+Classify every review item as one of:
 
 - `actionable-code-change`
 - `actionable-test-change`
@@ -53,85 +55,86 @@ Each review item must be classified as one of:
 - `non-actionable`
 - `incorrect-or-rejected`
 
-The orchestrator must not silently ignore review feedback.
+Do not silently ignore review feedback.
 
-## Agent Routing
+## Routing
 
-- Route implementation, bug, runtime behavior, test, packaging, release metadata, serialization, generation, build, and documentation fixes to `coder`.
-- Route presentational UI/UX/accessibility presentation fixes to `designer`.
-- Route multi-step, risky, public API, architecture, compatibility, package/release behavior, versioning, generated-output, or cross-cutting feedback to `planner` first for remediation planning.
-- Escalate to the user when feedback requires a product, public API, architecture, security, release, versioning, or compatibility decision.
+- `coder`: source, tests, docs, build, packaging, release metadata, serialization, generation, runtime behavior, validation fixes
+- `designer`: presentational UI/UX or static accessibility fixes
+- `planner`: multi-step, risky, public API, architecture, compatibility, package/release, versioning, generated-output, cross-cutting, or test-strategy feedback
+- user: product, public API, architecture, security, compatibility, release, or versioning decisions that cannot be safely inferred
 
 ## Fix Rules
 
 For each actionable item:
-1. Identify the exact review thread or comment.
-2. Identify the affected files.
-3. Delegate the smallest correct fix to the correct agent.
-4. Add or update tests when behavior changes.
-5. Update version/release metadata if the fix changes version-triggering files or artifact behavior.
-6. Run relevant validation.
-7. Commit with a clear conventional commit message.
-8. Push to the PR branch.
-9. Reply to the review thread with the fix summary and commit SHA.
-10. Resolve the thread only after the fix is pushed and validated.
+
+1. identify the exact thread/comment
+2. identify affected files
+3. delegate the smallest correct fix
+4. update tests when behavior changes
+5. update version/release metadata when required
+6. run relevant validation
+7. commit and push to the PR branch
+8. reply with fix summary and commit SHA
+9. resolve only after fix is pushed and validated
 
 ## Rejected Feedback
 
 If feedback is incorrect or intentionally not applied:
-1. Reply to the thread with a concise rationale.
-2. Do not resolve the thread unless policy allows rejected feedback to be resolved by the PR author.
-3. Escalate to the user before rejecting P0/P1 feedback, public API feedback, compatibility feedback, security feedback, architecture feedback, package/release feedback, or versioning feedback.
+
+1. reply with concise rationale
+2. do not resolve unless policy allows the PR author to resolve rejected feedback
+3. escalate before rejecting P0/P1, security, public API, compatibility, architecture, package/release, or versioning feedback
 
 ## Re-review
 
-After all actionable comments are fixed, pushed, replied to, and resolved, request another external review.
+After actionable comments are fixed, pushed, replied to, and resolved, request another external review when appropriate.
 
-Default Codex request:
+Default Codex re-review request:
 
-`@codex review the latest changes and verify the prior findings were addressed. Focus only on remaining regressions, missing tests, public API compatibility, security issues, package/release behavior, versioning, and risky behavior changes.`
+```text
+@codex review the latest changes and verify the prior findings were addressed. Focus only on remaining regressions, missing tests, public API compatibility, security issues, package/release behavior, versioning, and risky behavior changes.
+```
+
+Do not repeatedly request review without new commits or clear rationale.
 
 ## Stop Conditions
 
-The loop must stop when any of the following is true:
+Stop when:
 
-- no unresolved actionable review threads remain
-- the reviewer approves or posts no new actionable findings
-- the maximum loop count is reached
-- the same finding appears twice after attempted remediation
-- the fix requires user/product decision
-- the fix requires architecture, public API, compatibility, release, or versioning change beyond the approved plan
-- CI fails for reasons unrelated to the review feedback
-- resolving the feedback would violate project standards
+- no unresolved actionable review feedback remains
+- reviewer approves or posts no new actionable findings
+- max loop count is reached
+- the same finding repeats after attempted remediation
+- user/product decision is required
+- feedback requires out-of-plan architecture, public API, compatibility, release, or versioning change
+- unrelated CI failure blocks confidence
+- remediation would violate project standards
+- unsafe git state is detected
+- GitHub API/parser/tool failure cannot be safely recovered
 
-## Maximum Loop Count
+Default maximum: 3 remediation iterations per PR.
 
-Default maximum: 3 review-remediation iterations per PR.
-
-After 3 iterations, stop and summarize:
-- remaining unresolved items
-- attempted fixes
-- suspected reason the loop is not converging
-- recommended next action
-
-## Anti-loop Rule
-
-The orchestrator must not repeatedly request review without new commits or a clear rationale.
-
-The orchestrator must not repeatedly apply speculative fixes for the same comment.
+After 3 iterations, summarize remaining items, attempted fixes, non-convergence reason, and recommended next action.
 
 ## Thread Resolution Rule
 
-A review thread may only be resolved after the fix has been committed, pushed, and validated, or after the orchestrator has explicitly rejected the feedback with a written rationale.
+Resolve review threads only after:
+
+- fix is committed
+- fix is pushed
+- relevant validation is complete or explicitly reported
+- reply was posted
+
+Do not resolve unresolved questions or unapproved rejected high-severity feedback.
 
 ## Remediation Ledger
 
-The orchestrator should maintain a short remediation ledger during each loop.
+Maintain a short session-local ledger during each loop:
 
-The ledger should include:
 - PR number/URL
 - branch
-- iteration number
+- iteration
 - feedback queue
 - classification
 - owner
@@ -140,50 +143,22 @@ The ledger should include:
 - pushed commits
 - remaining items
 
-The ledger is a session artifact by default. Do not commit it unless the user or project policy explicitly requests that.
+Do not commit the ledger unless the user or project policy explicitly requests it.
 
 ## Skill Selection
 
-Use the narrowest matching skill for the user's request.
+Use the narrowest matching skill:
 
-- Use `address-pr-feedback` for generic PR comments, human reviewer comments, ambiguous reviewer feedback, or one-off PR comment fixes.
-- Use `run-codex-review-loop` only for explicit Codex review feedback, Codex review threads, Codex re-review, or the bounded Codex review remediation loop.
+- `address-pr-feedback` for generic PR comments, human reviewer comments, ambiguous reviewer feedback, or one-off fixes
+- `run-codex-review-loop` only for explicit Codex review feedback, Codex threads, Codex re-review, or the bounded Codex loop
+- `watch-pr-feedback` only for explicit watch/monitor/wait/poll/loop/continue requests
 
 Ambiguous requests such as `fix PR comment on PR #80` must not trigger the Codex loop by default.
 
+## Monitoring
 
-## Monitoring and Monitor-Based Review Handling
+A remediation skill is not a monitor. A monitor detects new feedback and routes to remediation skills.
 
-A remediation skill is not a monitor. It handles feedback that is already known or fetched during a remediation pass.
+Monitoring must be read-only, deterministic, bounded, parser-stable, and truthfully reported.
 
-Use `watch-pr-feedback` only when the user explicitly asks to watch, monitor, wait for, poll, loop on, or continue handling new comments as they appear.
-
-Preferred active-watch pattern:
-
-```text
-/loop /watch-pr-feedback PR #[number] Codex-only max 3 cycles
-```
-
-When invoked through dynamic `/loop`, the watch flow should prefer Monitor when available so the session can react to review activity without repeatedly re-running a full polling prompt.
-
-Allowed monitoring patterns:
-- manual one-shot remediation
-- active dynamic `/loop` watch using Monitor when available
-- fixed-interval scheduled checks when Monitor is unavailable
-- Desktop scheduled task when local recurring checks are needed
-- remote routine or GitHub-triggered automation for durable unattended handling
-
-Monitoring must be bounded by:
-- max remediation cycles
-- max speculative fix attempts per thread
-- PR state
-- user decision requirements
-- repeated-finding stop conditions
-- unsafe git state
-- API/tool failure handling
-
-The monitor must not directly implement fixes. It must route to the appropriate remediation skill:
-- `address-pr-feedback` for generic or human PR feedback
-- `run-codex-review-loop` for explicit Codex loop remediation
-
-If Monitor, `/loop`, or scheduling support is unavailable, the orchestrator must fall back to manual remediation or return `blocked`.
+Use `watch-pr-feedback` for monitor-backed behavior. If Monitor, `/loop`, scheduling support, or the approved parser strategy is unavailable, fall back to manual remediation or return `blocked`.
