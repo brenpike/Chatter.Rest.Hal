@@ -30,6 +30,37 @@ If pagination is required but not implemented, return `blocked` rather than clai
 
 Pass `-F after="CURSOR"` (using `endCursor` from `pageInfo`) on subsequent fetches. Omit `-F after` for the first page. Nested connection pagination (e.g., thread comments beyond the first page) requires a separate per-thread query using the thread `id` and a comment-level cursor.
 
+## Fetch Reviews
+
+Use this query to retrieve review summaries (including `CHANGES_REQUESTED` and `COMMENTED` reviews whose body contains actionable feedback not captured in inline threads).
+
+```bash
+gh api graphql \
+  -f owner="OWNER" \
+  -f repo="REPO" \
+  -F pr=123 \
+  -f query='
+query($owner: String!, $repo: String!, $pr: Int!, $after: String) {
+  repository(owner: $owner, name: $repo) {
+    pullRequest(number: $pr) {
+      reviews(first: 50, after: $after) {
+        pageInfo { hasNextPage endCursor }
+        nodes {
+          id
+          author { login }
+          state
+          body
+          submittedAt
+          url
+        }
+      }
+    }
+  }
+}'
+```
+
+Filter results to reviews where `state` is `CHANGES_REQUESTED` or `COMMENTED` and `body` is non-empty. Pass `-F after="CURSOR"` using `endCursor` from `pageInfo` on subsequent fetches.
+
 ## Fetch Review Threads
 
 ```bash
