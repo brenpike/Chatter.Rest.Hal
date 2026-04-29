@@ -138,12 +138,11 @@ namespace Chatter.Rest.Hal.Mcp;
 
 public sealed class NavigateToRootTool : McpServerTool
 {
-    public NavigateToRootTool(
-        ILogger<NavigateToRootTool> logger);
+    public NavigateToRootTool();
 }
 ```
 
-`IHalClient`, `HalMcpServerOptions`, and `IHalToolCollectionManager` are resolved from `RequestContext.Services` inside `InvokeAsync`.
+`IHalClient`, `HalMcpServerOptions`, `IHalToolCollectionManager`, and `ILogger<NavigateToRootTool>` are all resolved from `RequestContext.Services` inside `InvokeAsync`. No dependencies are injected via constructor -- `NavigateToRootTool` is instantiated during service registration before the DI container is built.
 
 **`ProtocolTool` property:**
 - `Name` = `"navigate_to_root"`
@@ -152,7 +151,7 @@ public sealed class NavigateToRootTool : McpServerTool
 
 **`InvokeAsync`:**
 1. Resolve `IHalClient halClient`, `HalMcpServerOptions halOptions`, `IHalToolCollectionManager manager` from `request.Services`
-2. Fetch `halOptions.RootUri` via `halClient.GetAsync(new Uri(halOptions.RootUri), cancellationToken)`
+2. Fetch `halOptions.RootUri` via `halClient.GetAsync(new Uri(halOptions.RootUri, UriKind.RelativeOrAbsolute), cancellationToken)`
 3. If response is `null`: return `CallToolResult { IsError = true }` with message `"No HAL resource returned from {halOptions.RootUri} (resource not found or response was not HAL)"`
 4. Call `manager.SwapTools(response, halOptions.RootUri)`
 5. Serialize response to HAL JSON
@@ -245,7 +244,7 @@ public sealed class HalMcpStartupService : IHostedService
 **`StartAsync`:**
 1. Create async scope: `await using var scope = _serviceProvider.CreateAsyncScope()`
 2. Resolve `IHalClient halClient` and `IHalToolCollectionManager manager` from `scope.ServiceProvider`
-3. Fetch `halOptions.RootUri` via `halClient.GetAsync(new Uri(halOptions.RootUri), cancellationToken)`
+3. Fetch `halOptions.RootUri` via `halClient.GetAsync(new Uri(halOptions.RootUri, UriKind.RelativeOrAbsolute), cancellationToken)`
 4. If successful and non-null: call `manager.SwapTools(response, halOptions.RootUri)` to populate the tool collection
 5. If response is null: log warning, do not throw
 6. If fetch throws (any exception): catch, log warning, do not throw. The `navigate_to_root` tool (already in the collection from registration) remains available for the agent to retry.
@@ -274,7 +273,7 @@ public static class HalMcpServerBuilderExtensions
 2. Validate `RootUri` is not null/empty/whitespace; throw `ArgumentException` if invalid (REQ-19)
 3. Register `HalMcpServerOptions` as singleton
 4. Register `IHalToolCollectionManager` → `HalToolCollectionManager` as scoped
-5. Create `NavigateToRootTool` singleton (with `ILogger<NavigateToRootTool>` resolved from builder) and add it to `McpServerOptions.ToolCollection`
+5. Instantiate `NavigateToRootTool` (no constructor dependencies) and add it to `McpServerOptions.ToolCollection`
 6. Register `HalMcpStartupService` as `IHostedService`
 7. Return `builder` for chaining
 
@@ -420,7 +419,7 @@ InvokeAsync(request, cancellationToken):
             resolvedHref = _link.Href
 
         // 4. Fetch resource
-        response = await halClient.GetAsync(new Uri(resolvedHref), cancellationToken)
+        response = await halClient.GetAsync(new Uri(resolvedHref, UriKind.RelativeOrAbsolute), cancellationToken)
 
         // 5. Handle non-HAL response
         if response is null:
@@ -583,14 +582,14 @@ public sealed class HalNavigationTool : McpServerTool
 
 public sealed class NavigateToRootTool : McpServerTool
 {
-    public NavigateToRootTool(
-        ILogger<NavigateToRootTool> logger);
+    public NavigateToRootTool();
+    // ILogger<NavigateToRootTool> resolved from RequestContext.Services inside InvokeAsync
 }
 ```
 
 **`HalToolCollectionManager` (internal scoped):** Accepts `ILoggerFactory` via constructor injection and uses it to create `ILogger<HalNavigationTool>` for each tool instance it constructs (REQ-24). It does not hold a logger for its own swap operations; swap-triggered log messages (tool count, individual tool names) are emitted by the calling tool or startup service, which has richer context about the triggering event.
 
-**`HalMcpServerBuilderExtensions.WithHalApi`:** Runs during service registration before the DI container is built, so `ILogger` is unavailable at this stage. The configured-root-uri `Debug` log is deferred to `HalMcpStartupService.StartAsync` instead. If `RootUri` validation fails, `ArgumentException` is thrown without logging — the exception message is descriptive, and the caller's exception handler is the appropriate place to log it.
+**`HalMcpServerBuilderExtensions.WithHalApi`:** Runs during service registration before the DI container is built, so `ILogger` is unavailable at this stage. The configured-root-uri `Debug` log is deferred to `HalMcpStartupService.StartAsync` instead. If `RootUri` validation fails, `ArgumentException` is thrown without logging — the exception message is descriptive, and the caller's exception handler is the appropriate place to log it. For the same reason, `NavigateToRootTool` accepts no constructor dependencies and resolves all required services (including `ILogger<NavigateToRootTool>`) from `RequestContext.Services` inside `InvokeAsync`.
 
 ---
 

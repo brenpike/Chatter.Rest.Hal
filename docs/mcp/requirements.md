@@ -96,7 +96,7 @@ Examples (no truncation needed):
 
 **REQ-08:** When a tool is called, the package resolves the templated href using `LinkObject.Expand(IDictionary<string, string>)` with the agent-supplied arguments. For non-templated links, `Href` is used directly.
 
-**REQ-09:** The resolved URI is fetched via HTTP GET using `IHalClient.GetAsync(Uri, CancellationToken)`. The `IHalClient` instance is resolved from `RequestContext.Services` inside `InvokeAsync` (not injected via constructor), because `IHalClient` may be a scoped service.
+**REQ-09:** The resolved URI is fetched via HTTP GET using `IHalClient.GetAsync(Uri, CancellationToken)`. The `IHalClient` instance is resolved from `RequestContext.Services` inside `InvokeAsync` (not injected via constructor), because `IHalClient` may be a scoped service. The `Uri` is constructed with `UriKind.RelativeOrAbsolute` to support both absolute and relative hrefs. Relative hrefs are resolved against the `BaseAddress` configured on the underlying `HttpClient` (per REQ-45).
 
 **REQ-10:** On a successful HAL response, the tool collection is replaced with the new resource's `_links` converted to tools. The `navigate_to_root` tool is preserved across all replacements.
 
@@ -134,7 +134,7 @@ Examples (no truncation needed):
 
 ### Logging
 
-**REQ-24:** `HalMcpStartupService`, `HalNavigationTool`, and `NavigateToRootTool` each accept `ILogger<T>` via constructor injection. `HalToolCollectionManager` accepts `ILoggerFactory` via constructor injection and uses it to create `ILogger<HalNavigationTool>` for each tool instance it constructs. Logging for tool-swap operations (tool counts added/removed, individual tool names) is performed at the call site — the tool or startup service that invokes `SwapTools` — which has richer context about the triggering event (e.g., which href triggered the swap, the root URI).
+**REQ-24:** `HalMcpStartupService` and `HalNavigationTool` each accept `ILogger<T>` via constructor injection. `NavigateToRootTool` resolves `ILogger<NavigateToRootTool>` from `RequestContext.Services` inside `InvokeAsync` (no constructor dependencies, because it is instantiated during service registration before the DI container is built). `HalToolCollectionManager` accepts `ILoggerFactory` via constructor injection and uses it to create `ILogger<HalNavigationTool>` for each tool instance it constructs. Logging for tool-swap operations (tool counts added/removed, individual tool names) is performed at the call site — the tool or startup service that invokes `SwapTools` — which has richer context about the triggering event (e.g., which href triggered the swap, the root URI).
 
 **REQ-25:** All log messages use structured logging with named placeholders (e.g., `{ToolName}`, `{Href}`, `{StatusCode}`, `{ToolCount}`, `{RootUri}`, `{Rel}`) and never string concatenation or string interpolation in log calls.
 
