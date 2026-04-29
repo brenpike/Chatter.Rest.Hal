@@ -204,9 +204,10 @@ The following shows what a user writes in their `Program.cs` to expose a HAL API
 ```csharp
 // User's dotnet new mcpserver project:
 
-// Register IHalClient (provided by Chatter.Rest.Hal.Client):
+// Register IHalClient with options (requires Chatter.Rest.Hal.Client.DependencyInjection):
 builder.Services.AddHttpClient<IHalClient, HalClient>(c =>
-    c.BaseAddress = new Uri("https://api.example.com/"));
+    c.BaseAddress = new Uri("https://api.example.com/"))
+    .AddHalOptions();  // registers HalClientOptions with defaults; override as needed
 
 builder.Services.AddMcpServer()
     .WithStdioServerTransport()
@@ -219,7 +220,7 @@ builder.Services.AddMcpServer()
 
 Key points:
 - `WithHalApi` is an extension method on `IMcpServerBuilder`, following the same pattern as `WithStdioServerTransport()` and `WithToolsFromAssembly()`
-- `IHalClient` is registered as a typed HTTP client via `AddHttpClient<IHalClient, HalClient>(...)` (provided by `Chatter.Rest.Hal.Client`). Tools resolve it from `RequestContext.Services` per invocation. `BaseAddress` should be set here when the HAL API returns relative hrefs (see REQ-45).
+- `IHalClient` is registered via `AddHttpClient<IHalClient, HalClient>(...).AddHalOptions()` (from `Chatter.Rest.Hal.Client.DependencyInjection`). `.AddHalOptions()` wires `HalClientOptions` to the typed client — required because `HalClient` takes `HalClientOptions` in its constructor. Set `BaseAddress` on the `HttpClient` when the HAL API returns relative hrefs (see REQ-45).
 - `HalMcpServerOptions` is configured via the standard `Action<T>` options pattern
 - The user does not register individual tools -- all tools are discovered dynamically from HAL `_links`
 
