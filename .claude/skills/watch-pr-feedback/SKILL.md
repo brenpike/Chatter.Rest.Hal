@@ -69,7 +69,7 @@ Optional:
 1. Confirm PR exists and is open using `gh pr view --json state --jq .state`.
 2. Confirm GitHub CLI access works.
 3. Confirm current branch and working tree state.
-4. Start Monitor when available using one deterministic, read-only feedback-detection command based on `.claude/references/github-pr-review-graphql.md`.
+4. Start Monitor when available using one deterministic, read-only feedback-detection command based on `.claude/references/github-pr-review-graphql.md`. Detection must cover review threads, top-level PR comments, and review summaries (reviews with `CHANGES_REQUESTED` or `COMMENTED` state whose body contains actionable feedback not captured in inline threads). Fetch and ledger review summary IDs and states alongside thread and comment IDs.
 5. Track seen comment/thread/review IDs in a session-local ledger.
 6. When new feedback appears, classify source:
    - Codex feedback
