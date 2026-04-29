@@ -95,7 +95,8 @@ public sealed class HalNavigationTool : McpServerTool
         string rel,
         LinkObject link,
         string selfHref,
-        ILogger<HalNavigationTool> logger);
+        ILogger<HalNavigationTool> logger,
+        string? uniqueName = null);
 }
 ```
 
@@ -104,13 +105,14 @@ public sealed class HalNavigationTool : McpServerTool
 - `_link` -- the `LinkObject` instance
 - `_selfHref` -- the self href of the resource this link came from (used for tool naming)
 - `_logger` -- `ILogger<HalNavigationTool>`
+- `_name` -- the pre-computed unique tool name (supplied by `SwapTools`; overrides `ToolNaming.CreateToolName` result when set)
 
 `IHalClient`, `HalMcpServerOptions`, and `IHalToolCollectionManager` are resolved from `RequestContext.Services` inside `InvokeAsync` (not stored as constructor fields) because they may be scoped services and `HalNavigationTool` instances are singletons in the tool collection.
 
 **`ProtocolTool` property (override):**
 
 Built from:
-- `Name` = `ToolNaming.CreateToolName(selfHref, rel)`
+- `Name` = `_name` when provided by `SwapTools` (deduplicated); otherwise `ToolNaming.CreateToolName(selfHref, rel)`
 - `Description` = `link.Title ?? $"Navigate to {rel}"`
 - `InputSchema` = JSON Schema with one `string` property per template variable from `link.GetTemplateVariables()`. Non-templated links produce `{ "type": "object", "properties": {} }`.
 
@@ -376,7 +378,8 @@ HalToolCollectionManager.SwapTools(resource, selfHref):
                     effectiveSelf = link.LinkObjects[0].Href
                     break
 
-        // 4. Add one HalNavigationTool per non-excluded rel
+        // 4. Add one HalNavigationTool per non-excluded rel (with collision dedup)
+        seenNames = set of names already in collection (including "navigate_to_root")
         if resource.Links is not null:
             for each link in resource.Links:
                 if link.Rel in _halOptions.ExcludeRels:
@@ -384,9 +387,16 @@ HalToolCollectionManager.SwapTools(resource, selfHref):
                 if link.LinkObjects is null or link.LinkObjects.Count == 0:
                     continue  // skip rels with no link objects (e.g., "_links": { "rel": null })
                 linkObject = link.LinkObjects[0]  // first LinkObject only (v1)
+                candidateName = ToolNaming.CreateToolName(effectiveSelf, link.Rel)
+                uniqueName = candidateName
+                counter = 2
+                while uniqueName in seenNames:
+                    uniqueName = candidateName + "_" + counter
+                    counter++
+                seenNames.Add(uniqueName)
                 logger = _loggerFactory.CreateLogger<HalNavigationTool>()
                 collection.Add(new HalNavigationTool(
-                    link.Rel, linkObject, effectiveSelf, logger))
+                    link.Rel, linkObject, effectiveSelf, logger, uniqueName))
 
     // 5. collection.Changed fires automatically (outside lock)
     //    -> SDK sends tools/list_changed notification
@@ -400,6 +410,7 @@ HalToolCollectionManager.SwapTools(resource, selfHref):
 - The `self` rel is included by default unless explicitly excluded (REQ-18)
 - `_swapLock` is `static readonly` — only one swap runs at a time across all scoped instances (REQ-42)
 - `ILogger<HalNavigationTool>` is created per tool via `_loggerFactory.CreateLogger<HalNavigationTool>()` (REQ-24)
+- Tool names are deduplicated within each swap batch using a counter suffix (`_2`, `_3`, ...). The first occurrence is never suffixed. Uniqueness takes priority over the 62-character length cap (REQ-05).
 - v1 is safe for a single active navigation context only. Concurrent tool invocations from multiple agents are not supported — the last SwapTools call wins, potentially replacing tools mid-navigation for another caller. This is an accepted v1 constraint (see REQ-21 and Out of Scope).
 
 ---
@@ -587,7 +598,8 @@ public sealed class HalNavigationTool : McpServerTool
         string rel,
         LinkObject link,
         string selfHref,
-        ILogger<HalNavigationTool> logger);
+        ILogger<HalNavigationTool> logger,
+        string? uniqueName = null);
 }
 
 public sealed class NavigateToRootTool : McpServerTool
@@ -681,6 +693,12 @@ Request bodies, response bodies, auth headers, and API keys must never appear in
 - Paths with multiple template variables: `/orders/{id}/lines/{lineId}` → `orders_id_lines_lineid__rel`
 - Paths with hyphens
 - Edge cases: trailing slashes, double slashes, empty rel
+
+**`HalToolCollectionManager.SwapTools` collision dedup:**
+- Two rels that sanitize to the same prefix produce `name` and `name_2`
+- Three collisions produce `name`, `name_2`, `name_3`
+- `navigate_to_root` is in `seenNames` from the start; a rel named `navigate_to_root` gets `navigate_to_root_2`
+- Suffix does not affect other tool names in the batch
 
 **`HalToolCollectionManager.SwapTools`** -- core swap logic:
 - Replaces all tools except `navigate_to_root`

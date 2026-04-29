@@ -78,6 +78,8 @@ After sanitizing both parts, apply truncation with a combined budget of 62 chara
 - If `relPart.Length >= 62`: final name = `relPart[..62]` (rel truncated, prefix omitted).
 - Else: `prefixBudget = 62 - relPart.Length - 2` (reserve 2 chars for the `__` separator); `prefix = prefix[..Min(prefixBudget, prefix.Length)]`. If `prefixBudget <= 0` or prefix is empty after truncation: final name = `relPart`. Else: final name = `prefix + "__" + relPart`.
 
+**Collision handling:** If the resulting tool name is already present in the tool collection being built during the current `SwapTools` call, append a numeric suffix starting at `_2` and incrementing (`_3`, `_4`, ...) until the name is unique within that swap batch. The first occurrence of a name never receives a suffix. The suffix is appended after truncation and may cause the final name to exceed 62 characters; this is acceptable because uniqueness takes priority over the length cap.
+
 Examples (no truncation needed):
 
 | self href | rel | tool name |
@@ -89,6 +91,15 @@ Examples (no truncation needed):
 | `/user-profiles` | `search` | `user_profiles__search` |
 | `https://api.example.com/orders` | `cancel` | `api_example_com_orders__cancel` |
 | `/orders?page=2` | `next` | `orders__next` |
+
+**Collision examples:**
+
+| self href | rel | Occurrence | tool name |
+|---|---|---|---|
+| `/orders` | `find` | 1st | `orders__find` |
+| `/orders` | `find` | 2nd (duplicate rel -- edge case) | `orders__find_2` |
+| `/orders-id` | `next` | 1st | `orders_id__next` |
+| `/orders_id` | `next` | 2nd (collision with above after sanitization) | `orders_id__next_2` |
 
 **REQ-06:** Tool description is `LinkObject.Title` when present and non-empty; otherwise `"Navigate to {rel}"`.
 
