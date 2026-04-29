@@ -6,7 +6,7 @@ This document is the source of truth for how the `Chatter.Rest.Hal.Mcp` package 
 
 ## Prerequisites
 
-IDEA-04 (`Chatter.Rest.Hal.Client`) must be implemented before this package. It provides the `IHalClient` interface with `GetAsync(Uri uri, CancellationToken cancellationToken)` that this package uses to fetch and parse HAL resources over HTTP. See [docs/backlog.md](../backlog.md) for the IDEA-04 specification.
+IDEA-04 (`Chatter.Rest.Hal.Client`) must be implemented before this package. It provides the `IHalClient` interface with `GetAsync(Uri, CancellationToken)` and `GetResultAsync(Uri, CancellationToken)` returning `HalClientResult` that this package uses to fetch and parse HAL resources over HTTP. See [docs/backlog.md](../backlog.md) for the IDEA-04 specification.
 
 ---
 
@@ -19,7 +19,7 @@ Chatter.Rest.Hal.Mcp
   -> Chatter.Rest.Hal           (core types: Resource, LinkObject, LinkCollection, Link)
 ```
 
-`Chatter.Rest.Hal.Client` itself depends on `Chatter.Rest.Hal` and `System.Net.Http`. The MCP package does not reference `System.Net.Http` directly — all HTTP access flows through `IHalClient`.
+`Chatter.Rest.Hal.Client` itself depends on `Chatter.Rest.Hal` and `System.Net.Http`. It provides `IHalClient` with `GetResultAsync` returning `HalClientResult { Resource?, StatusCode, ReasonPhrase }`. The MCP package does not reference `System.Net.Http` directly — all HTTP access flows through `IHalClient`.
 
 ---
 
@@ -151,10 +151,10 @@ public sealed class NavigateToRootTool : McpServerTool
 
 **`InvokeAsync`:**
 1. Resolve `IHalClient halClient`, `HalMcpServerOptions halOptions`, `IHalToolCollectionManager manager` from `request.Services`
-2. Fetch `halOptions.RootUri` via `halClient.GetAsync(new Uri(halOptions.RootUri, UriKind.RelativeOrAbsolute), cancellationToken)`
-3. If response is `null`: return `CallToolResult { IsError = true }` with message `"No HAL resource returned from {halOptions.RootUri} (resource not found or response was not HAL)"`
-4. Call `manager.SwapTools(response, halOptions.RootUri)`
-5. Serialize response to HAL JSON
+2. Fetch via `halClient.GetResultAsync(new Uri(halOptions.RootUri, UriKind.RelativeOrAbsolute), cancellationToken)`
+3. If `not result.IsHalResource`: return `CallToolResult { IsError = true }` with message `"HTTP {(int)result.StatusCode} {result.ReasonPhrase}: {halOptions.RootUri}"`
+4. Call `manager.SwapTools(result.Resource, halOptions.RootUri)`
+5. Serialize `result.Resource` to HAL JSON
 6. Return `CallToolResult { Content = [new TextContentBlock { Text = json }] }`
 7. Catch `HttpRequestException ex` when status code available: return `CallToolResult { IsError = true }` with message `"HTTP {(int)status} {reason}: {halOptions.RootUri}"`
 8. Catch `Exception ex`: return `CallToolResult { IsError = true, Content = [ex.Message] }`
@@ -244,9 +244,9 @@ public sealed class HalMcpStartupService : IHostedService
 **`StartAsync`:**
 1. Create async scope: `await using var scope = _serviceProvider.CreateAsyncScope()`
 2. Resolve `IHalClient halClient` and `IHalToolCollectionManager manager` from `scope.ServiceProvider`
-3. Fetch `halOptions.RootUri` via `halClient.GetAsync(new Uri(halOptions.RootUri, UriKind.RelativeOrAbsolute), cancellationToken)`
-4. If successful and non-null: call `manager.SwapTools(response, halOptions.RootUri)` to populate the tool collection
-5. If response is null: log warning, do not throw
+3. Fetch via `halClient.GetResultAsync(new Uri(halOptions.RootUri, UriKind.RelativeOrAbsolute), cancellationToken)`
+4. If `result.IsHalResource`: call `manager.SwapTools(result.Resource, halOptions.RootUri)` to populate the tool collection
+5. If `not result.IsHalResource`: log warning including `result.StatusCode`, do not throw
 6. If fetch throws (any exception): catch, log warning, do not throw. The `navigate_to_root` tool (already in the collection from registration) remains available for the agent to retry.
 
 **`StopAsync`:** No-op. Returns `Task.CompletedTask`.
@@ -429,21 +429,21 @@ InvokeAsync(request, cancellationToken):
             resolvedHref = _link.Href
 
         // 4. Fetch resource
-        response = await halClient.GetAsync(new Uri(resolvedHref, UriKind.RelativeOrAbsolute), cancellationToken)
+        result = await halClient.GetResultAsync(new Uri(resolvedHref, UriKind.RelativeOrAbsolute), cancellationToken)
 
-        // 5. Handle non-HAL response
-        if response is null:
+        // 5. Handle non-HAL response (404, non-HAL body, empty)
+        if not result.IsHalResource:
             return CallToolResult
             {
                 IsError = true,
-                Content = [TextContentBlock("No HAL resource returned from {resolvedHref} (resource not found or response was not HAL)")]
+                Content = [TextContentBlock("HTTP {(int)result.StatusCode} {result.ReasonPhrase}: {resolvedHref}")]
             }
 
         // 6. Swap tool collection with new resource's links
-        manager.SwapTools(response, resolvedHref)
+        manager.SwapTools(result.Resource, resolvedHref)
 
         // 7. Serialize response to HAL JSON
-        json = JsonSerializer.Serialize(response, halJsonSerializerOptions)
+        json = JsonSerializer.Serialize(result.Resource, halJsonSerializerOptions)
 
         // 8. Return content
         return CallToolResult
@@ -476,9 +476,9 @@ InvokeAsync(request, cancellationToken):
 
 | Condition | Behavior | Error message format |
 |---|---|---|
-| HTTP non-success status | `IsError = true`, no collection change | `"HTTP {statusCode} {reasonPhrase}: {resolvedHref}"` |
-| Response is not valid HAL (null) | `IsError = true`, no collection change | `"No HAL resource returned from {href} (resource not found or response was not HAL)"` |
-| Exception during invocation | `IsError = true`, no collection change | `ex.Message` |
+| `result.IsHalResource == false` (404, non-HAL, empty) | `IsError = true`, no collection change | `"HTTP {statusCode} {reasonPhrase}: {href}"` |
+| `HttpRequestException` (4xx non-404, 5xx, network) | `IsError = true`, no collection change | `"HTTP {statusCode} {reasonPhrase}: {href}"` when status available; `ex.Message` otherwise |
+| `Exception` during invocation | `IsError = true`, no collection change | `ex.Message` |
 | Startup root fetch failure | Logged warning, no throw | `navigate_to_root` remains; agent can retry |
 | Relative href without BaseAddress | `IsError = true` via Exception catch | `ex.Message` (`InvalidOperationException`) |
 
@@ -552,9 +552,9 @@ All I/O in the package is async end-to-end. No sync-over-async wrappers (`.Resul
 ### CancellationToken threading (REQ-38)
 
 Every async call site passes the `CancellationToken` received from the framework:
-- `HalMcpStartupService.StartAsync` receives `CancellationToken` from `IHostedService.StartAsync` and passes it to `IHalClient.GetAsync`
-- `HalNavigationTool.InvokeAsync` receives `CancellationToken` from `McpServerTool.InvokeAsync(RequestContext, CancellationToken)` and passes it to `IHalClient.GetAsync`
-- `NavigateToRootTool.InvokeAsync` receives `CancellationToken` from the same `McpServerTool` contract and passes it to `IHalClient.GetAsync`
+- `HalMcpStartupService.StartAsync` receives `CancellationToken` from `IHostedService.StartAsync` and passes it to `IHalClient.GetResultAsync`
+- `HalNavigationTool.InvokeAsync` receives `CancellationToken` from `McpServerTool.InvokeAsync(RequestContext, CancellationToken)` and passes it to `IHalClient.GetResultAsync`
+- `NavigateToRootTool.InvokeAsync` receives `CancellationToken` from the same `McpServerTool` contract and passes it to `IHalClient.GetResultAsync`
 
 The `CancellationToken` is not stored as a field. It flows through the call chain as a parameter at every level.
 
@@ -650,7 +650,7 @@ The calling tool or startup service logs before and after calling `SwapTools`. T
 // manager = IHalToolCollectionManager resolved from RequestContext.Services
 // mcpOptions = resolved from RequestContext.Services (for collection count)
 var previousCount = mcpOptions.ToolCollection.Count;
-manager.SwapTools(response, resolvedHref);
+manager.SwapTools(result.Resource, resolvedHref);
 var addedCount = mcpOptions.ToolCollection.Count - 1; // minus navigate_to_root
 LogToolsSwapped(previousCount - 1, addedCount);
 
@@ -743,7 +743,7 @@ Request bodies, response bodies, auth headers, and API keys must never appear in
 
 ### Async conventions
 
-- Verify `CancellationToken` is passed through to `IHalClient.GetAsync` in `HalNavigationTool.InvokeAsync` (mock `IHalClient` asserts token received)
-- Verify `CancellationToken` is passed through to `IHalClient.GetAsync` in `NavigateToRootTool.InvokeAsync`
-- Verify `CancellationToken` is passed through to `IHalClient.GetAsync` in `HalMcpStartupService.StartAsync`
+- Verify `CancellationToken` is passed through to `IHalClient.GetResultAsync` in `HalNavigationTool.InvokeAsync` (mock `IHalClient` asserts token received)
+- Verify `CancellationToken` is passed through to `IHalClient.GetResultAsync` in `NavigateToRootTool.InvokeAsync`
+- Verify `CancellationToken` is passed through to `IHalClient.GetResultAsync` in `HalMcpStartupService.StartAsync`
 - Verify cancellation is honored: when a pre-cancelled token is supplied, the operation throws `OperationCanceledException` without making an HTTP request

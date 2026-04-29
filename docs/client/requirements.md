@@ -52,9 +52,25 @@ Already uses `Chatter.Rest.Hal` for building HAL documents server-side. Wants to
 
 **REQ-01:** `HalClient` implements `IHalClient` and wraps an `HttpClient` with HAL-specific request/response behavior. It accepts `HalClientOptions` directly via its constructor. The `Chatter.Rest.Hal.Client.DependencyInjection` companion package resolves `IOptions<HalClientOptions>.Value` before constructing `HalClient`, so the base package has no dependency on `Microsoft.Extensions.Options`.
 
-**REQ-02:** `IHalClient` exposes async methods for all standard HTTP verbs: `GetAsync`, `PostAsync`, `PutAsync`, `PatchAsync`, and `DeleteAsync`. All methods accept a `Uri` parameter and a `CancellationToken` with a default value.
+**REQ-01a:** `HalClientResult` is a read-only value type (sealed class or readonly struct) in the `Chatter.Rest.Hal.Client` namespace that wraps the outcome of a `GetResultAsync` call:
+
+```csharp
+public sealed class HalClientResult
+{
+    public Resource? Resource { get; init; }
+    public HttpStatusCode StatusCode { get; init; }
+    public string? ReasonPhrase { get; init; }
+    public bool IsHalResource => Resource is not null;
+}
+```
+
+`IsHalResource` is `true` only when `Resource` is non-null. When `IsHalResource` is `false`, `StatusCode` and `ReasonPhrase` describe why: e.g., `404 Not Found`, `200 OK` (non-HAL body), or `204 No Content`.
+
+**REQ-02:** `IHalClient` exposes async methods for all standard HTTP verbs: `GetAsync`, `GetResultAsync`, `PostAsync`, `PutAsync`, `PatchAsync`, and `DeleteAsync`. All methods accept a `Uri` parameter and a `CancellationToken` with a default value.
 
 **REQ-03:** `GetAsync` returns `Resource?` (untyped) or `Resource<T>?` (typed, where `Resource<T>` is a typed resource facade defined in this package that provides strongly-typed access to state via `State()` and exposes typed traversal and mutation methods). Both overloads return `null` when the server responds with HTTP 404.
+
+**REQ-03a:** `GetResultAsync(Uri uri, CancellationToken cancellationToken = default)` returns `HalClientResult` and never returns `null`. It does not throw for HTTP 404; instead it returns `HalClientResult { StatusCode = 404, ReasonPhrase = "Not Found", Resource = null }`. For non-success status codes other than 404 (4xx excluding 404, 5xx), `HalClient` calls `EnsureSuccessStatusCode()` and allows the resulting `HttpRequestException` to propagate. Network errors and timeouts propagate as `HttpRequestException` or `TaskCanceledException`. The `StatusCode` and `ReasonPhrase` fields are always populated from the HTTP response when a response was received.
 
 **REQ-04:** `PostAsync`, `PutAsync`, and `PatchAsync` each have four overloads:
 - (a) Non-generic, object body: accepts `object` (serialized as JSON), returns `Resource?`

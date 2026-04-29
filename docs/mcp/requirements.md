@@ -24,13 +24,13 @@ The package converts these HAL structures into live MCP tools, updating the tool
 
 ### Package dependencies
 
-- `Chatter.Rest.Hal.Client` (IDEA-04 in [docs/backlog.md](../backlog.md)) -- provides `IHalClient` and its `GetAsync(Uri, CancellationToken)` method for fetching and parsing HAL resources
+- `Chatter.Rest.Hal.Client` (IDEA-04 in [docs/backlog.md](../backlog.md)) -- provides `IHalClient` with `GetAsync` and `GetResultAsync(Uri, CancellationToken)` → `HalClientResult`; `HalClientResult` carries `Resource?`, `StatusCode`, and `ReasonPhrase`
 - `ModelContextProtocol` -- Microsoft's official C# MCP SDK
 - `Chatter.Rest.Hal` -- core HAL types (`Resource`, `LinkObject`, `LinkCollection`, etc.)
 
 ### Prerequisite
 
-IDEA-04 (`Chatter.Rest.Hal.Client`) must be implemented before this package. It provides `IHalClient` with `GetAsync(Uri uri, CancellationToken cancellationToken)` that this package uses to fetch and parse HAL resources. See [docs/backlog.md](../backlog.md) for IDEA-04 specification.
+IDEA-04 (`Chatter.Rest.Hal.Client`) must be implemented before this package. It provides `IHalClient` with `GetAsync` and `GetResultAsync(Uri, CancellationToken)` returning `HalClientResult` that this package uses to fetch and parse HAL resources. See [docs/backlog.md](../backlog.md) for IDEA-04 specification.
 
 ---
 
@@ -98,7 +98,7 @@ Examples (no truncation needed):
 
 **REQ-08:** When a tool is called, the package resolves the templated href using `LinkObject.Expand(IDictionary<string, string>)` with the agent-supplied arguments. For non-templated links, `Href` is used directly.
 
-**REQ-09:** The resolved URI is fetched via HTTP GET using `IHalClient.GetAsync(Uri, CancellationToken)`. The `IHalClient` instance is resolved from `RequestContext.Services` inside `InvokeAsync` (not injected via constructor), because `IHalClient` may be a scoped service. The `Uri` is constructed with `UriKind.RelativeOrAbsolute` to support both absolute and relative hrefs. Relative hrefs are resolved against the `BaseAddress` configured on the underlying `HttpClient` (per REQ-45).
+**REQ-09:** The resolved URI is fetched via `IHalClient.GetResultAsync(Uri, CancellationToken)`. The `IHalClient` instance is resolved from `RequestContext.Services` inside `InvokeAsync` (not injected via constructor), because `IHalClient` may be a scoped service. `GetResultAsync` returns a `HalClientResult` that always carries `StatusCode` and `ReasonPhrase`, enabling the tool to report meaningful HTTP status in error messages regardless of whether the response was 404, non-HAL, or empty. The `Uri` is constructed with `UriKind.RelativeOrAbsolute` to support both absolute and relative hrefs. Relative hrefs are resolved against the `BaseAddress` configured on the underlying `HttpClient` (per REQ-45).
 
 **REQ-10:** On a successful HAL response, the tool collection is replaced with the new resource's `_links` converted to tools. The `navigate_to_root` tool is preserved across all replacements.
 
@@ -110,9 +110,9 @@ Examples (no truncation needed):
 
 ### Error handling
 
-**REQ-14:** If the HTTP response is not a valid HAL resource (response parses to `null`), the tool returns `CallToolResult { IsError = true }` with message `"No HAL resource returned from {href} (resource not found or response was not HAL)"`. The tool does not throw.
+**REQ-14:** If `HalClientResult.IsHalResource` is `false` (404, non-HAL body, or empty response), the tool returns `CallToolResult { IsError = true }` with message `"HTTP {statusCode} {reasonPhrase}: {href}"` using `result.StatusCode` and `result.ReasonPhrase`. This allows agents to distinguish a 404 from a 200 OK with a non-HAL body. The tool does not throw.
 
-**REQ-15:** If the HTTP request fails (non-success status code), the tool returns `CallToolResult { IsError = true }` with the HTTP status code, reason phrase, and resolved URI. The tool does not throw.
+**REQ-15:** If `GetResultAsync` throws `HttpRequestException` (non-success status codes other than 404: 4xx excluding 404, 5xx, network errors), the tool catches it and returns `CallToolResult { IsError = true }` with the HTTP status code, reason phrase, and resolved URI when available. The tool does not throw.
 
 **REQ-16:** If an exception occurs during tool invocation (network failure, deserialization error, etc.), the tool returns `CallToolResult { IsError = true }` with the exception message. The tool does not throw.
 
@@ -166,7 +166,7 @@ Examples (no truncation needed):
 
 **REQ-37:** All I/O operations in `Chatter.Rest.Hal.Mcp` must be async end-to-end. Synchronous-over-async patterns (`.Result`, `.GetAwaiter().GetResult()`, `.Wait()`) and blocking calls (`Thread.Sleep`) are prohibited anywhere in the implementation. `HalMcpStartupService.StartAsync`, `HalNavigationTool.InvokeAsync`, and `NavigateToRootTool.InvokeAsync` are all inherently async and must remain fully async through all delegate calls.
 
-**REQ-38:** Every async method that performs or delegates to I/O must accept a `CancellationToken` parameter and pass it through to all downstream async calls. Specifically: `HalMcpStartupService.StartAsync` receives `CancellationToken` from the `IHostedService` contract and must pass it to `IHalClient.GetAsync`. `HalNavigationTool.InvokeAsync` and `NavigateToRootTool.InvokeAsync` receive `CancellationToken` from the `McpServerTool.InvokeAsync(RequestContext, CancellationToken)` base-class contract and must pass it to `IHalClient.GetAsync`. The `CancellationToken` is not stored as a field — it flows as a call-chain parameter at every level.
+**REQ-38:** Every async method that performs or delegates to I/O must accept a `CancellationToken` parameter and pass it through to all downstream async calls. Specifically: `HalMcpStartupService.StartAsync` receives `CancellationToken` from the `IHostedService` contract and must pass it to `IHalClient.GetResultAsync`. `HalNavigationTool.InvokeAsync` and `NavigateToRootTool.InvokeAsync` receive `CancellationToken` from the `McpServerTool.InvokeAsync(RequestContext, CancellationToken)` base-class contract and must pass it to `IHalClient.GetResultAsync`. The `CancellationToken` is not stored as a field — it flows as a call-chain parameter at every level.
 
 **REQ-39:** Tool invocation in this package is single-resource-fetch-per-call. There are no loops performing independent async I/O calls, so `Task.WhenAll` parallelism is not applicable. This requirement documents the analysis explicitly so that future maintainers do not introduce unnecessary parallelism.
 
@@ -255,15 +255,16 @@ These scenarios describe end-to-end behavior for test derivation.
 
 1. Agent calls a tool that resolves to `/orders/999`
 2. Server responds with `404 Not Found`
-3. Tool returns `CallToolResult { IsError = true }` with message `"HTTP 404 Not Found: /orders/999"`
-4. Tool collection is not modified (previous tools remain)
+3. `GetResultAsync` returns `HalClientResult { StatusCode = 404, ReasonPhrase = "Not Found", Resource = null }` — no exception thrown
+4. Tool returns `CallToolResult { IsError = true }` with message `"HTTP 404 Not Found: /orders/999"`
+5. Tool collection is not modified (previous tools remain)
 
 ### Scenario: Non-HAL response
 
 1. Agent calls a tool that resolves to `/health`
 2. Server responds with `200 OK` but body is plain text, not HAL JSON
-3. `IHalClient.GetAsync` returns `null`
-4. Tool returns `CallToolResult { IsError = true }` with message `"No HAL resource returned from /health (resource not found or response was not HAL)"`
+3. `GetResultAsync` returns `HalClientResult { StatusCode = 200, ReasonPhrase = "OK", Resource = null }`
+4. Tool returns `CallToolResult { IsError = true }` with message `"HTTP 200 OK: /health"`
 5. Tool collection is not modified
 
 ### Scenario: Startup failure
