@@ -55,7 +55,7 @@ If invoked for generic or ambiguous feedback, return blocked and direct the orch
 ## Procedure
 
 1. Confirm PR exists, current branch is the PR head branch, latest remote state is fetched, and working tree is clean.
-2. Fetch Codex-authored feedback using `.claude/references/github-pr-review-graphql.md`.
+2. Fetch Codex-authored feedback using `.claude/references/github-pr-review-graphql.md`: review threads, inline thread comments, top-level PR comments, and review summaries (reviews with `CHANGES_REQUESTED` or `COMMENTED` state whose body contains actionable feedback not captured in inline threads).
 3. Build a remediation queue with thread/comment id, file, line/diff context, summary, classification, severity, owner, user-input requirement, and version/release impact.
 4. Route per `pr-review-remediation-loop.md`.
 5. Apply smallest correct fixes through delegated agents.

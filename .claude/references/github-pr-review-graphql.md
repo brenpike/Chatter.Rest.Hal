@@ -28,6 +28,8 @@ Examples below fetch first pages. Implementations must page through any connecti
 
 If pagination is required but not implemented, return `blocked` rather than claiming full coverage.
 
+Pass `-F after="CURSOR"` (using `endCursor` from `pageInfo`) on subsequent fetches. Omit `-F after` for the first page. Nested connection pagination (e.g., thread comments beyond the first page) requires a separate per-thread query using the thread `id` and a comment-level cursor.
+
 ## Fetch Review Threads
 
 ```bash
@@ -36,13 +38,13 @@ gh api graphql \
   -f repo="REPO" \
   -F pr=123 \
   -f query='
-query($owner: String!, $repo: String!, $pr: Int!) {
+query($owner: String!, $repo: String!, $pr: Int!, $after: String) {
   repository(owner: $owner, name: $repo) {
     pullRequest(number: $pr) {
       number
       url
       state
-      reviewThreads(first: 100) {
+      reviewThreads(first: 100, after: $after) {
         pageInfo { hasNextPage endCursor }
         nodes {
           id
@@ -78,10 +80,10 @@ gh api graphql \
   -f repo="REPO" \
   -F pr=123 \
   -f query='
-query($owner: String!, $repo: String!, $pr: Int!) {
+query($owner: String!, $repo: String!, $pr: Int!, $after: String) {
   repository(owner: $owner, name: $repo) {
     pullRequest(number: $pr) {
-      reviewThreads(first: 100) {
+      reviewThreads(first: 100, after: $after) {
         pageInfo { hasNextPage endCursor }
         nodes {
           id
@@ -121,10 +123,10 @@ gh api graphql \
   -f repo="REPO" \
   -F pr=123 \
   -f query='
-query($owner: String!, $repo: String!, $pr: Int!) {
+query($owner: String!, $repo: String!, $pr: Int!, $after: String) {
   repository(owner: $owner, name: $repo) {
     pullRequest(number: $pr) {
-      comments(first: 100) {
+      comments(first: 100, after: $after) {
         pageInfo { hasNextPage endCursor }
         nodes {
           id
