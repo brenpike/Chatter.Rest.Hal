@@ -62,16 +62,17 @@ Already uses `Chatter.Rest.Hal` for building or consuming HAL documents. Wants t
 
 ### Tool naming
 
-**REQ-04:** Each `LinkObject` in a resource's `_links` becomes one `McpServerTool` instance. For rels with multiple `LinkObject` entries (array relations), only the first `LinkObject` is converted to a tool in v1.
+**REQ-04:** Each `LinkObject` in a resource's `_links` becomes one `McpServerTool` instance. For rels with multiple `LinkObject` entries (array relations), only the first `LinkObject` is converted to a tool in v1. Rels with zero `LinkObject` entries (e.g., from `"_links": { "rel": null }`) are silently skipped and produce no tool.
 
 **REQ-05:** Tool name is derived from the self href and the rel. Both parts are sanitized independently using the same algorithm, then joined with `__`. Sanitization steps applied to each part in order:
 1. Strip URI scheme prefix: if the string contains `://`, remove the scheme and `://` only (e.g., `https://` is removed, leaving `api.example.com/orders`). The authority (host + optional port) is retained and processed by subsequent steps.
-2. Lowercase the result.
-3. Replace each `{varname}` URI template token with just `varname` (remove braces, keep inner name).
-4. Replace every character that is not `[a-z0-9]` with `_`.
-5. Collapse consecutive `_` runs to a single `_`.
-6. Trim leading and trailing `_`.
-7. Map empty string (e.g., from root `/`) to `root`.
+2. Strip query string and fragment: if the string contains `?`, remove `?` and everything after it. If the string contains `#`, remove `#` and everything after it.
+3. Lowercase the result.
+4. Replace each `{varname}` URI template token with just `varname` (remove braces, keep inner name).
+5. Replace every character that is not `[a-z0-9]` with `_`.
+6. Collapse consecutive `_` runs to a single `_`.
+7. Trim leading and trailing `_`.
+8. Map empty string (e.g., from root `/`) to `root`.
 
 After sanitizing both parts, apply truncation with a combined budget of 62 characters:
 - If `relPart.Length >= 62`: final name = `relPart[..62]` (rel truncated, prefix omitted).
@@ -87,6 +88,7 @@ Examples (no truncation needed):
 | `/orders/{id}` | `self` | `orders_id__self` |
 | `/user-profiles` | `search` | `user_profiles__search` |
 | `https://api.example.com/orders` | `cancel` | `api_example_com_orders__cancel` |
+| `/orders?page=2` | `next` | `orders__next` |
 
 **REQ-06:** Tool description is `LinkObject.Title` when present and non-empty; otherwise `"Navigate to {rel}"`.
 
@@ -158,7 +160,7 @@ Examples (no truncation needed):
 
 **REQ-35:** All `Debug`-level log points use `LoggerMessage` source generators to avoid string allocation when `Debug` logging is not enabled. All `Trace`-level log points that iterate collections use explicit `IsEnabled(LogLevel.Trace)` guards before the loop. No `Information`-level logging occurs on hot paths (only on startup).
 
-**REQ-36:** Request bodies, response bodies, auth headers, and API keys must never appear in log messages at any log level. Tool names and hrefs are safe to log.
+**REQ-36:** Request bodies, response bodies, auth headers, and API keys must never appear in log messages at any log level. Tool names are safe to log. Hrefs may be logged at Debug level but must have query strings and fragments stripped before logging to avoid exposing tokens, signatures, or other sensitive query parameters.
 
 ### Async and Cancellation
 
@@ -293,3 +295,4 @@ The following capabilities are explicitly deferred and must not be implemented i
 - **Tool list union mode** -- no accumulation of tools across traversals; each navigation replaces the tool set
 - **Typed input schemas beyond `string`** -- all template variables are `string` parameters
 - **Array relation expansion** -- rels with multiple `LinkObject` entries use only the first entry (REQ-04)
+- **Concurrent navigation sessions** -- the tool collection is global; concurrent tool invocations from multiple agents or clients will overwrite each other's current resource state. v1 is designed for a single stdio transport with one active navigation context at a time (see REQ-21).

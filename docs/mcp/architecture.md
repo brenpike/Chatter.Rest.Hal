@@ -292,17 +292,22 @@ Sanitize(input):
     // 1. Strip URI scheme prefix: if "://" present, remove scheme and "://" only; keep authority
     if s contains "://":
         s = s after "://"   // e.g., "https://api.example.com/orders" -> "api.example.com/orders"
-    // 2. Lowercase
+    // 2. Strip query string and fragment
+    if s contains "?":
+        s = s before "?"
+    if s contains "#":
+        s = s before "#"
+    // 3. Lowercase
     s = s.ToLowerInvariant()
-    // 3. Replace {varname} tokens: remove braces, keep inner name
+    // 4. Replace {varname} tokens: remove braces, keep inner name
     s = Regex.Replace(s, @"\{([^}]+)\}", "$1")
-    // 4. Replace non-[a-z0-9] characters with "_" (leading "/" is handled here)
+    // 5. Replace non-[a-z0-9] characters with "_" (leading "/" is handled here)
     s = Regex.Replace(s, @"[^a-z0-9]", "_")
-    // 5. Collapse consecutive underscores
+    // 6. Collapse consecutive underscores
     s = Regex.Replace(s, @"_+", "_")
-    // 6. Trim leading/trailing underscores
+    // 7. Trim leading/trailing underscores
     s = s.Trim('_')
-    // 7. Map empty string to "root"
+    // 8. Map empty string to "root"
     return s == "" ? "root" : s
 ```
 
@@ -342,6 +347,7 @@ CreateToolName(selfHref, rel):
 | `/api/v2/users/abc-def` | `edit` | `api_v2_users_abc_def__edit` |
 | `/orders/{id}/lines/{lineId}` | `delete` | `orders_id_lines_lineid__delete` |
 | `https://api.example.com/orders` | `cancel` | `api_example_com_orders__cancel` |
+| `/orders?page=2` | `next` | `orders__next` |
 
 The double-underscore `__` separator between prefix and rel is intentional. Single underscores appear within sanitized segments; the double underscore provides unambiguous parsing of prefix vs. rel.
 
@@ -375,6 +381,8 @@ HalToolCollectionManager.SwapTools(resource, selfHref):
             for each link in resource.Links:
                 if link.Rel in _halOptions.ExcludeRels:
                     continue
+                if link.LinkObjects is null or link.LinkObjects.Count == 0:
+                    continue  // skip rels with no link objects (e.g., "_links": { "rel": null })
                 linkObject = link.LinkObjects[0]  // first LinkObject only (v1)
                 logger = _loggerFactory.CreateLogger<HalNavigationTool>()
                 collection.Add(new HalNavigationTool(
@@ -392,6 +400,7 @@ HalToolCollectionManager.SwapTools(resource, selfHref):
 - The `self` rel is included by default unless explicitly excluded (REQ-18)
 - `_swapLock` is `static readonly` — only one swap runs at a time across all scoped instances (REQ-42)
 - `ILogger<HalNavigationTool>` is created per tool via `_loggerFactory.CreateLogger<HalNavigationTool>()` (REQ-24)
+- v1 is safe for a single active navigation context only. Concurrent tool invocations from multiple agents are not supported — the last SwapTools call wins, potentially replacing tools mid-navigation for another caller. This is an accepted v1 constraint (see REQ-21 and Out of Scope).
 
 ---
 
