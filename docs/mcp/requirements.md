@@ -207,7 +207,7 @@ The following shows what a user writes in their `Program.cs` to expose a HAL API
 // Register IHalClient with options (requires Chatter.Rest.Hal.Client.DependencyInjection):
 builder.Services.AddHttpClient<IHalClient, HalClient>(c =>
     c.BaseAddress = new Uri("https://api.example.com/"))
-    .AddHalOptions();  // registers HalClientOptions with defaults; override as needed
+    .AddHalOptions(_ => { });  // configure HalClientOptions here; pass _ => { } for defaults
 
 builder.Services.AddMcpServer()
     .WithStdioServerTransport()
@@ -220,7 +220,7 @@ builder.Services.AddMcpServer()
 
 Key points:
 - `WithHalApi` is an extension method on `IMcpServerBuilder`, following the same pattern as `WithStdioServerTransport()` and `WithToolsFromAssembly()`
-- `IHalClient` is registered via `AddHttpClient<IHalClient, HalClient>(...).AddHalOptions()` (from `Chatter.Rest.Hal.Client.DependencyInjection`). `.AddHalOptions()` wires `HalClientOptions` to the typed client — required because `HalClient` takes `HalClientOptions` in its constructor. Set `BaseAddress` on the `HttpClient` when the HAL API returns relative hrefs (see REQ-45).
+- `IHalClient` is registered via `AddHttpClient<IHalClient, HalClient>(...).AddHalOptions(_ => { })` (from `Chatter.Rest.Hal.Client.DependencyInjection`). `.AddHalOptions(Action<HalClientOptions>)` wires `HalClientOptions` to the typed client — required because `HalClient` takes `HalClientOptions` in its constructor. Pass `_ => { }` to accept all defaults. Set `BaseAddress` on the `HttpClient` when the HAL API returns relative hrefs (see REQ-45).
 - `HalMcpServerOptions` is configured via the standard `Action<T>` options pattern
 - The user does not register individual tools -- all tools are discovered dynamically from HAL `_links`
 
