@@ -65,7 +65,7 @@ Already uses `Chatter.Rest.Hal` for building or consuming HAL documents. Wants t
 **REQ-04:** Each `LinkObject` in a resource's `_links` becomes one `McpServerTool` instance. For rels with multiple `LinkObject` entries (array relations), only the first `LinkObject` is converted to a tool in v1.
 
 **REQ-05:** Tool name is derived from the self href and the rel. Both parts are sanitized independently using the same algorithm, then joined with `__`. Sanitization steps applied to each part in order:
-1. Strip URI scheme prefix: if the string contains `://`, remove everything up to and including `://` and the following authority (host + optional port). Strip the resulting leading `/`.
+1. Strip URI scheme prefix: if the string contains `://`, remove the scheme and `://` only (e.g., `https://` is removed, leaving `api.example.com/orders`). The authority (host + optional port) is retained and processed by subsequent steps.
 2. Replace each `{varname}` URI template token with just `varname` (remove braces, keep inner name).
 3. Replace every character that is not `[a-z0-9]` with `_`.
 4. Collapse consecutive `_` runs to a single `_`.
@@ -75,7 +75,7 @@ Already uses `Chatter.Rest.Hal` for building or consuming HAL documents. Wants t
 
 After sanitizing both parts, apply truncation with a combined budget of 62 characters:
 - If `relPart.Length >= 62`: final name = `relPart[..62]` (rel truncated, prefix omitted).
-- Else: `prefixBudget = 62 - relPart.Length`; `prefix = prefix[..Min(prefixBudget, prefix.Length)]`. If prefix is empty after truncation: final name = `relPart`. Else: final name = `prefix + "__" + relPart`.
+- Else: `prefixBudget = 62 - relPart.Length - 2` (reserve 2 chars for the `__` separator); `prefix = prefix[..Min(prefixBudget, prefix.Length)]`. If `prefixBudget <= 0` or prefix is empty after truncation: final name = `relPart`. Else: final name = `prefix + "__" + relPart`.
 
 Examples (no truncation needed):
 
@@ -134,7 +134,7 @@ Examples (no truncation needed):
 
 ### Logging
 
-**REQ-24:** `HalMcpStartupService`, `HalNavigationTool`, `NavigateToRootTool`, and `HalToolCollectionManager` each accept `ILogger<T>` (or `ILoggerFactory` for `HalToolCollectionManager`, which creates per-tool loggers) via constructor injection. Logging for tool-swap operations is performed inside `HalToolCollectionManager` using its own logger, and at the call site for swap-triggered context the call site already has (e.g., which href triggered the swap).
+**REQ-24:** `HalMcpStartupService`, `HalNavigationTool`, and `NavigateToRootTool` each accept `ILogger<T>` via constructor injection. `HalToolCollectionManager` accepts `ILoggerFactory` via constructor injection and uses it to create `ILogger<HalNavigationTool>` for each tool instance it constructs. Logging for tool-swap operations (tool counts added/removed, individual tool names) is performed at the call site — the tool or startup service that invokes `SwapTools` — which has richer context about the triggering event (e.g., which href triggered the swap, the root URI).
 
 **REQ-25:** All log messages use structured logging with named placeholders (e.g., `{ToolName}`, `{Href}`, `{StatusCode}`, `{ToolCount}`, `{RootUri}`, `{Rel}`) and never string concatenation or string interpolation in log calls.
 

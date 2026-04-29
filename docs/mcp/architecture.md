@@ -289,10 +289,9 @@ Both the self href and the rel are sanitized independently using the same steps,
 ```
 Sanitize(input):
     s = input
-    // 1. Strip URI scheme and authority: if "://" present, remove everything up to and including host/port
+    // 1. Strip URI scheme prefix: if "://" present, remove scheme and "://" only; keep authority
     if s contains "://":
-        s = s after "://"
-        s = s after first "/" (remove authority)  // strip host[:port]
+        s = s after "://"   // e.g., "https://api.example.com/orders" -> "api.example.com/orders"
     // 2. Strip leading "/"
     s = s.TrimStart('/')
     // 3. Replace {varname} tokens: remove braces, keep inner name
@@ -319,7 +318,11 @@ CreateToolName(selfHref, rel):
     if relPart.Length >= 62:
         return relPart[..62]
 
-    prefixBudget = 62 - relPart.Length
+    prefixBudget = 62 - relPart.Length - 2  // reserve 2 chars for "__" separator
+
+    if prefixBudget <= 0:
+        return relPart
+
     prefix = prefix[..Min(prefixBudget, prefix.Length)]
 
     if prefix == "":
