@@ -4,24 +4,24 @@
 
 Chatter.Rest.Hal is a .NET/C# implementation of the HAL (Hypertext Application Language) specification for building and consuming RESTful APIs. It provides a fluent builder API, System.Text.Json serialization/deserialization, and a Roslyn source generator package.
 
-**Repository:** https://github.com/brenpike/Chatter.Rest.Hal
-**HAL Specification:** https://datatracker.ietf.org/doc/html/draft-kelly-json-hal
-**License:** MIT
+**Repository:** https://github.com/brenpike/Chatter.Rest.Hal  
+**HAL Specification:** https://datatracker.ietf.org/doc/html/draft-kelly-json-hal  
+**License:** MIT  
 **Author:** Brennan Pike
 
 ## Documentation Index
 
 | Doc | Contents |
 |---|---|
-| [docs/architecture.md](docs/architecture.md) | Domain model, builder internals, converters, source generator pipeline |
-| [docs/api.md](docs/api.md) | Full fluent builder API reference and extension method signatures |
-| [docs/serialization.md](docs/serialization.md) | Converter wiring, HalJsonOptions, force-array, deserialization internals |
-| [docs/usage.md](docs/usage.md) | Copy-paste examples for building, serializing, deserializing |
-| [docs/development.md](docs/development.md) | Build/test/pack commands, code style, test conventions, CI/CD |
-| [docs/HAL_TEST_PLAN.md](docs/HAL_TEST_PLAN.md) | Spec-to-test mapping; consult when adding tests or evaluating spec compliance |
-| [docs/aspnetcore/requirements.md](docs/aspnetcore/requirements.md) | Package requirements (REQ-01–REQ-37) for `Chatter.Rest.Hal.AspNetCore` |
-| [docs/aspnetcore/architecture.md](docs/aspnetcore/architecture.md) | Architecture, type pseudocode, and test strategy for `Chatter.Rest.Hal.AspNetCore` |
-| [versioning.md](versioning.md) | SemVer rules, bump triggers, CHANGELOG convention, git tag policy |
+| `docs/architecture.md` | Domain model, builder internals, converters, source generator pipeline |
+| `docs/api.md` | Fluent builder API reference and extension method signatures |
+| `docs/serialization.md` | Converter wiring, HalJsonOptions, force-array, deserialization internals |
+| `docs/usage.md` | Copy-paste examples for building, serializing, deserializing |
+| `docs/development.md` | Build/test/pack commands, code style, test conventions, CI/CD |
+| `docs/HAL_TEST_PLAN.md` | HAL spec-to-test mapping; consult for spec compliance and tests |
+| `docs/aspnetcore/requirements.md` | Package requirements for `Chatter.Rest.Hal.AspNetCore` |
+| `docs/aspnetcore/architecture.md` | Architecture, pseudocode, and test strategy for `Chatter.Rest.Hal.AspNetCore` |
+| `versioning.md` | SemVer rules, bump triggers, changelog, tag policy |
 
 ## Solution Structure
 
@@ -33,71 +33,53 @@ Chatter.Rest.Hal is a .NET/C# implementation of the HAL (Hypertext Application L
 | `test/Chatter.Rest.Hal.Tests/` | — |
 | `test/Chatter.Rest.Hal.CodeGenerators.Tests/` | — |
 
-`Chatter.Rest.UriTemplates` is an external NuGet package dependency (not an in-repo project). See [nuget.org](https://www.nuget.org/packages/Chatter.Rest.UriTemplates/).
+`Chatter.Rest.UriTemplates` is an external NuGet package dependency, not an in-repo project.
 
 ## Multi-Agent Governance
 
-This repository uses a constrained multi-agent workflow.
+This repository uses the constrained Claude Code framework defined by:
 
-Canonical governance files:
-- `agent-system-policy.md` — shared agent roles, authority, tool policy, escalation, and reporting
-- `branching-pr-workflow.md` — mandatory branching, commit, PR, merge, and validation workflow
-- `versioning.md` — mandatory SemVer, release metadata, CHANGELOG, and tag workflow
-- `pr-review-remediation-loop.md` — mandatory external PR review feedback loop
+- `agent-system-policy.md`
+- `branching-pr-workflow.md`
+- `versioning.md`
+- `pr-review-remediation-loop.md`
 
-These files must ALWAYS be respected unless the user says otherwise.
+Role-specific agents live in `.claude/agents/`.
+Reusable workflows live in `.claude/skills/`.
+External reviewer guidance lives in `AGENTS.md`.
 
-Role-specific behavior is defined in:
-- `.claude/agents/orchestrator.md`
-- `.claude/agents/planner.md`
-- `.claude/agents/coder.md`
-- `.claude/agents/designer.md`
-
-Reusable Claude Code workflows are defined in `.claude/skills/`.
+These files must be respected unless the user explicitly overrides them for a specific task.
 
 ## Build and Test Commands
 
-See [docs/development.md](docs/development.md) for all build, test, and pack commands.
+See `docs/development.md` for canonical build, test, pack, and CI/CD commands.
 
-## Architecture
+Use project documentation rather than inventing commands.
 
-See [docs/architecture.md](docs/architecture.md) for domain model, builder internals, converters, and source generator pipeline.
+## Architecture and Code Style
 
-## Testing Conventions
+See:
 
-See [docs/development.md](docs/development.md) for test framework, assertions, naming conventions, and fixture patterns.
+- `docs/architecture.md` for domain model, builders, converters, and source generator pipeline
+- `docs/development.md` for editorconfig rules, style, tests, and fixtures
+- `docs/HAL_TEST_PLAN.md` when adding tests or evaluating HAL spec compliance
 
-## Code Style and Conventions
+Observed conventions:
 
-See [docs/development.md](docs/development.md) for editorconfig rules (line endings, indentation, braces).
-
-Additional conventions observed in the codebase:
-
-- All collection types are `sealed record` implementing `ICollection<T>` and `IHalPart`
-- Domain types use the `Chatter.Rest.Hal` namespace
-- Converters use the `Chatter.Rest.Hal.Converters` namespace
-- Builders use the `Chatter.Rest.Hal.Builders` namespace with stages in sub-namespaces
-- Internal members are exposed to test assemblies via `InternalsVisibleTo`
-
-## Test Plan
-
-`docs/HAL_TEST_PLAN.md` maps every normative and behavioral HAL spec requirement to testable scenarios, cross-referenced against the existing test suite. Consult it when:
-- Answering questions about expected behavior
-- Adding new tests for spec compliance
-- Evaluating whether a bug is a spec violation or implementation choice
-
-## CI/CD
-
-See [docs/development.md](docs/development.md) for CI/CD workflow details.
+- collection types are `sealed record` implementing `ICollection<T>` and `IHalPart`
+- domain types use namespace `Chatter.Rest.Hal`
+- converters use namespace `Chatter.Rest.Hal.Converters`
+- builders use namespace `Chatter.Rest.Hal.Builders` with stages in sub-namespaces
+- internal members are exposed to test assemblies via `InternalsVisibleTo`
 
 ## Package Versions
 
-- `Chatter.Rest.Hal` — v1.1.0
-- `Chatter.Rest.Hal.CodeGenerators` — v0.3.0
+| Package | Version |
+|---|---|
+| `Chatter.Rest.Hal` | `1.1.0` |
+| `Chatter.Rest.Hal.CodeGenerators` | `0.3.0` |
 
-External dependency: `Chatter.Rest.UriTemplates` v0.1.0 ([NuGet](https://www.nuget.org/packages/Chatter.Rest.UriTemplates/))
-
-See [versioning.md](versioning.md) for full versioning policy, bump rules, and CHANGELOG convention.
+External dependency: `Chatter.Rest.UriTemplates` v0.1.0.
 
 ## Versioning Configuration
 
@@ -105,63 +87,52 @@ See [versioning.md](versioning.md) for full versioning policy, bump rules, and C
 
 | Package | Bump trigger path | Canonical version source | CHANGELOG | Tag prefix |
 |---|---|---|---|---|
-| `Chatter.Rest.Hal` | `src/Chatter.Rest.Hal/**` (non-`.md`) | `src/Chatter.Rest.Hal/Chatter.Rest.Hal.csproj` | `CHANGELOG.md` | `hal` |
-| `Chatter.Rest.Hal.CodeGenerators` | `src/Chatter.Rest.Hal.CodeGenerators/**` (non-`.md`) | `src/Chatter.Rest.Hal.CodeGenerators/Chatter.Rest.Hal.CodeGenerators.csproj` | `CHANGELOG-CodeGenerators.md` | `codegen` |
+| `Chatter.Rest.Hal` | `src/Chatter.Rest.Hal/**` excluding `.md` | `src/Chatter.Rest.Hal/Chatter.Rest.Hal.csproj` | `CHANGELOG.md` | `hal` |
+| `Chatter.Rest.Hal.CodeGenerators` | `src/Chatter.Rest.Hal.CodeGenerators/**` excluding `.md` | `src/Chatter.Rest.Hal.CodeGenerators/Chatter.Rest.Hal.CodeGenerators.csproj` | `CHANGELOG-CodeGenerators.md` | `codegen` |
 
-`src/Chatter.Rest.Hal.Core/**` is a shared internal component (no standalone package). Changes there may trigger a bump in dependent packages if the change propagates through a public API.
+`src/Chatter.Rest.Hal.Core/**` is a shared internal component. Changes there may trigger a bump in dependent packages if the change propagates through public API, runtime behavior, generated output, package contents, or compatibility contracts.
 
 ### Atomic Version Bump Files
 
-When bumping version `X.Y.Z` for a package, update all of these atomically:
+When bumping version `X.Y.Z` for a package, update these atomically:
 
-1. `src/<package>/<package>.csproj` — `<Version>X.Y.Z</Version>` (source of truth)
-2. `CLAUDE.md` — Package Versions table row for the package
-3. Package CHANGELOG file — add `## [X.Y.Z] - YYYY-MM-DD` section above `[Unreleased]`; update comparison link at bottom
+1. `src/<package>/<package>.csproj` — canonical `<Version>X.Y.Z</Version>`
+2. `CLAUDE.md` — package version table row
+3. package CHANGELOG — dated release section above `[Unreleased]` and comparison link update
 
-### Git Tag Format
+### Git Tags
 
-CI creates annotated tags after each successful deploy to NuGet (post-`main` merge). Tag format:
+CI creates annotated tags after successful deploy to NuGet, post-`main` merge.
 
 | Package | Tag format | Example |
 |---|---|---|
 | `Chatter.Rest.Hal` | `hal/vX.Y.Z` | `hal/v1.2.0` |
 | `Chatter.Rest.Hal.CodeGenerators` | `codegen/vX.Y.Z` | `codegen/v0.4.0` |
 
-Tags serve as the version anchor for CI `version-check` validation on future PRs.
+Tags serve as version anchors for CI `version-check` validation on future PRs.
 
 ## Memory Usage
 
-- Use `claude-mem` first when prior context, earlier decisions, constraints, risks, or continuity may materially improve accuracy, efficiency, or consistency.
-- Treat memory as a continuity and token-efficiency aid, not as a substitute for current repo inspection, validation, or other required verification.
-- Reuse still-valid prior context when helpful, but continue normally if no relevant memory is found.
-- If `mem-search` or another memory tool fails, retry at most once if the failure appears transient, then fall back to normal tools and available context.
-- Memory-tool failure alone must not block execution.
+Use `claude-mem` when prior context, decisions, constraints, risks, or continuity may materially improve accuracy, efficiency, or consistency.
+
+Memory is a continuity/token-efficiency aid, not a substitute for current repo inspection, validation, or required verification.
+
+If memory fails, retry at most once when transient, then continue with normal tools and available context. Memory failure alone must not block execution.
 
 ## Codebase Exploration Guidance
 
-Use local repo inspection first for codebase exploration and change understanding.
+Use local repo inspection first.
 
 Preferred tools:
-- `Read` for targeted file inspection
+
+- `Read` for targeted inspection
 - `Grep` and `Glob` for discovery
-- read-only shell commands for repository structure and search
-- `Context7` only when external framework, library, platform, or API documentation is needed
-- `claude-mem` when prior project or session context can reduce rediscovery
+- read-only shell commands for structure/search
+- `Context7` when external framework/library/platform/API docs are needed
+- `claude-mem` when prior context reduces rediscovery
 
 For code review, debugging, and refactoring:
+
 1. start with the smallest local inspection that can answer the question
 2. widen scope only when necessary
 3. validate conclusions with the actual files being changed
-
-## PR Feedback Skill Selection
-
-- Use `address-pr-feedback` for generic PR comments or ambiguous reviewer feedback.
-- Use `run-codex-review-loop` only for explicit Codex review remediation or Codex re-review loops.
-
-
-## PR Feedback Monitoring
-
-- Use `watch-pr-feedback` only when explicitly asked to watch, monitor, wait for, poll, loop on, or continue handling PR feedback as it appears.
-- Prefer dynamic `/loop` invocation so Monitor can be used when available.
-- Use `address-pr-feedback` for one-time generic PR comments.
-- Use `run-codex-review-loop` only for explicit Codex review remediation or Codex re-review loops.
