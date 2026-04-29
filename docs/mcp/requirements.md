@@ -65,7 +65,7 @@ Already uses `Chatter.Rest.Hal` for building or consuming HAL documents. Wants t
 **REQ-04:** Each `LinkObject` in a resource's `_links` becomes one `McpServerTool` instance. For rels with multiple `LinkObject` entries (array relations), only the first `LinkObject` is converted to a tool in v1. Rels with zero `LinkObject` entries (e.g., from `"_links": { "rel": null }`) are silently skipped and produce no tool.
 
 **REQ-05:** Tool name is derived from the self href and the rel. Both parts are sanitized independently using the same algorithm, then joined with `__`. Sanitization steps applied to each part in order:
-1. Strip URI scheme prefix: if the string contains `://`, remove the scheme and `://` only (e.g., `https://` is removed, leaving `api.example.com/orders`). The authority (host + optional port) is retained and processed by subsequent steps.
+1. Strip URI scheme prefix: if the string begins with a URI scheme pattern matching `^[a-z][a-z0-9+.-]*://`, remove the scheme and `://` (e.g., `https://` is removed, leaving `api.example.com/orders`). Relative hrefs (starting with `/` or any non-scheme character) are unaffected. The authority (host + optional port) is retained and processed by subsequent steps.
 2. Strip query string and fragment: if the string contains `?`, remove `?` and everything after it. If the string contains `#`, remove `#` and everything after it.
 3. Lowercase the result.
 4. Replace each `{varname}` URI template token with just `varname` (remove braces, keep inner name).

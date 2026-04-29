@@ -293,9 +293,10 @@ Both the self href and the rel are sanitized independently using the same steps,
 ```
 Sanitize(input):
     s = input
-    // 1. Strip URI scheme prefix: if "://" present, remove scheme and "://" only; keep authority
-    if s contains "://":
+    // 1. Strip URI scheme prefix: if s starts with scheme pattern ^[a-z][a-z0-9+.-]*://, remove through "://"; keep authority
+    if s matches Regex @"^[a-z][a-z0-9+.\-]*://":
         s = s after "://"   // e.g., "https://api.example.com/orders" -> "api.example.com/orders"
+                             //       "/search?next=https://..." -> unchanged (no leading scheme)
     // 2. Strip query string and fragment
     if s contains "?":
         s = s before "?"
