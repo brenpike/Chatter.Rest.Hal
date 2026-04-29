@@ -247,6 +247,7 @@ public sealed class HalMcpStartupService : IHostedService
 **`StartAsync`:**
 1. Create async scope: `await using var scope = _serviceProvider.CreateAsyncScope()`
 2. Resolve `IHalClient halClient` and `IHalToolCollectionManager manager` from `scope.ServiceProvider`
+2b. Compute sanitized root URI for logging: `sanitizedRootUri = halOptions.RootUri` before `?` (if present), then before `#` (if present)
 3. Fetch via `halClient.GetResultAsync(new Uri(halOptions.RootUri, UriKind.RelativeOrAbsolute), cancellationToken)`
 4. If `result.IsHalResource`: call `manager.SwapTools(result.Resource, halOptions.RootUri)` to populate the tool collection
 5. If `not result.IsHalResource`: log warning including `result.StatusCode`, do not throw
@@ -632,6 +633,8 @@ All log points are defined as `[LoggerMessage]` attributed static partial method
 | `LogStartupComplete` | Information | 3 | `"HAL MCP tools initialized: {ToolCount} tools registered from {RootUri}"` | `ToolCount`, `RootUri` |
 | `LogStartupFailed` | Warning | 4 | `"Failed to fetch root resource from {RootUri} on startup"` | `RootUri` (exception passed as `Exception` arg) |
 
+> `{RootUri}` parameters in all `HalMcpStartupService` log templates receive sanitized values (query string and fragment stripped per REQ-36).
+
 **`HalNavigationTool` log points:**
 
 | Log method | Level | Event ID | Message template | Parameters |
@@ -644,6 +647,8 @@ All log points are defined as `[LoggerMessage]` attributed static partial method
 | `LogToolsSwapped` | Debug | 6 | `"Tool collection updated: {RemovedCount} removed, {AddedCount} added"` | `RemovedCount`, `AddedCount` |
 | `LogToolAdded` | Trace | 7 | `"Tool added: {AddedToolName}"` | `AddedToolName` |
 
+> `{Href}` parameters in all `HalNavigationTool` log templates receive sanitized values (query string and fragment stripped per REQ-36).
+
 **`NavigateToRootTool` log points:**
 
 | Log method | Level | Event ID | Message template | Parameters |
@@ -655,6 +660,8 @@ All log points are defined as `[LoggerMessage]` attributed static partial method
 | `LogRootException` | Error | 5 | `"Root navigation failed"` | (exception passed as `Exception` arg) |
 | `LogRootToolsSwapped` | Debug | 6 | `"Root tool collection updated: {RemovedCount} removed, {AddedCount} added"` | `RemovedCount`, `AddedCount` |
 | `LogRootToolAdded` | Trace | 7 | `"Tool added: {AddedToolName}"` | `AddedToolName` |
+
+> `{RootUri}` parameters in all `NavigateToRootTool` log templates receive sanitized values (query string and fragment stripped per REQ-36).
 
 ---
 
@@ -682,7 +689,7 @@ The `-1` adjusts for the persistent `navigate_to_root` tool, which is not counte
 
 ### Sensitive Data
 
-Request bodies, response bodies, auth headers, and API keys must never appear in log messages (REQ-36). Tool names and hrefs are safe to log.
+Request bodies, response bodies, auth headers, and API keys must never appear in log messages (REQ-36). Tool names are safe to log. Hrefs and root URIs must be sanitized (query string and fragment stripped) before logging to avoid exposing tokens, signatures, or other sensitive query parameters. All `{Href}` and `{RootUri}` parameters in log templates receive sanitized values; the raw `resolvedHref` / `halOptions.RootUri` is used only for HTTP requests and error-response content, not for log calls.
 
 ---
 
