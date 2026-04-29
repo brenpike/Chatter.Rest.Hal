@@ -113,6 +113,34 @@ query($owner: String!, $repo: String!, $pr: Int!, $after: String) {
         | "THREAD=\($thread.id) COMMENT=\(.id) AUTHOR=\(.author.login) PATH=\($thread.path) LINE=\($thread.line // "") URL=\(.url)"'
 ```
 
+## Fetch Thread Comments (Paginated)
+
+Use this query to retrieve additional pages of comments from a single review thread when `comments(first: 20)` returns `pageInfo.hasNextPage == true`. `threadId` is the thread's GraphQL node id (e.g., `PRRT_...`).
+
+```bash
+gh api graphql \
+  -f threadId="THREAD_NODE_ID" \
+  -f query='
+query($threadId: ID!, $after: String) {
+  node(id: $threadId) {
+    ... on PullRequestReviewThread {
+      comments(first: 20, after: $after) {
+        pageInfo { hasNextPage endCursor }
+        nodes {
+          id
+          author { login }
+          body
+          createdAt
+          url
+        }
+      }
+    }
+  }
+}'
+```
+
+Pass `-F after="CURSOR"` using `endCursor` from `pageInfo` on subsequent fetches. Omit `-F after` for the first continuation page.
+
 ## Fetch Top-Level PR Comments
 
 Top-level PR comments are issue comments because every PR is also an issue.
