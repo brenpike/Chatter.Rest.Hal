@@ -6,7 +6,7 @@ This document is the source of truth for how the `Chatter.Rest.Hal.Mcp` package 
 
 ## Prerequisites
 
-IDEA-04 (`Chatter.Rest.Hal.Client`) must be implemented before this package. It provides `HttpClient` extension methods (notably `GetHalAsync`) that this package uses to fetch and parse HAL resources over HTTP. See [docs/backlog.md](../backlog.md) for the IDEA-04 specification.
+IDEA-04 (`Chatter.Rest.Hal.Client`) must be implemented before this package. It provides the `IHalClient` interface with `GetAsync(Uri uri, CancellationToken cancellationToken)` that this package uses to fetch and parse HAL resources over HTTP. See [docs/backlog.md](../backlog.md) for the IDEA-04 specification.
 
 ---
 
@@ -14,12 +14,12 @@ IDEA-04 (`Chatter.Rest.Hal.Client`) must be implemented before this package. It 
 
 ```
 Chatter.Rest.Hal.Mcp
-  -> Chatter.Rest.Hal.Client   (IDEA-04; provides GetHalAsync)
+  -> Chatter.Rest.Hal.Client   (IDEA-04; provides IHalClient)
   -> ModelContextProtocol       (Microsoft official C# MCP SDK)
-      -> Chatter.Rest.Hal       (core types: Resource, LinkObject, LinkCollection, Link)
+  -> Chatter.Rest.Hal           (core types: Resource, LinkObject, LinkCollection, Link)
 ```
 
-`Chatter.Rest.Hal.Client` itself depends on `Chatter.Rest.Hal` and `System.Net.Http`. The MCP package does not reference `System.Net.Http` directly -- all HTTP access flows through `Chatter.Rest.Hal.Client`.
+`Chatter.Rest.Hal.Client` itself depends on `Chatter.Rest.Hal` and `System.Net.Http`. The MCP package does not reference `System.Net.Http` directly — all HTTP access flows through `IHalClient`.
 
 ---
 
@@ -31,6 +31,8 @@ The package integrates with `ModelContextProtocol` (Microsoft's official C# MCP 
 - **Tool base class:** All tool instances (both HAL-derived and static) extend `McpServerTool` abstract base.
 - **Dynamic tool collection:** `McpServerPrimitiveCollection<McpServerTool>` (accessed via `McpServerOptions.ToolCollection`) is mutated at runtime. The SDK auto-fires `tools/list_changed` when the collection's `Changed` event triggers.
 - **No custom handlers:** No custom `ListToolsHandler` or `CallToolHandler` is needed. Standard collection mutation and `McpServerTool.InvokeAsync` dispatch suffice.
+- **`ScopeRequests = true` (default):** The MCP SDK creates an `IServiceScope` per tool invocation and exposes it as `RequestContext.Services`. Scoped services (including `IHalClient` and `IHalToolCollectionManager`) are correctly resolved per-invocation from this scope.
+- **Tool collection singletons:** `McpServerTool` instances stored in the tool collection are singletons. Scoped services must never be captured in tool constructor fields. Instead, tools resolve scoped dependencies from `RequestContext.Services` inside `InvokeAsync`.
 
 ---
 
@@ -46,7 +48,7 @@ The package integrates with `ModelContextProtocol` (Microsoft's official C# MCP 
 | Namespace | Visibility | Contents |
 |---|---|---|
 | `Chatter.Rest.Hal.Mcp` | Public | `HalMcpServerOptions`, `HalNavigationTool`, `NavigateToRootTool`, `HalMcpServerBuilderExtensions` |
-| `Chatter.Rest.Hal.Mcp.Internal` | Internal | `HalToolCollectionManager`, `ToolNaming` |
+| `Chatter.Rest.Hal.Mcp.Internal` | Internal | `IHalToolCollectionManager`, `HalToolCollectionManager`, `ToolNaming` |
 
 ---
 
@@ -93,9 +95,7 @@ public sealed class HalNavigationTool : McpServerTool
         string rel,
         LinkObject link,
         string selfHref,
-        HttpClient httpClient,
-        HalMcpServerOptions halOptions,
-        McpServerOptions mcpOptions);
+        ILogger<HalNavigationTool> logger);
 }
 ```
 
@@ -103,9 +103,9 @@ public sealed class HalNavigationTool : McpServerTool
 - `_rel` -- the link relation name
 - `_link` -- the `LinkObject` instance
 - `_selfHref` -- the self href of the resource this link came from (used for tool naming)
-- `_httpClient` -- the `HttpClient` for fetching
-- `_halOptions` -- configuration
-- `_mcpOptions` -- access to `McpServerOptions.ToolCollection`
+- `_logger` -- `ILogger<HalNavigationTool>`
+
+`IHalClient`, `HalMcpServerOptions`, and `IHalToolCollectionManager` are resolved from `RequestContext.Services` inside `InvokeAsync` (not stored as constructor fields) because they may be scoped services and `HalNavigationTool` instances are singletons in the tool collection.
 
 **`ProtocolTool` property (override):**
 
@@ -139,11 +139,11 @@ namespace Chatter.Rest.Hal.Mcp;
 public sealed class NavigateToRootTool : McpServerTool
 {
     public NavigateToRootTool(
-        HttpClient httpClient,
-        HalMcpServerOptions halOptions,
-        McpServerOptions mcpOptions);
+        ILogger<NavigateToRootTool> logger);
 }
 ```
+
+`IHalClient`, `HalMcpServerOptions`, and `IHalToolCollectionManager` are resolved from `RequestContext.Services` inside `InvokeAsync`.
 
 **`ProtocolTool` property:**
 - `Name` = `"navigate_to_root"`
@@ -151,33 +151,56 @@ public sealed class NavigateToRootTool : McpServerTool
 - `InputSchema` = `{ "type": "object", "properties": {} }` (no input parameters)
 
 **`InvokeAsync`:**
-1. Fetch `halOptions.RootUri` via `httpClient.GetHalAsync(halOptions.RootUri, cancellationToken: cancellationToken)`
-2. If response is `null`: return `CallToolResult { IsError = true }` with message `$"Response from {halOptions.RootUri} was not a valid HAL resource"`
-3. Call `HalToolCollectionManager.SwapTools(mcpOptions.ToolCollection, response, halOptions.RootUri, halOptions, httpClient, mcpOptions)`
-4. Serialize response to HAL JSON
-5. Return `CallToolResult { Content = [new TextContentBlock { Text = json }] }`
-6. Exception catch-all: return `CallToolResult { IsError = true, Content = [ex.Message] }`
+1. Resolve `IHalClient halClient`, `HalMcpServerOptions halOptions`, `IHalToolCollectionManager manager` from `request.Services`
+2. Fetch `halOptions.RootUri` via `halClient.GetAsync(new Uri(halOptions.RootUri), cancellationToken)`
+3. If response is `null`: return `CallToolResult { IsError = true }` with message `"No HAL resource returned from {halOptions.RootUri} (resource not found or response was not HAL)"`
+4. Call `manager.SwapTools(response, halOptions.RootUri)`
+5. Serialize response to HAL JSON
+6. Return `CallToolResult { Content = [new TextContentBlock { Text = json }] }`
+7. Catch `HttpRequestException ex` when status code available: return `CallToolResult { IsError = true }` with message `"HTTP {(int)status} {reason}: {halOptions.RootUri}"`
+8. Catch `Exception ex`: return `CallToolResult { IsError = true, Content = [ex.Message] }`
 
 ---
 
-### `HalToolCollectionManager` (internal static)
-
-Central logic for replacing the tool collection with tools derived from a HAL resource's links.
+### `IHalToolCollectionManager` (internal interface)
 
 ```csharp
 namespace Chatter.Rest.Hal.Mcp.Internal;
 
-internal static class HalToolCollectionManager
+internal interface IHalToolCollectionManager
 {
-    public static void SwapTools(
-        McpServerPrimitiveCollection<McpServerTool> collection,
-        Resource resource,
-        string selfHref,
-        HalMcpServerOptions halOptions,
-        HttpClient httpClient,
-        McpServerOptions mcpOptions);
+    void SwapTools(Resource resource, string selfHref);
 }
 ```
+
+---
+
+### `HalToolCollectionManager : IHalToolCollectionManager` (internal scoped)
+
+Scoped DI service that replaces the tool collection with tools derived from a HAL resource's links. Registered as `IHalToolCollectionManager` (scoped).
+
+```csharp
+namespace Chatter.Rest.Hal.Mcp.Internal;
+
+internal sealed class HalToolCollectionManager : IHalToolCollectionManager
+{
+    private static readonly object _swapLock = new();
+
+    public HalToolCollectionManager(
+        McpServerOptions mcpOptions,
+        HalMcpServerOptions halOptions,
+        ILoggerFactory loggerFactory);
+
+    public void SwapTools(Resource resource, string selfHref);
+}
+```
+
+**Fields stored:**
+- `_mcpOptions` -- access to `McpServerOptions.ToolCollection`
+- `_halOptions` -- configuration (ExcludeRels)
+- `_loggerFactory` -- used to create `ILogger<HalNavigationTool>` for each tool instance
+
+`_swapLock` is `static readonly` so only one swap executes at a time across all scoped instances.
 
 See [Tool Collection Swap Algorithm](#tool-collection-swap-algorithm) below.
 
@@ -210,9 +233,9 @@ namespace Chatter.Rest.Hal.Mcp;
 public sealed class HalMcpStartupService : IHostedService
 {
     public HalMcpStartupService(
-        McpServerOptions mcpOptions,
-        HttpClient httpClient,
-        HalMcpServerOptions halOptions);
+        IServiceProvider serviceProvider,
+        HalMcpServerOptions halOptions,
+        ILogger<HalMcpStartupService> logger);
 
     public Task StartAsync(CancellationToken cancellationToken);
     public Task StopAsync(CancellationToken cancellationToken);
@@ -220,9 +243,12 @@ public sealed class HalMcpStartupService : IHostedService
 ```
 
 **`StartAsync`:**
-1. Fetch `halOptions.RootUri` via `httpClient.GetHalAsync(halOptions.RootUri, cancellationToken: cancellationToken)`
-2. If successful: call `HalToolCollectionManager.SwapTools(...)` to populate tool collection with root's links
-3. If fetch fails (any exception or null response): catch, log warning, do not throw. The `navigate_to_root` tool (already in the collection from registration) remains available for the agent to retry.
+1. Create async scope: `await using var scope = _serviceProvider.CreateAsyncScope()`
+2. Resolve `IHalClient halClient` and `IHalToolCollectionManager manager` from `scope.ServiceProvider`
+3. Fetch `halOptions.RootUri` via `halClient.GetAsync(new Uri(halOptions.RootUri), cancellationToken)`
+4. If successful and non-null: call `manager.SwapTools(response, halOptions.RootUri)` to populate the tool collection
+5. If response is null: log warning, do not throw
+6. If fetch throws (any exception): catch, log warning, do not throw. The `navigate_to_root` tool (already in the collection from registration) remains available for the agent to retry.
 
 **`StopAsync`:** No-op. Returns `Task.CompletedTask`.
 
@@ -247,24 +273,59 @@ public static class HalMcpServerBuilderExtensions
 1. Create `HalMcpServerOptions` instance, invoke `configure` delegate
 2. Validate `RootUri` is not null/empty/whitespace; throw `ArgumentException` if invalid (REQ-19)
 3. Register `HalMcpServerOptions` as singleton
-4. Create `NavigateToRootTool` singleton and add it to `McpServerOptions.ToolCollection`
-5. Register `HalMcpStartupService` as `IHostedService`
-6. Return `builder` for chaining
+4. Register `IHalToolCollectionManager` → `HalToolCollectionManager` as scoped
+5. Create `NavigateToRootTool` singleton (with `ILogger<NavigateToRootTool>` resolved from builder) and add it to `McpServerOptions.ToolCollection`
+6. Register `HalMcpStartupService` as `IHostedService`
+7. Return `builder` for chaining
 
 ---
 
 ## Tool Naming Algorithm
 
+Both the self href and the rel are sanitized independently using the same steps, then joined with `__`. The combined name is truncated to a 62-character budget.
+
+### Sanitization (applied to each part)
+
 ```
-ToolNaming.CreateToolName(selfHref, rel):
-    segment = selfHref
-        .TrimStart('/')
-        .Replace each `{varname}` token with just `varname` (strip braces, keep inner name)
-        .Replace('/', '_')
-        .Replace('-', '_')
-        .ToLowerInvariant()
-    prefix = segment == "" ? "root" : segment
-    return $"{prefix}__{rel}"
+Sanitize(input):
+    s = input
+    // 1. Strip URI scheme and authority: if "://" present, remove everything up to and including host/port
+    if s contains "://":
+        s = s after "://"
+        s = s after first "/" (remove authority)  // strip host[:port]
+    // 2. Strip leading "/"
+    s = s.TrimStart('/')
+    // 3. Replace {varname} tokens: remove braces, keep inner name
+    s = Regex.Replace(s, @"\{([^}]+)\}", "$1")
+    // 4. Replace non-[a-z0-9] characters with "_"
+    s = Regex.Replace(s, @"[^a-z0-9]", "_")   // after lowercasing
+    // 5. Collapse consecutive underscores
+    s = Regex.Replace(s, @"_+", "_")
+    // 6. Trim leading/trailing underscores
+    s = s.Trim('_')
+    // 7. Lowercase
+    s = s.ToLowerInvariant()
+    // 8. Map empty string to "root"
+    return s == "" ? "root" : s
+```
+
+### Truncation (budget = 62)
+
+```
+CreateToolName(selfHref, rel):
+    prefix = Sanitize(selfHref)
+    relPart = Sanitize(rel)
+
+    if relPart.Length >= 62:
+        return relPart[..62]
+
+    prefixBudget = 62 - relPart.Length
+    prefix = prefix[..Min(prefixBudget, prefix.Length)]
+
+    if prefix == "":
+        return relPart
+
+    return prefix + "__" + relPart
 ```
 
 ### Examples
@@ -279,44 +340,46 @@ ToolNaming.CreateToolName(selfHref, rel):
 | `/` | `self` | `root__self` |
 | `/api/v2/users/abc-def` | `edit` | `api_v2_users_abc_def__edit` |
 | `/orders/{id}/lines/{lineId}` | `delete` | `orders_id_lines_lineid__delete` |
+| `https://api.example.com/orders` | `cancel` | `api_example_com_orders__cancel` |
 
-> **Note:** Template variable tokens (`{varname}`) are replaced as a unit — the inner name is preserved and the braces are dropped. Replacing `{` and `}` individually with `_` would produce trailing underscores in the sanitized prefix (e.g. `orders__id_`) and triple-underscore separators in the final tool name (`orders__id___rel`).
-
-The double-underscore `__` separator between prefix and rel is intentional. Single underscores appear within the sanitized href segments, so the double underscore provides unambiguous parsing of prefix vs. rel.
+The double-underscore `__` separator between prefix and rel is intentional. Single underscores appear within sanitized segments; the double underscore provides unambiguous parsing of prefix vs. rel.
 
 ---
 
 ## Tool Collection Swap Algorithm
 
 ```
-SwapTools(collection, resource, selfHref, halOptions, httpClient, mcpOptions):
-    // 1. Preserve navigate_to_root
-    navigateToRoot = collection entries where tool name == "navigate_to_root"
+HalToolCollectionManager.SwapTools(resource, selfHref):
+    lock (_swapLock):
+        collection = _mcpOptions.ToolCollection
 
-    // 2. Clear and restore persistent tools
-    collection.Clear()
-    for each tool in navigateToRoot:
-        collection.Add(tool)
+        // 1. Preserve navigate_to_root
+        navigateToRoot = collection entries where tool name == "navigate_to_root"
 
-    // 3. Resolve actual self href from the resource if available
-    effectiveSelf = selfHref
-    if resource.Links is not null:
-        for each link in resource.Links:
-            if link.Rel == "self" and link.LinkObjects has entries:
-                effectiveSelf = link.LinkObjects[0].Href
-                break
+        // 2. Clear and restore persistent tools
+        collection.Clear()
+        for each tool in navigateToRoot:
+            collection.Add(tool)
 
-    // 4. Add one HalNavigationTool per non-excluded rel
-    if resource.Links is not null:
-        for each link in resource.Links:
-            if link.Rel in halOptions.ExcludeRels:
-                continue
-            linkObject = link.LinkObjects[0]  // first LinkObject only (v1)
-            collection.Add(new HalNavigationTool(
-                link.Rel, linkObject, effectiveSelf,
-                httpClient, halOptions, mcpOptions))
+        // 3. Resolve actual self href from the resource if available
+        effectiveSelf = selfHref
+        if resource.Links is not null:
+            for each link in resource.Links:
+                if link.Rel == "self" and link.LinkObjects has entries:
+                    effectiveSelf = link.LinkObjects[0].Href
+                    break
 
-    // 5. collection.Changed fires automatically
+        // 4. Add one HalNavigationTool per non-excluded rel
+        if resource.Links is not null:
+            for each link in resource.Links:
+                if link.Rel in _halOptions.ExcludeRels:
+                    continue
+                linkObject = link.LinkObjects[0]  // first LinkObject only (v1)
+                logger = _loggerFactory.CreateLogger<HalNavigationTool>()
+                collection.Add(new HalNavigationTool(
+                    link.Rel, linkObject, effectiveSelf, logger))
+
+    // 5. collection.Changed fires automatically (outside lock)
     //    -> SDK sends tools/list_changed notification
 ```
 
@@ -326,6 +389,8 @@ SwapTools(collection, resource, selfHref, halOptions, httpClient, mcpOptions):
 - Only the first `LinkObject` per rel is used (REQ-04); array relations are not expanded in v1
 - Rels in `ExcludeRels` are skipped (REQ-17)
 - The `self` rel is included by default unless explicitly excluded (REQ-18)
+- `_swapLock` is `static readonly` — only one swap runs at a time across all scoped instances (REQ-42)
+- `ILogger<HalNavigationTool>` is created per tool via `_loggerFactory.CreateLogger<HalNavigationTool>()` (REQ-24)
 
 ---
 
@@ -334,36 +399,43 @@ SwapTools(collection, resource, selfHref, halOptions, httpClient, mcpOptions):
 ```
 InvokeAsync(request, cancellationToken):
     try:
-        // 1. Extract arguments
-        args = request.Params?.Arguments as IDictionary<string, string>
-            ?? empty dictionary
+        // 1. Resolve scoped services
+        halClient = request.Services.GetRequiredService<IHalClient>()
+        halOptions = request.Services.GetRequiredService<HalMcpServerOptions>()
+        manager   = request.Services.GetRequiredService<IHalToolCollectionManager>()
 
-        // 2. Resolve href
+        // 2. Coerce arguments from JsonElement to string
+        rawArgs = request.Params?.Arguments ?? empty
+        args = rawArgs.ToDictionary(
+            k => k.Key,
+            v => v.Value.ValueKind == JsonValueKind.String
+                ? v.Value.GetString() ?? string.Empty
+                : v.Value.ToString())
+
+        // 3. Resolve href
         if _link.Templated == true:
             resolvedHref = _link.Expand(args)
         else:
             resolvedHref = _link.Href
 
-        // 3. Fetch resource
-        response = await _httpClient.GetHalAsync(resolvedHref, cancellationToken: cancellationToken)
+        // 4. Fetch resource
+        response = await halClient.GetAsync(new Uri(resolvedHref), cancellationToken)
 
-        // 4. Handle non-HAL response
+        // 5. Handle non-HAL response
         if response is null:
             return CallToolResult
             {
                 IsError = true,
-                Content = [TextContentBlock("Response from {resolvedHref} was not a valid HAL resource")]
+                Content = [TextContentBlock("No HAL resource returned from {resolvedHref} (resource not found or response was not HAL)")]
             }
 
-        // 5. Swap tool collection with new resource's links
-        HalToolCollectionManager.SwapTools(
-            _mcpOptions.ToolCollection, response, resolvedHref,
-            _halOptions, _httpClient, _mcpOptions)
+        // 6. Swap tool collection with new resource's links
+        manager.SwapTools(response, resolvedHref)
 
-        // 6. Serialize response to HAL JSON
+        // 7. Serialize response to HAL JSON
         json = JsonSerializer.Serialize(response, halJsonSerializerOptions)
 
-        // 7. Return content
+        // 8. Return content
         return CallToolResult
         {
             Content = [TextContentBlock(json)]
@@ -395,9 +467,12 @@ InvokeAsync(request, cancellationToken):
 | Condition | Behavior | Error message format |
 |---|---|---|
 | HTTP non-success status | `IsError = true`, no collection change | `"HTTP {statusCode} {reasonPhrase}: {resolvedHref}"` |
-| Response is not valid HAL | `IsError = true`, no collection change | `"Response from {resolvedHref} was not a valid HAL resource"` |
+| Response is not valid HAL (null) | `IsError = true`, no collection change | `"No HAL resource returned from {href} (resource not found or response was not HAL)"` |
 | Exception during invocation | `IsError = true`, no collection change | `ex.Message` |
 | Startup root fetch failure | Logged warning, no throw | `navigate_to_root` remains; agent can retry |
+| Relative href without BaseAddress | `IsError = true` via Exception catch | `ex.Message` (`InvalidOperationException`) |
+
+Applies symmetrically to `HalNavigationTool` and `NavigateToRootTool`.
 
 ---
 
@@ -428,9 +503,31 @@ All template variables are typed as `string` in v1 (REQ-07). The `required` arra
 
 ---
 
+## Argument Coercion
+
+MCP arguments arrive as `IDictionary<string, JsonElement>`. Before calling `LinkObject.Expand(IDictionary<string, string>)`, coerce to `string`:
+
+```csharp
+var args = rawArgs.ToDictionary(
+    kvp => kvp.Key,
+    kvp => kvp.Value.ValueKind == JsonValueKind.String
+        ? kvp.Value.GetString() ?? string.Empty
+        : kvp.Value.ToString());
+```
+
+This handles both JSON string values (`"42"`) and non-string JSON values (numbers, booleans) that MCP clients may send for template variables typed as `string` in the input schema (REQ-43).
+
+---
+
 ## Serialization
 
 When returning HAL resource content in `CallToolResult`, the resource is serialized using `System.Text.Json.JsonSerializer.Serialize<Resource>()` with HAL converters applied (via `JsonSerializerOptions.AddHalConverters()`). This produces standard HAL JSON including `_links`, `_embedded`, and state properties.
+
+---
+
+## Target Framework
+
+The package targets `net8.0` (REQ-44). This aligns with the minimum TFM of `ModelContextProtocol` and `Chatter.Rest.Hal.Client`.
 
 ---
 
@@ -469,8 +566,7 @@ Each stateful type accepts `ILogger<T>` via constructor injection (REQ-24). Upda
 public sealed class HalMcpStartupService : IHostedService
 {
     public HalMcpStartupService(
-        McpServerOptions mcpOptions,
-        HttpClient httpClient,
+        IServiceProvider serviceProvider,
         HalMcpServerOptions halOptions,
         ILogger<HalMcpStartupService> logger);
 }
@@ -481,23 +577,17 @@ public sealed class HalNavigationTool : McpServerTool
         string rel,
         LinkObject link,
         string selfHref,
-        HttpClient httpClient,
-        HalMcpServerOptions halOptions,
-        McpServerOptions mcpOptions,
         ILogger<HalNavigationTool> logger);
 }
 
 public sealed class NavigateToRootTool : McpServerTool
 {
     public NavigateToRootTool(
-        HttpClient httpClient,
-        HalMcpServerOptions halOptions,
-        McpServerOptions mcpOptions,
         ILogger<NavigateToRootTool> logger);
 }
 ```
 
-**`HalToolCollectionManager` (internal static):** Does not accept `ILogger`. It is a pure collection-mutation helper. All logging for tool-swap operations is performed at the call site (the tool or startup service that calls `SwapTools`), which has richer context (which tool triggered the swap, the root URI, the current navigation href). Injecting a logger into a static helper would make it impure and reduce testability without improving log quality.
+**`HalToolCollectionManager` (internal scoped):** Accepts `ILoggerFactory` via constructor injection and uses it to create `ILogger<HalNavigationTool>` for each tool instance it constructs (REQ-24). It does not hold a logger for its own swap operations; swap-triggered log messages (tool count, individual tool names) are emitted by the calling tool or startup service, which has richer context about the triggering event.
 
 **`HalMcpServerBuilderExtensions.WithHalApi`:** Runs during service registration before the DI container is built, so `ILogger` is unavailable at this stage. The configured-root-uri `Debug` log is deferred to `HalMcpStartupService.StartAsync` instead. If `RootUri` validation fails, `ArgumentException` is thrown without logging — the exception message is descriptive, and the caller's exception handler is the appropriate place to log it.
 
@@ -534,10 +624,11 @@ All log points are defined as `[LoggerMessage]` attributed static partial method
 |---|---|---|---|---|
 | `LogRootInvoking` | Debug | 1 | `"Navigating to root {RootUri}"` | `RootUri` |
 | `LogRootResponse` | Debug | 2 | `"Root navigation received {StatusCode} from {RootUri}"` | `StatusCode`, `RootUri` |
-| `LogRootNonHalResponse` | Warning | 3 | `"Root resource at {RootUri} was not a valid HAL resource"` | `RootUri` |
-| `LogRootException` | Error | 4 | `"Root navigation failed"` | (exception passed as `Exception` arg) |
-| `LogRootToolsSwapped` | Debug | 5 | `"Root tool collection updated: {RemovedCount} removed, {AddedCount} added"` | `RemovedCount`, `AddedCount` |
-| `LogRootToolAdded` | Trace | 6 | `"Tool added: {AddedToolName}"` | `AddedToolName` |
+| `LogRootHttpError` | Warning | 3 | `"Root navigation received HTTP {StatusCode} from {RootUri}"` | `StatusCode`, `RootUri` |
+| `LogRootNonHalResponse` | Warning | 4 | `"Root resource at {RootUri} was not a valid HAL resource"` | `RootUri` |
+| `LogRootException` | Error | 5 | `"Root navigation failed"` | (exception passed as `Exception` arg) |
+| `LogRootToolsSwapped` | Debug | 6 | `"Root tool collection updated: {RemovedCount} removed, {AddedCount} added"` | `RemovedCount`, `AddedCount` |
+| `LogRootToolAdded` | Trace | 7 | `"Tool added: {AddedToolName}"` | `AddedToolName` |
 
 ---
 
@@ -546,15 +637,15 @@ All log points are defined as `[LoggerMessage]` attributed static partial method
 The calling tool or startup service logs before and after calling `SwapTools`. The Trace-level tool-name loop uses an explicit `IsEnabled` guard (REQ-33):
 
 ```
-var previousCount = _mcpOptions.ToolCollection.Count;
-HalToolCollectionManager.SwapTools(
-    _mcpOptions.ToolCollection, response, resolvedHref,
-    _halOptions, _httpClient, _mcpOptions);
-var addedCount = _mcpOptions.ToolCollection.Count - 1; // minus navigate_to_root
+// manager = IHalToolCollectionManager resolved from RequestContext.Services
+// mcpOptions = resolved from RequestContext.Services (for collection count)
+var previousCount = mcpOptions.ToolCollection.Count;
+manager.SwapTools(response, resolvedHref);
+var addedCount = mcpOptions.ToolCollection.Count - 1; // minus navigate_to_root
 LogToolsSwapped(previousCount - 1, addedCount);
 
 if (_logger.IsEnabled(LogLevel.Trace))
-    foreach (var tool in _mcpOptions.ToolCollection)
+    foreach (var tool in mcpOptions.ToolCollection)
         if (tool.ProtocolTool.Name != "navigate_to_root")
             LogToolAdded(tool.ProtocolTool.Name);
 ```

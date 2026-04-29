@@ -24,13 +24,13 @@ The package converts these HAL structures into live MCP tools, updating the tool
 
 ### Package dependencies
 
-- `Chatter.Rest.Hal.Client` (IDEA-04 in [docs/backlog.md](../backlog.md)) -- provides `GetHalAsync` HTTP helpers
+- `Chatter.Rest.Hal.Client` (IDEA-04 in [docs/backlog.md](../backlog.md)) -- provides `IHalClient` and its `GetAsync(Uri, CancellationToken)` method for fetching and parsing HAL resources
 - `ModelContextProtocol` -- Microsoft's official C# MCP SDK
 - `Chatter.Rest.Hal` -- core HAL types (`Resource`, `LinkObject`, `LinkCollection`, etc.)
 
 ### Prerequisite
 
-IDEA-04 (`Chatter.Rest.Hal.Client`) must be implemented before this package. It provides the HTTP client extensions (`GetHalAsync`) that this package uses to fetch and parse HAL resources. See [docs/backlog.md](../backlog.md) for IDEA-04 specification.
+IDEA-04 (`Chatter.Rest.Hal.Client`) must be implemented before this package. It provides `IHalClient` with `GetAsync(Uri uri, CancellationToken cancellationToken)` that this package uses to fetch and parse HAL resources. See [docs/backlog.md](../backlog.md) for IDEA-04 specification.
 
 ---
 
@@ -64,24 +64,29 @@ Already uses `Chatter.Rest.Hal` for building or consuming HAL documents. Wants t
 
 **REQ-04:** Each `LinkObject` in a resource's `_links` becomes one `McpServerTool` instance. For rels with multiple `LinkObject` entries (array relations), only the first `LinkObject` is converted to a tool in v1.
 
-**REQ-05:** Tool name is derived as `{sanitized_self_href}__{rel}` where sanitization applies the following transforms to the self href in order:
-1. Strip leading `/`
-2. Replace `/` with `_`
-3. Replace `{` with `_`
-4. Replace `}` with `_`
-5. Replace `-` with `_`
-6. Lowercase the result
-7. Map empty string (from root `/`) to `root`
+**REQ-05:** Tool name is derived from the self href and the rel. Both parts are sanitized independently using the same algorithm, then joined with `__`. Sanitization steps applied to each part in order:
+1. Strip URI scheme prefix: if the string contains `://`, remove everything up to and including `://` and the following authority (host + optional port). Strip the resulting leading `/`.
+2. Replace each `{varname}` URI template token with just `varname` (remove braces, keep inner name).
+3. Replace every character that is not `[a-z0-9]` with `_`.
+4. Collapse consecutive `_` runs to a single `_`.
+5. Trim leading and trailing `_`.
+6. Lowercase the result.
+7. Map empty string (e.g., from root `/`) to `root`.
 
-Examples:
+After sanitizing both parts, apply truncation with a combined budget of 62 characters:
+- If `relPart.Length >= 62`: final name = `relPart[..62]` (rel truncated, prefix omitted).
+- Else: `prefixBudget = 62 - relPart.Length`; `prefix = prefix[..Min(prefixBudget, prefix.Length)]`. If prefix is empty after truncation: final name = `relPart`. Else: final name = `prefix + "__" + relPart`.
+
+Examples (no truncation needed):
 
 | self href | rel | tool name |
 |---|---|---|
 | `/` | `orders` | `root__orders` |
 | `/orders/42` | `cancel` | `orders_42__cancel` |
 | `/api/v1/customers` | `next` | `api_v1_customers__next` |
-| `/orders/{id}` | `self` | `orders__id___self` |
+| `/orders/{id}` | `self` | `orders_id__self` |
 | `/user-profiles` | `search` | `user_profiles__search` |
+| `https://api.example.com/orders` | `cancel` | `api_example_com_orders__cancel` |
 
 **REQ-06:** Tool description is `LinkObject.Title` when present and non-empty; otherwise `"Navigate to {rel}"`.
 
@@ -91,7 +96,7 @@ Examples:
 
 **REQ-08:** When a tool is called, the package resolves the templated href using `LinkObject.Expand(IDictionary<string, string>)` with the agent-supplied arguments. For non-templated links, `Href` is used directly.
 
-**REQ-09:** The resolved URI is fetched via HTTP GET using the configured `HttpClient` (through `Chatter.Rest.Hal.Client`'s `GetHalAsync`).
+**REQ-09:** The resolved URI is fetched via HTTP GET using `IHalClient.GetAsync(Uri, CancellationToken)`. The `IHalClient` instance is resolved from `RequestContext.Services` inside `InvokeAsync` (not injected via constructor), because `IHalClient` may be a scoped service.
 
 **REQ-10:** On a successful HAL response, the tool collection is replaced with the new resource's `_links` converted to tools. The `navigate_to_root` tool is preserved across all replacements.
 
@@ -103,7 +108,7 @@ Examples:
 
 ### Error handling
 
-**REQ-14:** If the HTTP response is not a valid HAL resource (response parses to `null`), the tool returns `CallToolResult { IsError = true }` with a descriptive message including the resolved URI. The tool does not throw.
+**REQ-14:** If the HTTP response is not a valid HAL resource (response parses to `null`), the tool returns `CallToolResult { IsError = true }` with message `"No HAL resource returned from {href} (resource not found or response was not HAL)"`. The tool does not throw.
 
 **REQ-15:** If the HTTP request fails (non-success status code), the tool returns `CallToolResult { IsError = true }` with the HTTP status code, reason phrase, and resolved URI. The tool does not throw.
 
@@ -129,7 +134,7 @@ Examples:
 
 ### Logging
 
-**REQ-24:** `HalMcpStartupService`, `HalNavigationTool`, and `NavigateToRootTool` each accept `ILogger<T>` via constructor injection. `HalToolCollectionManager` is an internal static helper and does not hold an `ILogger`; logging for tool-swap operations is performed at the call site (the tool or startup service that calls `SwapTools`), which has richer context about the triggering event.
+**REQ-24:** `HalMcpStartupService`, `HalNavigationTool`, `NavigateToRootTool`, and `HalToolCollectionManager` each accept `ILogger<T>` (or `ILoggerFactory` for `HalToolCollectionManager`, which creates per-tool loggers) via constructor injection. Logging for tool-swap operations is performed inside `HalToolCollectionManager` using its own logger, and at the call site for swap-triggered context the call site already has (e.g., which href triggered the swap).
 
 **REQ-25:** All log messages use structured logging with named placeholders (e.g., `{ToolName}`, `{Href}`, `{StatusCode}`, `{ToolCount}`, `{RootUri}`, `{Rel}`) and never string concatenation or string interpolation in log calls.
 
@@ -145,7 +150,7 @@ Examples:
 
 **REQ-31:** At `Error` level, `HalNavigationTool.InvokeAsync` logs unexpected exceptions during tool invocation, including the exception and the tool name.
 
-**REQ-32:** `NavigateToRootTool.InvokeAsync` follows the same logging pattern as `HalNavigationTool` (REQ-28 through REQ-31) using its own `ILogger<NavigateToRootTool>`.
+**REQ-32:** `NavigateToRootTool.InvokeAsync` follows the same logging pattern as `HalNavigationTool` (REQ-28 through REQ-31) using its own `ILogger<NavigateToRootTool>`. This includes a `Warning`-level log when the HTTP response is a non-success status code (`LogRootHttpError`), matching `HalNavigationTool`'s 3-tier error handling (HTTP error / non-HAL / exception).
 
 **REQ-33:** At `Debug` level, after `SwapTools` completes, the calling tool or startup service logs the number of tools removed and the number of tools added. At `Trace` level, each individual tool name added to the collection is logged inside an `IsEnabled(LogLevel.Trace)` guard to avoid iteration overhead when `Trace` is not enabled.
 
@@ -162,6 +167,18 @@ Examples:
 **REQ-38:** Every async method that performs or delegates to I/O must accept a `CancellationToken` parameter and pass it through to all downstream async calls. Specifically: `HalMcpStartupService.StartAsync` receives `CancellationToken` from the `IHostedService` contract and must pass it to `GetHalAsync`. `HalNavigationTool.InvokeAsync` and `NavigateToRootTool.InvokeAsync` receive `CancellationToken` from the `McpServerTool.InvokeAsync(RequestContext, CancellationToken)` base-class contract and must pass it to `GetHalAsync`. The `CancellationToken` is not stored as a field — it flows as a call-chain parameter at every level.
 
 **REQ-39:** Tool invocation in this package is single-resource-fetch-per-call. There are no loops performing independent async I/O calls, so `Task.WhenAll` parallelism is not applicable. This requirement documents the analysis explicitly so that future maintainers do not introduce unnecessary parallelism.
+
+**REQ-40:** `HalToolCollectionManager` is a **scoped** DI service registered under the `IHalToolCollectionManager` interface. Tools (`HalNavigationTool`, `NavigateToRootTool`) resolve `IHalToolCollectionManager` and `IHalClient` from `RequestContext.Services` inside `InvokeAsync`. These services are NOT injected via constructor, because `McpServerTool` instances are singletons in the tool collection and scoped services must not be captured in singleton state.
+
+**REQ-41:** `HalMcpStartupService` injects `IServiceProvider` (the root provider) and creates an explicit `IAsyncDisposable` async scope via `IServiceProvider.CreateAsyncScope()` for each startup operation, ensuring scoped services (including `IHalClient`) are correctly lifetime-managed.
+
+**REQ-42:** `HalToolCollectionManager.SwapTools` is protected by a `static readonly object _swapLock = new()`. The swap (collection Clear + Add sequence) is wrapped in `lock(_swapLock)`. This is a synchronous lock because `McpServerPrimitiveCollection<McpServerTool>` mutation is synchronous; no async code executes inside the lock.
+
+**REQ-43:** When a tool receives arguments from the MCP framework, raw argument values arrive as `JsonElement`. The tool coerces them to `string` using: `rawArgs.ToDictionary(k => k.Key, v => v.Value.ValueKind == JsonValueKind.String ? v.Value.GetString() ?? string.Empty : v.Value.ToString())`. This ensures string-typed template variables work correctly regardless of how the MCP client serialized them.
+
+**REQ-44:** The package targets `net8.0`.
+
+**REQ-45:** When the HAL API returns relative `href` values (e.g., `/orders`), the caller is responsible for configuring `BaseAddress` on the named `HttpClient` registered with `IHttpClientFactory`. If `BaseAddress` is not set and a relative URI is resolved, `HttpClient` throws `InvalidOperationException`, which is caught by the generic `Exception` catch block in `InvokeAsync` and returned as `CallToolResult { IsError = true }` with the exception message (mirroring `Chatter.Rest.Hal.Client` REQ-08b).
 
 ---
 
