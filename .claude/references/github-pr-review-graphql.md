@@ -170,7 +170,7 @@ query($threadId: ID!, $after: String) {
 }'
 ```
 
-Pass `-F after="CURSOR"` using `endCursor` from `pageInfo` on subsequent fetches. Omit `-F after` for the first continuation page.
+Pass `-F after="CURSOR"` using `endCursor` from `pageInfo` on all continuation fetches. Omit `-F after` only for the initial fetch (first page of the thread's comments).
 
 ## Fetch Top-Level PR Comments
 
