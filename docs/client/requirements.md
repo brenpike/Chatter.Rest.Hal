@@ -52,7 +52,7 @@ Already uses `Chatter.Rest.Hal` for building HAL documents server-side. Wants to
 
 **REQ-01:** `HalClient` implements `IHalClient` and wraps an `HttpClient` with HAL-specific request/response behavior. It accepts `HalClientOptions` directly via its constructor. The `Chatter.Rest.Hal.Client.DependencyInjection` companion package resolves `IOptions<HalClientOptions>.Value` before constructing `HalClient`, so the base package has no dependency on `Microsoft.Extensions.Options`.
 
-**REQ-01a:** `HalClientResult` is a read-only value type (sealed class or readonly struct) in the `Chatter.Rest.Hal.Client` namespace that wraps the outcome of a `GetResultAsync` call:
+**REQ-01a:** `HalClientResult` is a `sealed class` in the `Chatter.Rest.Hal.Client` namespace that wraps the outcome of a `GetResultAsync` call:
 
 ```csharp
 public sealed class HalClientResult

@@ -155,15 +155,15 @@ Examples (no truncation needed):
 
 **REQ-27:** At `Warning` level, `HalMcpStartupService` logs when the root fetch fails on startup, including the exception and the root URI. Startup does not throw (per REQ-03).
 
-**REQ-28:** At `Debug` level, `HalNavigationTool.InvokeAsync` logs the tool name and resolved href before each HTTP fetch, and the response status code after receiving the response.
+**REQ-28:** At `Debug` level, `HalNavigationTool.InvokeAsync` logs the tool name and resolved href (sanitized -- query string and fragment stripped per REQ-36) before each HTTP fetch, and the response status code after receiving the response.
 
-**REQ-29:** At `Warning` level, `HalNavigationTool.InvokeAsync` logs when the HTTP response is a non-success status code, including the status code and resolved href.
+**REQ-29:** At `Warning` level, `HalNavigationTool.InvokeAsync` logs when the HTTP response is a non-success status code, including the status code and resolved href (sanitized per REQ-36).
 
-**REQ-30:** At `Warning` level, `HalNavigationTool.InvokeAsync` logs when the response is not a valid HAL resource, including the resolved href.
+**REQ-30:** At `Warning` level, `HalNavigationTool.InvokeAsync` logs when the response is not a valid HAL resource, including the resolved href (sanitized per REQ-36).
 
 **REQ-31:** At `Error` level, `HalNavigationTool.InvokeAsync` logs unexpected exceptions during tool invocation, including the exception and the tool name.
 
-**REQ-32:** `NavigateToRootTool.InvokeAsync` follows the same logging pattern as `HalNavigationTool` (REQ-28 through REQ-31) using its own `ILogger<NavigateToRootTool>`. This includes a `Warning`-level log when the HTTP response is a non-success status code (`LogRootHttpError`), matching `HalNavigationTool`'s 3-tier error handling (HTTP error / non-HAL / exception).
+**REQ-32:** `NavigateToRootTool.InvokeAsync` follows the same logging pattern as `HalNavigationTool` (REQ-28 through REQ-31) using its own `ILogger<NavigateToRootTool>`. This includes a `Warning`-level log when the HTTP response is a non-success status code (`LogRootHttpError`), matching `HalNavigationTool`'s 3-tier error handling (HTTP error / non-HAL / exception). `RootUri` is sanitized before logging per REQ-36.
 
 **REQ-33:** At `Debug` level, after `SwapTools` completes, the calling tool or startup service logs the number of tools removed and the number of tools added. At `Trace` level, each individual tool name added to the collection is logged inside an `IsEnabled(LogLevel.Trace)` guard to avoid iteration overhead when `Trace` is not enabled.
 
@@ -171,7 +171,7 @@ Examples (no truncation needed):
 
 **REQ-35:** All `Debug`-level log points use `LoggerMessage` source generators to avoid string allocation when `Debug` logging is not enabled. All `Trace`-level log points that iterate collections use explicit `IsEnabled(LogLevel.Trace)` guards before the loop. No `Information`-level logging occurs on hot paths (only on startup).
 
-**REQ-36:** Request bodies, response bodies, auth headers, and API keys must never appear in log messages at any log level. Tool names are safe to log. Hrefs may be logged at Debug level but must have query strings and fragments stripped before logging to avoid exposing tokens, signatures, or other sensitive query parameters.
+**REQ-36:** Request bodies, response bodies, auth headers, and API keys must never appear in log messages at any log level. Tool names are safe to log. Hrefs must never be logged raw. Before logging any href, compute a **sanitized href** by stripping the query string (`?` and everything after) and the fragment (`#` and everything after). Use the sanitized href in all log messages. The `{Href}` and `{RootUri}` placeholders in log message templates throughout REQ-28--REQ-35 refer to this sanitized value.
 
 ### Async and Cancellation
 

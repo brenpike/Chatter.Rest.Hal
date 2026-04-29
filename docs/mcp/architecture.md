@@ -153,6 +153,7 @@ public sealed class NavigateToRootTool : McpServerTool
 
 **`InvokeAsync`:**
 1. Resolve `IHalClient halClient`, `HalMcpServerOptions halOptions`, `IHalToolCollectionManager manager` from `request.Services`
+1b. Compute sanitized root URI for logging: `sanitizedRootUri = halOptions.RootUri` before `?` (if present), then before `#` (if present)
 2. Fetch via `halClient.GetResultAsync(new Uri(halOptions.RootUri, UriKind.RelativeOrAbsolute), cancellationToken)`
 3. If `not result.IsHalResource`: return `CallToolResult { IsError = true }` with message `"HTTP {(int)result.StatusCode} {result.ReasonPhrase}: {halOptions.RootUri}"`
 4. Call `manager.SwapTools(result.Resource, halOptions.RootUri)`
@@ -438,6 +439,9 @@ InvokeAsync(request, cancellationToken):
             resolvedHref = _link.Expand(args)
         else:
             resolvedHref = _link.Href
+
+        // 3b. Compute sanitized href for logging (strip query and fragment)
+        sanitizedHref = resolvedHref before "?" (if present), then before "#" (if present)
 
         // 4. Fetch resource
         result = await halClient.GetResultAsync(new Uri(resolvedHref, UriKind.RelativeOrAbsolute), cancellationToken)
