@@ -164,7 +164,7 @@ Examples (no truncation needed):
 
 **REQ-37:** All I/O operations in `Chatter.Rest.Hal.Mcp` must be async end-to-end. Synchronous-over-async patterns (`.Result`, `.GetAwaiter().GetResult()`, `.Wait()`) and blocking calls (`Thread.Sleep`) are prohibited anywhere in the implementation. `HalMcpStartupService.StartAsync`, `HalNavigationTool.InvokeAsync`, and `NavigateToRootTool.InvokeAsync` are all inherently async and must remain fully async through all delegate calls.
 
-**REQ-38:** Every async method that performs or delegates to I/O must accept a `CancellationToken` parameter and pass it through to all downstream async calls. Specifically: `HalMcpStartupService.StartAsync` receives `CancellationToken` from the `IHostedService` contract and must pass it to `GetHalAsync`. `HalNavigationTool.InvokeAsync` and `NavigateToRootTool.InvokeAsync` receive `CancellationToken` from the `McpServerTool.InvokeAsync(RequestContext, CancellationToken)` base-class contract and must pass it to `GetHalAsync`. The `CancellationToken` is not stored as a field — it flows as a call-chain parameter at every level.
+**REQ-38:** Every async method that performs or delegates to I/O must accept a `CancellationToken` parameter and pass it through to all downstream async calls. Specifically: `HalMcpStartupService.StartAsync` receives `CancellationToken` from the `IHostedService` contract and must pass it to `IHalClient.GetAsync`. `HalNavigationTool.InvokeAsync` and `NavigateToRootTool.InvokeAsync` receive `CancellationToken` from the `McpServerTool.InvokeAsync(RequestContext, CancellationToken)` base-class contract and must pass it to `IHalClient.GetAsync`. The `CancellationToken` is not stored as a field — it flows as a call-chain parameter at every level.
 
 **REQ-39:** Tool invocation in this package is single-resource-fetch-per-call. There are no loops performing independent async I/O calls, so `Task.WhenAll` parallelism is not applicable. This requirement documents the analysis explicitly so that future maintainers do not introduce unnecessary parallelism.
 
@@ -202,7 +202,7 @@ builder.Services.AddMcpServer()
 
 Key points:
 - `WithHalApi` is an extension method on `IMcpServerBuilder`, following the same pattern as `WithStdioServerTransport()` and `WithToolsFromAssembly()`
-- `HttpClient` is resolved from DI (standard `IHttpClientFactory` pattern)
+- `IHalClient` resolves the registered `HttpClient` internally (standard `IHttpClientFactory` pattern)
 - `HalMcpServerOptions` is configured via the standard `Action<T>` options pattern
 - The user does not register individual tools -- all tools are discovered dynamically from HAL `_links`
 
@@ -256,8 +256,8 @@ These scenarios describe end-to-end behavior for test derivation.
 
 1. Agent calls a tool that resolves to `/health`
 2. Server responds with `200 OK` but body is plain text, not HAL JSON
-3. `GetHalAsync` returns `null`
-4. Tool returns `CallToolResult { IsError = true }` with message `"Response from /health was not a valid HAL resource"`
+3. `IHalClient.GetAsync` returns `null`
+4. Tool returns `CallToolResult { IsError = true }` with message `"No HAL resource returned from /health (resource not found or response was not HAL)"`
 5. Tool collection is not modified
 
 ### Scenario: Startup failure

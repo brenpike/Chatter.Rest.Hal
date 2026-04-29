@@ -542,9 +542,9 @@ All I/O in the package is async end-to-end. No sync-over-async wrappers (`.Resul
 ### CancellationToken threading (REQ-38)
 
 Every async call site passes the `CancellationToken` received from the framework:
-- `HalMcpStartupService.StartAsync` receives `CancellationToken` from `IHostedService.StartAsync` and passes it to `GetHalAsync`
-- `HalNavigationTool.InvokeAsync` receives `CancellationToken` from `McpServerTool.InvokeAsync(RequestContext, CancellationToken)` and passes it to `GetHalAsync`
-- `NavigateToRootTool.InvokeAsync` receives `CancellationToken` from the same `McpServerTool` contract and passes it to `GetHalAsync`
+- `HalMcpStartupService.StartAsync` receives `CancellationToken` from `IHostedService.StartAsync` and passes it to `IHalClient.GetAsync`
+- `HalNavigationTool.InvokeAsync` receives `CancellationToken` from `McpServerTool.InvokeAsync(RequestContext, CancellationToken)` and passes it to `IHalClient.GetAsync`
+- `NavigateToRootTool.InvokeAsync` receives `CancellationToken` from the same `McpServerTool` contract and passes it to `IHalClient.GetAsync`
 
 The `CancellationToken` is not stored as a field. It flows through the call chain as a parameter at every level.
 
@@ -733,7 +733,7 @@ Request bodies, response bodies, auth headers, and API keys must never appear in
 
 ### Async conventions
 
-- Verify `CancellationToken` is passed through to `GetHalAsync` in `HalNavigationTool.InvokeAsync` (mock `HttpClient` asserts token received)
-- Verify `CancellationToken` is passed through to `GetHalAsync` in `NavigateToRootTool.InvokeAsync`
-- Verify `CancellationToken` is passed through to `GetHalAsync` in `HalMcpStartupService.StartAsync`
+- Verify `CancellationToken` is passed through to `IHalClient.GetAsync` in `HalNavigationTool.InvokeAsync` (mock `IHalClient` asserts token received)
+- Verify `CancellationToken` is passed through to `IHalClient.GetAsync` in `NavigateToRootTool.InvokeAsync`
+- Verify `CancellationToken` is passed through to `IHalClient.GetAsync` in `HalMcpStartupService.StartAsync`
 - Verify cancellation is honored: when a pre-cancelled token is supplied, the operation throws `OperationCanceledException` without making an HTTP request
