@@ -50,6 +50,7 @@ query($owner: String!, $repo: String!, $pr: Int!) {
           path
           line
           comments(first: 20) {
+            pageInfo { hasNextPage endCursor }
             nodes {
               id
               author { login }
@@ -87,6 +88,7 @@ query($owner: String!, $repo: String!, $pr: Int!) {
           path
           line
           comments(first: 20) {
+            pageInfo { hasNextPage endCursor }
             nodes {
               id
               author { login }
@@ -121,6 +123,7 @@ query($owner: String!, $repo: String!, $pr: Int!) {
   repository(owner: $owner, name: $repo) {
     pullRequest(number: $pr) {
       comments(first: 100) {
+        pageInfo { hasNextPage endCursor }
         nodes {
           id
           author { login }
