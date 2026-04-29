@@ -292,19 +292,17 @@ Sanitize(input):
     // 1. Strip URI scheme prefix: if "://" present, remove scheme and "://" only; keep authority
     if s contains "://":
         s = s after "://"   // e.g., "https://api.example.com/orders" -> "api.example.com/orders"
-    // 2. Strip leading "/"
-    s = s.TrimStart('/')
+    // 2. Lowercase
+    s = s.ToLowerInvariant()
     // 3. Replace {varname} tokens: remove braces, keep inner name
     s = Regex.Replace(s, @"\{([^}]+)\}", "$1")
-    // 4. Replace non-[a-z0-9] characters with "_"
-    s = Regex.Replace(s, @"[^a-z0-9]", "_")   // after lowercasing
+    // 4. Replace non-[a-z0-9] characters with "_" (leading "/" is handled here)
+    s = Regex.Replace(s, @"[^a-z0-9]", "_")
     // 5. Collapse consecutive underscores
     s = Regex.Replace(s, @"_+", "_")
     // 6. Trim leading/trailing underscores
     s = s.Trim('_')
-    // 7. Lowercase
-    s = s.ToLowerInvariant()
-    // 8. Map empty string to "root"
+    // 7. Map empty string to "root"
     return s == "" ? "root" : s
 ```
 

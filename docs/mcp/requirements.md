@@ -66,11 +66,11 @@ Already uses `Chatter.Rest.Hal` for building or consuming HAL documents. Wants t
 
 **REQ-05:** Tool name is derived from the self href and the rel. Both parts are sanitized independently using the same algorithm, then joined with `__`. Sanitization steps applied to each part in order:
 1. Strip URI scheme prefix: if the string contains `://`, remove the scheme and `://` only (e.g., `https://` is removed, leaving `api.example.com/orders`). The authority (host + optional port) is retained and processed by subsequent steps.
-2. Replace each `{varname}` URI template token with just `varname` (remove braces, keep inner name).
-3. Replace every character that is not `[a-z0-9]` with `_`.
-4. Collapse consecutive `_` runs to a single `_`.
-5. Trim leading and trailing `_`.
-6. Lowercase the result.
+2. Lowercase the result.
+3. Replace each `{varname}` URI template token with just `varname` (remove braces, keep inner name).
+4. Replace every character that is not `[a-z0-9]` with `_`.
+5. Collapse consecutive `_` runs to a single `_`.
+6. Trim leading and trailing `_`.
 7. Map empty string (e.g., from root `/`) to `root`.
 
 After sanitizing both parts, apply truncation with a combined budget of 62 characters:
