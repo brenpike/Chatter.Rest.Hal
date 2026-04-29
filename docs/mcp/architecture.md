@@ -31,7 +31,7 @@ The package integrates with `ModelContextProtocol` (Microsoft's official C# MCP 
 - **Tool base class:** All tool instances (both HAL-derived and static) extend `McpServerTool` abstract base.
 - **Dynamic tool collection:** `McpServerPrimitiveCollection<McpServerTool>` (accessed via `McpServerOptions.ToolCollection`) is mutated at runtime. The SDK auto-fires `tools/list_changed` when the collection's `Changed` event triggers.
 - **No custom handlers:** No custom `ListToolsHandler` or `CallToolHandler` is needed. Standard collection mutation and `McpServerTool.InvokeAsync` dispatch suffice.
-- **`ScopeRequests = true` (default):** The MCP SDK creates an `IServiceScope` per tool invocation and exposes it as `RequestContext.Services`. Scoped services (including `IHalClient` and `IHalToolCollectionManager`) are correctly resolved per-invocation from this scope.
+- **`ScopeRequests = true` (enforced):** `WithHalApi` explicitly sets `McpServerOptions.ScopeRequests = true` during registration (REQ-46). This ensures the MCP SDK creates a fresh `IServiceScope` per tool invocation and exposes it as `RequestContext.Services`, regardless of host defaults. Scoped services (`IHalClient`, `IHalToolCollectionManager`) are resolved per-invocation from this scope.
 - **Tool collection singletons:** `McpServerTool` instances stored in the tool collection are singletons. Scoped services must never be captured in tool constructor fields. Instead, tools resolve scoped dependencies from `RequestContext.Services` inside `InvokeAsync`.
 
 ---
@@ -272,10 +272,11 @@ public static class HalMcpServerBuilderExtensions
 1. Create `HalMcpServerOptions` instance, invoke `configure` delegate
 2. Validate `RootUri` is not null/empty/whitespace; throw `ArgumentException` if invalid (REQ-19)
 3. Register `HalMcpServerOptions` as singleton
-4. Register `IHalToolCollectionManager` → `HalToolCollectionManager` as scoped
-5. Instantiate `NavigateToRootTool` (no constructor dependencies) and add it to `McpServerOptions.ToolCollection`
-6. Register `HalMcpStartupService` as `IHostedService`
-7. Return `builder` for chaining
+4. Set `mcpOptions.ScopeRequests = true` to guarantee per-invocation scoped DI (REQ-46)
+5. Register `IHalToolCollectionManager` → `HalToolCollectionManager` as scoped
+6. Instantiate `NavigateToRootTool` (no constructor dependencies) and add it to `McpServerOptions.ToolCollection`
+7. Register `HalMcpStartupService` as `IHostedService`
+8. Return `builder` for chaining
 
 ---
 

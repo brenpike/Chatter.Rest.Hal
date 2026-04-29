@@ -170,6 +170,8 @@ Examples (no truncation needed):
 
 **REQ-40:** `HalToolCollectionManager` is a **scoped** DI service registered under the `IHalToolCollectionManager` interface. Tools (`HalNavigationTool`, `NavigateToRootTool`) resolve `IHalToolCollectionManager` and `IHalClient` from `RequestContext.Services` inside `InvokeAsync`. These services are NOT injected via constructor, because `McpServerTool` instances are singletons in the tool collection and scoped services must not be captured in singleton state.
 
+**REQ-46:** `WithHalApi` must explicitly set `McpServerOptions.ScopeRequests = true` during registration. This guarantees that the MCP SDK creates a fresh `IServiceScope` per tool invocation and exposes it as `RequestContext.Services`, regardless of whether the host application has changed the default. Without this guarantee, `IHalClient` and `IHalToolCollectionManager` (both scoped) would resolve from the root provider, causing scope-validation exceptions or incorrect service lifetimes.
+
 **REQ-41:** `HalMcpStartupService` injects `IServiceProvider` (the root provider) and creates an explicit `IAsyncDisposable` async scope via `IServiceProvider.CreateAsyncScope()` for each startup operation, ensuring scoped services (including `IHalClient`) are correctly lifetime-managed.
 
 **REQ-42:** `HalToolCollectionManager.SwapTools` is protected by a `static readonly object _swapLock = new()`. The swap (collection Clear + Add sequence) is wrapped in `lock(_swapLock)`. This is a synchronous lock because `McpServerPrimitiveCollection<McpServerTool>` mutation is synchronous; no async code executes inside the lock.
