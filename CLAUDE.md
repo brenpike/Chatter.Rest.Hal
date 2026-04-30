@@ -21,7 +21,6 @@ Chatter.Rest.Hal is a .NET/C# implementation of the HAL (Hypertext Application L
 | `docs/HAL_TEST_PLAN.md` | HAL spec-to-test mapping; consult for spec compliance and tests |
 | `docs/aspnetcore/requirements.md` | Package requirements for `Chatter.Rest.Hal.AspNetCore` |
 | `docs/aspnetcore/architecture.md` | Architecture, pseudocode, and test strategy for `Chatter.Rest.Hal.AspNetCore` |
-| `versioning.md` | SemVer rules, bump triggers, changelog, tag policy |
 
 ## Solution Structure
 
@@ -37,18 +36,23 @@ Chatter.Rest.Hal is a .NET/C# implementation of the HAL (Hypertext Application L
 
 ## Multi-Agent Governance
 
-This repository uses the constrained Claude Code framework defined by:
+This repository uses the [agent-framework](https://github.com/brenpike/agent-framework) Claude Code plugin.
 
-- `agent-system-policy.md`
-- `branching-pr-workflow.md`
-- `versioning.md`
-- `pr-review-remediation-loop.md`
+Enable the plugin in `.claude/settings.json`:
+```json
+{
+  "enabledPlugins": {
+    "agent-framework@brenpike": true
+  }
+}
+```
 
-Role-specific agents live in `.claude/agents/`.
-Reusable workflows live in `.claude/skills/`.
-External reviewer guidance lives in `AGENTS.md`.
+The plugin provides:
+- Agents: `agent-framework:orchestrator` (default), `agent-framework:planner`, `agent-framework:coder`, `agent-framework:designer`
+- Skills: `agent-framework:create-working-branch`, `agent-framework:checkpoint-commit`, `agent-framework:open-plan-pr`, and others
+- Governance reference docs in the plugin's `governance/` directory
 
-These files must be respected unless the user explicitly overrides them for a specific task.
+Project-specific adapter details live in `CLAUDE.md` (this file). External reviewer guidance lives in `AGENTS.md`.
 
 ## Build and Test Commands
 
