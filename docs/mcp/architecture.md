@@ -107,7 +107,7 @@ public sealed class HalNavigationTool : McpServerTool
 - `_logger` -- `ILogger<HalNavigationTool>`
 - `_name` -- the pre-computed unique tool name (supplied by `SwapTools`; overrides `ToolNaming.CreateToolName` result when set)
 
-`IHalClient`, `HalMcpServerOptions`, and `IHalToolCollectionManager` are resolved from `RequestContext.Services` inside `InvokeAsync` (not stored as constructor fields) because they may be scoped services and `HalNavigationTool` instances are singletons in the tool collection.
+`IHalClient`, `HalMcpServerOptions`, `IHalToolCollectionManager`, and `McpServerOptions` are resolved from `RequestContext.Services` inside `InvokeAsync` (not stored as constructor fields). `IHalClient` and `IHalToolCollectionManager` may be scoped services; `McpServerOptions` is a singleton but is resolved per-invocation for consistency and to avoid capturing it in constructor fields of singleton tool instances.
 
 **`ProtocolTool` property (override):**
 
@@ -371,7 +371,7 @@ HalToolCollectionManager.SwapTools(resource, selfHref):
         navigateToRoot = collection entries where tool name == "navigate_to_root"
 
         // 2. Capture removed count (before clear; excludes navigate_to_root)
-        removedCount = collection.Count - 1
+        removedCount = collection.Count - navigateToRoot.Count
 
         // 3. Clear and restore persistent tools
         collection.Clear()
@@ -420,7 +420,7 @@ HalToolCollectionManager.SwapTools(resource, selfHref):
 - Rels in `ExcludeRels` are skipped (REQ-17)
 - The `self` rel is included by default unless explicitly excluded (REQ-18)
 - `_swapLock` is `static readonly` — only one swap runs at a time across all scoped instances (REQ-42)
-- `SwapTools` returns `(int removed, int added)` — counts are computed inside the lock and returned to the caller for logging. `removed` excludes `navigate_to_root` (it is preserved, not removed). `added` excludes `navigate_to_root`.
+- `SwapTools` returns `(int removed, int added)` — counts are computed inside the lock and returned to the caller for logging. `removed` = pre-swap collection size minus `navigateToRoot.Count` (preserved tools). `added` = total tools added in the swap (excludes `navigate_to_root`).
 - `ILogger<HalNavigationTool>` is created per tool via `_loggerFactory.CreateLogger<HalNavigationTool>()` (REQ-24)
 - Tool names are deduplicated within each swap batch using a counter suffix (`_2`, `_3`, ...). The first occurrence is never suffixed. Uniqueness takes priority over the 62-character length cap (REQ-05).
 - v1 is safe for a single active navigation context only. Concurrent tool invocations from multiple agents are not supported — the last SwapTools call wins, potentially replacing tools mid-navigation for another caller. This is an accepted v1 constraint (see REQ-21 and Out of Scope).
@@ -433,9 +433,10 @@ HalToolCollectionManager.SwapTools(resource, selfHref):
 InvokeAsync(request, cancellationToken):
     try:
         // 1. Resolve scoped services
-        halClient = request.Services.GetRequiredService<IHalClient>()
+        halClient  = request.Services.GetRequiredService<IHalClient>()
         halOptions = request.Services.GetRequiredService<HalMcpServerOptions>()
-        manager   = request.Services.GetRequiredService<IHalToolCollectionManager>()
+        manager    = request.Services.GetRequiredService<IHalToolCollectionManager>()
+        mcpOptions = request.Services.GetRequiredService<McpServerOptions>()
 
         // 2. Coerce arguments from JsonElement to string
         rawArgs = request.Params?.Arguments ?? empty
@@ -471,7 +472,7 @@ InvokeAsync(request, cancellationToken):
         // 6b. Log swap result (Debug); log individual tool names (Trace, guarded)
         LogToolsSwapped(removed, added)
         if _logger.IsEnabled(LogLevel.Trace):
-            for each tool in _mcpOptions.ToolCollection:
+            for each tool in mcpOptions.ToolCollection:
                 if tool.ProtocolTool.Name != "navigate_to_root":
                     LogToolAdded(tool.ProtocolTool.Name)
 
@@ -752,7 +753,7 @@ The calling tool or startup service logs after calling `SwapTools` using the ret
 
 ```
 // manager  = IHalToolCollectionManager resolved from RequestContext.Services
-// mcpOptions already available (for Trace-level tool name iteration)
+// mcpOptions = request.Services.GetRequiredService<McpServerOptions>() (for Trace-level tool name iteration)
 var (removed, added) = manager.SwapTools(result.Resource, resolvedHref);
 LogToolsSwapped(removed, added);
 
