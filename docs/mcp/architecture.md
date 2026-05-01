@@ -406,7 +406,7 @@ HalToolCollectionManager.SwapTools(resource, selfHref):
                 collection.Add(new HalNavigationTool(
                     link.Rel, linkObject, effectiveSelf, logger, uniqueName))
 
-        addedCount = seenNames.Count - 1  // exclude navigate_to_root
+        addedCount = seenNames.Count - navigateToRoot.Count  // exclude preserved tools
 
     // 6. collection.Changed fires automatically (outside lock)
     //    -> SDK sends tools/list_changed notification
@@ -420,7 +420,7 @@ HalToolCollectionManager.SwapTools(resource, selfHref):
 - Rels in `ExcludeRels` are skipped (REQ-17)
 - The `self` rel is included by default unless explicitly excluded (REQ-18)
 - `_swapLock` is `static readonly` — only one swap runs at a time across all scoped instances (REQ-42)
-- `SwapTools` returns `(int removed, int added)` — counts are computed inside the lock and returned to the caller for logging. `removed` = pre-swap collection size minus `navigateToRoot.Count` (preserved tools). `added` = total tools added in the swap (excludes `navigate_to_root`).
+- `SwapTools` returns `(int removed, int added)` — counts are computed inside the lock and returned to the caller for logging. `removed` = pre-swap collection size minus `navigateToRoot.Count` (preserved tools). `added` = tools added in the swap = `seenNames.Count - navigateToRoot.Count` (excludes preserved tools).
 - `ILogger<HalNavigationTool>` is created per tool via `_loggerFactory.CreateLogger<HalNavigationTool>()` (REQ-24)
 - Tool names are deduplicated within each swap batch using a counter suffix (`_2`, `_3`, ...). The first occurrence is never suffixed. Uniqueness takes priority over the 62-character length cap (REQ-05).
 - v1 is safe for a single active navigation context only. Concurrent tool invocations from multiple agents are not supported — the last SwapTools call wins, potentially replacing tools mid-navigation for another caller. This is an accepted v1 constraint (see REQ-21 and Out of Scope).
