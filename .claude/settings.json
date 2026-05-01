@@ -1,6 +1,6 @@
 {
   "enabledPlugins": {
+    "agent-framework@brenpike": true,
     "claude-mem@thedotmack": true
-  },
-  "agent": "orchestrator"
+  }
 }
