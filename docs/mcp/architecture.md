@@ -107,7 +107,7 @@ public sealed class HalNavigationTool : McpServerTool
 - `_logger` -- `ILogger<HalNavigationTool>`
 - `_name` -- the pre-computed unique tool name (supplied by `SwapTools`; overrides `ToolNaming.CreateToolName` result when set)
 
-`IHalClient`, `HalMcpServerOptions`, and `IHalToolCollectionManager` are resolved from `RequestContext.Services` inside `InvokeAsync` (not stored as constructor fields) because they may be scoped services and `HalNavigationTool` instances are singletons in the tool collection.
+`IHalClient`, `HalMcpServerOptions`, `IHalToolCollectionManager`, and `McpServerOptions` are resolved from `RequestContext.Services` inside `InvokeAsync` (not stored as constructor fields). `IHalClient` and `IHalToolCollectionManager` may be scoped services; `McpServerOptions` is a singleton but is resolved per-invocation for consistency and to avoid capturing it in constructor fields of singleton tool instances.
 
 **`ProtocolTool` property (override):**
 
@@ -151,12 +151,14 @@ public sealed class NavigateToRootTool : McpServerTool
 - `Description` = `"Return to the API root and rediscover available actions"`
 - `InputSchema` = `{ "type": "object", "properties": {} }` (no input parameters)
 
+**`InvokeAsync` method:** See [InvokeAsync Flow (NavigateToRootTool)](#invokeasync-flow-navigatetoroottool) below.
+
 **`InvokeAsync`:**
 1. Resolve `IHalClient halClient`, `HalMcpServerOptions halOptions`, `IHalToolCollectionManager manager` from `request.Services`
 1b. Compute sanitized root URI for logging: `sanitizedRootUri = halOptions.RootUri` before `?` (if present), then before `#` (if present)
 2. Fetch via `halClient.GetResultAsync(new Uri(halOptions.RootUri, UriKind.RelativeOrAbsolute), cancellationToken)`
 3. If `not result.IsHalResource`: return `CallToolResult { IsError = true }` with message `"HTTP {(int)result.StatusCode} {result.ReasonPhrase}: {halOptions.RootUri}"`
-4. Call `manager.SwapTools(result.Resource, halOptions.RootUri)`
+4. Call `(removed, added) = manager.SwapTools(result.Resource, halOptions.RootUri)`. Log `Debug` swap counts; log `Trace`-guarded individual tool names (see [InvokeAsync Flow (NavigateToRootTool)](#invokeasync-flow-navigatetoroottool) below).
 5. Serialize `result.Resource` to HAL JSON
 6. Return `CallToolResult { Content = [new TextContentBlock { Text = json }] }`
 7. Catch `HttpRequestException ex` when status code available: return `CallToolResult { IsError = true }` with message `"HTTP {(int)status} {reason}: {halOptions.RootUri}"`
@@ -171,7 +173,7 @@ namespace Chatter.Rest.Hal.Mcp.Internal;
 
 internal interface IHalToolCollectionManager
 {
-    void SwapTools(Resource resource, string selfHref);
+    (int removed, int added) SwapTools(Resource resource, string selfHref);
 }
 ```
 
@@ -193,7 +195,7 @@ internal sealed class HalToolCollectionManager : IHalToolCollectionManager
         HalMcpServerOptions halOptions,
         ILoggerFactory loggerFactory);
 
-    public void SwapTools(Resource resource, string selfHref);
+    public (int removed, int added) SwapTools(Resource resource, string selfHref);
 }
 ```
 
@@ -368,12 +370,15 @@ HalToolCollectionManager.SwapTools(resource, selfHref):
         // 1. Preserve navigate_to_root
         navigateToRoot = collection entries where tool name == "navigate_to_root"
 
-        // 2. Clear and restore persistent tools
+        // 2. Capture removed count (before clear; excludes navigate_to_root)
+        removedCount = collection.Count - navigateToRoot.Count
+
+        // 3. Clear and restore persistent tools
         collection.Clear()
         for each tool in navigateToRoot:
             collection.Add(tool)
 
-        // 3. Resolve actual self href from the resource if available
+        // 4. Resolve actual self href from the resource if available
         effectiveSelf = selfHref
         if resource.Links is not null:
             for each link in resource.Links:
@@ -381,7 +386,7 @@ HalToolCollectionManager.SwapTools(resource, selfHref):
                     effectiveSelf = link.LinkObjects[0].Href
                     break
 
-        // 4. Add one HalNavigationTool per non-excluded rel (with collision dedup)
+        // 5. Add one HalNavigationTool per non-excluded rel (with collision dedup)
         seenNames = set of names already in collection (including "navigate_to_root")
         if resource.Links is not null:
             for each link in resource.Links:
@@ -401,8 +406,11 @@ HalToolCollectionManager.SwapTools(resource, selfHref):
                 collection.Add(new HalNavigationTool(
                     link.Rel, linkObject, effectiveSelf, logger, uniqueName))
 
-    // 5. collection.Changed fires automatically (outside lock)
+        addedCount = seenNames.Count - navigateToRoot.Count  // exclude preserved tools
+
+    // 6. collection.Changed fires automatically (outside lock)
     //    -> SDK sends tools/list_changed notification
+    return (removedCount, addedCount)
 ```
 
 **Key behaviors:**
@@ -412,6 +420,7 @@ HalToolCollectionManager.SwapTools(resource, selfHref):
 - Rels in `ExcludeRels` are skipped (REQ-17)
 - The `self` rel is included by default unless explicitly excluded (REQ-18)
 - `_swapLock` is `static readonly` — only one swap runs at a time across all scoped instances (REQ-42)
+- `SwapTools` returns `(int removed, int added)` — counts are computed inside the lock and returned to the caller for logging. `removed` = pre-swap collection size minus `navigateToRoot.Count` (preserved tools). `added` = tools added in the swap = `seenNames.Count - navigateToRoot.Count` (excludes preserved tools).
 - `ILogger<HalNavigationTool>` is created per tool via `_loggerFactory.CreateLogger<HalNavigationTool>()` (REQ-24)
 - Tool names are deduplicated within each swap batch using a counter suffix (`_2`, `_3`, ...). The first occurrence is never suffixed. Uniqueness takes priority over the 62-character length cap (REQ-05).
 - v1 is safe for a single active navigation context only. Concurrent tool invocations from multiple agents are not supported — the last SwapTools call wins, potentially replacing tools mid-navigation for another caller. This is an accepted v1 constraint (see REQ-21 and Out of Scope).
@@ -424,9 +433,10 @@ HalToolCollectionManager.SwapTools(resource, selfHref):
 InvokeAsync(request, cancellationToken):
     try:
         // 1. Resolve scoped services
-        halClient = request.Services.GetRequiredService<IHalClient>()
+        halClient  = request.Services.GetRequiredService<IHalClient>()
         halOptions = request.Services.GetRequiredService<HalMcpServerOptions>()
-        manager   = request.Services.GetRequiredService<IHalToolCollectionManager>()
+        manager    = request.Services.GetRequiredService<IHalToolCollectionManager>()
+        mcpOptions = request.Services.GetRequiredService<McpServerOptions>()
 
         // 2. Coerce arguments from JsonElement to string
         rawArgs = request.Params?.Arguments ?? empty
@@ -457,7 +467,14 @@ InvokeAsync(request, cancellationToken):
             }
 
         // 6. Swap tool collection with new resource's links
-        manager.SwapTools(result.Resource, resolvedHref)
+        (removed, added) = manager.SwapTools(result.Resource, resolvedHref)
+
+        // 6b. Log swap result (Debug); log individual tool names (Trace, guarded)
+        LogToolsSwapped(removed, added)
+        if _logger.IsEnabled(LogLevel.Trace):
+            for each tool in mcpOptions.ToolCollection:
+                if tool.ProtocolTool.Name != "navigate_to_root":
+                    LogToolAdded(tool.ProtocolTool.Name)
 
         // 7. Serialize response to HAL JSON
         json = JsonSerializer.Serialize(result.Resource, halJsonSerializerOptions)
@@ -486,6 +503,70 @@ InvokeAsync(request, cancellationToken):
 **Important:** `InvokeAsync` never throws (REQ-14, REQ-15, REQ-16). All failures are returned as `CallToolResult { IsError = true }`.
 
 **Tool collection update on error:** When the HTTP request fails or the response is not HAL, the tool collection is NOT modified. The agent retains its current set of tools and can retry or navigate elsewhere.
+
+---
+
+## InvokeAsync Flow (NavigateToRootTool)
+
+```
+InvokeAsync(request, cancellationToken):
+    try:
+        // 1. Resolve scoped services
+        halClient  = request.Services.GetRequiredService<IHalClient>()
+        halOptions = request.Services.GetRequiredService<HalMcpServerOptions>()
+        manager    = request.Services.GetRequiredService<IHalToolCollectionManager>()
+        logger     = request.Services.GetRequiredService<ILogger<NavigateToRootTool>>()
+        mcpOptions = request.Services.GetRequiredService<McpServerOptions>()
+
+        // 1b. Compute sanitized root URI for logging (strip query and fragment)
+        sanitizedRootUri = halOptions.RootUri before "?" (if present), then before "#" (if present)
+
+        // 2. Fetch resource
+        result = await halClient.GetResultAsync(new Uri(halOptions.RootUri, UriKind.RelativeOrAbsolute), cancellationToken)
+
+        // 3. Handle non-HAL response (404, non-HAL body, empty)
+        if not result.IsHalResource:
+            return CallToolResult
+            {
+                IsError = true,
+                Content = [TextContentBlock("HTTP {(int)result.StatusCode} {result.ReasonPhrase}: {halOptions.RootUri}")]
+            }
+
+        // 4. Swap tool collection
+        (removed, added) = manager.SwapTools(result.Resource, halOptions.RootUri)
+
+        // 4b. Log swap result (Debug); log individual tool names (Trace, guarded)
+        LogRootToolsSwapped(removed, added)
+        if logger.IsEnabled(LogLevel.Trace):
+            for each tool in mcpOptions.ToolCollection:
+                if tool.ProtocolTool.Name != "navigate_to_root":
+                    LogRootToolAdded(tool.ProtocolTool.Name)
+
+        // 5. Serialize response to HAL JSON
+        json = JsonSerializer.Serialize(result.Resource, halJsonSerializerOptions)
+
+        // 6. Return content
+        return CallToolResult
+        {
+            Content = [TextContentBlock(json)]
+        }
+
+    catch HttpRequestException ex when status code available:
+        return CallToolResult
+        {
+            IsError = true,
+            Content = [TextContentBlock("HTTP {(int)status} {reason}: {halOptions.RootUri}")]
+        }
+
+    catch Exception ex:
+        return CallToolResult
+        {
+            IsError = true,
+            Content = [TextContentBlock(ex.Message)]
+        }
+```
+
+**Important:** `InvokeAsync` never throws (REQ-13, REQ-14, REQ-15, REQ-16). All failures are returned as `CallToolResult { IsError = true }`.
 
 ---
 
@@ -668,15 +749,13 @@ All log points are defined as `[LoggerMessage]` attributed static partial method
 
 ### SwapTools Call-Site Logging Pattern
 
-The calling tool or startup service logs before and after calling `SwapTools`. The Trace-level tool-name loop uses an explicit `IsEnabled` guard (REQ-33):
+The calling tool or startup service logs after calling `SwapTools` using the returned tuple. The Trace-level tool-name loop uses an explicit `IsEnabled` guard (REQ-33):
 
 ```
-// manager = IHalToolCollectionManager resolved from RequestContext.Services
-// mcpOptions = resolved from RequestContext.Services (for collection count)
-var previousCount = mcpOptions.ToolCollection.Count;
-manager.SwapTools(result.Resource, resolvedHref);
-var addedCount = mcpOptions.ToolCollection.Count - 1; // minus navigate_to_root
-LogToolsSwapped(previousCount - 1, addedCount);
+// manager  = IHalToolCollectionManager resolved from RequestContext.Services
+// mcpOptions = request.Services.GetRequiredService<McpServerOptions>() (for Trace-level tool name iteration)
+var (removed, added) = manager.SwapTools(result.Resource, resolvedHref);
+LogToolsSwapped(removed, added);
 
 if (_logger.IsEnabled(LogLevel.Trace))
     foreach (var tool in mcpOptions.ToolCollection)
@@ -684,7 +763,7 @@ if (_logger.IsEnabled(LogLevel.Trace))
             LogToolAdded(tool.ProtocolTool.Name);
 ```
 
-The `-1` adjusts for the persistent `navigate_to_root` tool, which is not counted in the "removed" or "added" totals.
+The `removed` and `added` counts exclude the persistent `navigate_to_root` tool and are computed inside the lock, eliminating the need to read `ToolCollection.Count` outside the lock.
 
 ---
 
