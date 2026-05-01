@@ -187,7 +187,7 @@ Examples (no truncation needed):
 
 **REQ-41:** `HalMcpStartupService` injects `IServiceProvider` (the root provider) and creates an explicit `IAsyncDisposable` async scope via `IServiceProvider.CreateAsyncScope()` for each startup operation, ensuring scoped services (including `IHalClient`) are correctly lifetime-managed.
 
-**REQ-42:** `HalToolCollectionManager.SwapTools` is protected by a `static readonly object _swapLock = new()`. The swap (collection Clear + Add sequence) is wrapped in `lock(_swapLock)`. This is a synchronous lock because `McpServerPrimitiveCollection<McpServerTool>` mutation is synchronous; no async code executes inside the lock.
+**REQ-42:** `HalToolCollectionManager.SwapTools` is protected by a `static readonly object _swapLock = new()`. The swap (collection Clear + Add sequence) is wrapped in `lock(_swapLock)`. This is a synchronous lock because `McpServerPrimitiveCollection<McpServerTool>` mutation is synchronous; no async code executes inside the lock. `SwapTools` returns `(int removed, int added)` -- the tool counts (excluding the persistent `navigate_to_root`) computed inside the lock, enabling the call site to log accurate counts without reading the collection after the lock is released.
 
 **REQ-43:** When a tool receives arguments from the MCP framework, raw argument values arrive as `JsonElement`. The tool coerces them to `string` using: `rawArgs.ToDictionary(k => k.Key, v => v.Value.ValueKind == JsonValueKind.String ? v.Value.GetString() ?? string.Empty : v.Value.ToString())`. This ensures string-typed template variables work correctly regardless of how the MCP client serialized them.
 
