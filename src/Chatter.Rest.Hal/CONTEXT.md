@@ -15,7 +15,7 @@ The application-specific properties of a **Resource**, excluding reserved HAL pr
 _Avoid_: body, data, properties, content
 
 **Link**:
-A named entry in a **Link Collection**, identified by a **Relation** and containing one or more **Link Objects**.
+A named entry in a **Link Collection**, identified by a **Relation** and containing zero or more **Link Objects**.
 _Avoid_: hyperlink, URL entry, link relation entry
 
 **Relation**:
