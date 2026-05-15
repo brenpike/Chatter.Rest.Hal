@@ -1,6 +1,6 @@
 # HAL Shared Kernel
 
-Shared marker types consumed by both the HAL domain library and the source generator. This context exists to break the circular dependency: the generator needs to know which classes to target, and the domain library defines the types that generated code references.
+Shared marker types referenced by consumer projects and test projects. The source generator discovers HalResponseAttribute by metadata name at compile time and does not require a direct project reference to Core. Generated code references the domain package (Chatter.Rest.Hal) at the consuming project's compile time.
 
 ## Language
 
@@ -10,7 +10,7 @@ _Avoid_: HalAttribute, HAL marker, response marker
 
 ## Relationships
 
-- **HalResponseAttribute** is declared here and consumed by two downstream contexts: HAL Code Generation reads it to discover annotated classes; HAL Domain & Serialization ships the domain types (**Link Collection**, **Embedded Resource Collection**) that appear in the generated partial-class members
+- **HalResponseAttribute** is declared here and consumed by consumer projects and test projects; HAL Code Generation discovers it by metadata name at compile time to find annotated classes; generated code references HAL Domain & Serialization types (**Link Collection**, **Embedded Resource Collection**) at the consuming project's compile time
 
 ## Example dialogue
 

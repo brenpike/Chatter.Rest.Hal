@@ -106,11 +106,11 @@ _Avoid_: URL template, route template
 - A **Resource** contains zero or one **State** objects
 - A **Link Collection** contains zero or more **Links**
 - A **Link** is identified by exactly one **Relation** and contains one **Link Object Collection**
-- A **Link Object Collection** contains one or more **Link Objects**
+- A **Link Object Collection** contains zero or more **Link Objects**
 - A **Link Object** carries exactly one **Href** and optional metadata properties
 - An **Embedded Resource Collection** contains zero or more **Embedded Resources**
 - An **Embedded Resource** is identified by a name and contains one **Resource Collection**
-- A **Resource Collection** contains one or more **Resources** (recursive: each may have its own **Links** and **Embedded Resources**)
+- A **Resource Collection** contains zero or more **Resources** (recursive: each may have its own **Links** and **Embedded Resources**)
 - A **CURIE** is a **Link** under the reserved `"curies"` **Relation** whose **Link Objects** define prefix-to-template mappings
 - **CURIE Expansion** uses a **CURIE's** **Href** (a **URI Template**) to resolve prefixed **Relations** to full URIs
 - A **Self Link** is a **Link** with **Relation** `"self"`
