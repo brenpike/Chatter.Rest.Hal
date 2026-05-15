@@ -97,7 +97,7 @@ _Avoid_: IHalType, IHalEntity
 ### External dependency
 
 **URI Template**:
-An RFC 6570 template string (provided by the external `Chatter.Rest.UriTemplates` package) used by **Link Object** for template expansion and by **CURIEs** for relation expansion.
+An RFC 6570 template string used by **Link Object** for template expansion via the external `Chatter.Rest.UriTemplates` package. **CURIEs** also use a template-shaped **Href** (containing a `{rel}` token), but CURIE expansion performs plain `{rel}` string substitution — it does not use the external `Chatter.Rest.UriTemplates` package.
 _Avoid_: URL template, route template
 
 ## Relationships
@@ -112,7 +112,7 @@ _Avoid_: URL template, route template
 - An **Embedded Resource** is identified by a name and contains one **Resource Collection**
 - A **Resource Collection** contains zero or more **Resources** (recursive: each may have its own **Links** and **Embedded Resources**)
 - A **CURIE** is a **Link** under the reserved `"curies"` **Relation** whose **Link Objects** define prefix-to-template mappings
-- **CURIE Expansion** uses a **CURIE's** **Href** (a **URI Template**) to resolve prefixed **Relations** to full URIs
+- **CURIE Expansion** uses a **CURIE's** **Href** (a template-shaped string with a `{rel}` token) to resolve prefixed **Relations** to full URIs via plain string substitution — the external `Chatter.Rest.UriTemplates` package is not involved
 - A **Self Link** is a **Link** with **Relation** `"self"`
 - **Force Array** applies to **Links**; **Force Write As Collection** applies to **Embedded Resources** — both override the default singular/plural JSON shape
 - The **Fluent Builder** produces a **Resource** graph; **Stage Interfaces** control the construction sequence
