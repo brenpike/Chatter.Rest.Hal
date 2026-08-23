@@ -231,12 +231,13 @@ The `Chatter.Rest.Hal.CodeGenerators` package generates HAL properties on your D
 
 ```bash
 dotnet add package Chatter.Rest.Hal.CodeGenerators
-dotnet add package Chatter.Rest.Hal.Core
 ```
+
+Since 0.4.0 the generator ships `HalResponseAttribute` itself and declares its dependency on `Chatter.Rest.Hal`, so this single package is all a project needs. (`Chatter.Rest.Hal.Core` is not published; remove any old source-declared copy of the attribute or set the `CHATTER_REST_HAL_CODEGEN_EXCLUDE_ATTRIBUTE` define — see the CodeGenerators changelog.) A class library that packs and exposes the generated members should also add a direct `Chatter.Rest.Hal` reference; see `docs/architecture.md`.
 
 **Decorate your DTO**
 
-Your class must be `partial`, non-generic, and non-nested.
+Your class must be `partial` (and not a `record`). Generic and nested classes are supported since 0.4.0; containing types must themselves be `partial`.
 
 ```csharp
 using Chatter.Rest.Hal;
@@ -268,6 +269,9 @@ public partial class OrderResponse
 
 | Constraint | Reason |
 |---|---|
-| Class must be `partial` | The generator needs to emit into the same type declaration |
-| Class must be non-generic | Type parameter substitution is not supported by the generator |
-| Class must be non-nested | Roslyn emit targets top-level type declarations only |
+| Class must be `partial` (`HAL0001`), and so must every containing type (`HAL0002`) | The generator emits a supplementary partial declaration that the compiler merges |
+| Class must not be a `record` (`HAL0003`) | Only class declarations are supported |
+| Class must not already declare `Links` or `Embedded` (`HAL0004`) | The generated members would collide |
+| Class must not be file-local, nor nested in a file-local type (`HAL0005`) | Generated sources are separate files, where a re-declared `file` type is unrelated |
+
+Generic and nested classes are supported since 0.4.0.
