@@ -44,6 +44,21 @@ public class EqualityShapeNormalizationTests
 	}
 
 	[Fact]
+	public void NullAndWhitespaceOptionalLinkObjectValuesCompareEqual()
+	{
+		// The converter omits null and whitespace-only optional values alike, so both forms
+		// serialize to identical HAL and must compare equal.
+		var a = new LinkObject("/orders") { Title = null, Name = "  " };
+		var b = new LinkObject("/orders") { Title = " ", Name = null };
+
+		Assert.Equal(a, b);
+		Assert.Equal(a.GetHashCode(), b.GetHashCode());
+
+		var c = new LinkObject("/orders") { Title = "Orders" };
+		Assert.NotEqual(a, c);
+	}
+
+	[Fact]
 	public void ForceWriteAsCollectionIgnoredWhenEmptyOrMultiple()
 	{
 		var a = new EmbeddedResource("orders") { ForceWriteAsCollection = false };

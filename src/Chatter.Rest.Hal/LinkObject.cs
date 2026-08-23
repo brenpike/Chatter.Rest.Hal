@@ -155,6 +155,58 @@ public sealed record LinkObject : IHalPart
 	public string? Hreflang { get; set; }
 
 	/// <summary>
+	/// Determines whether this link object represents the same HAL content as another.
+	/// </summary>
+	/// <remarks>
+	/// The converter omits optional string properties that are null <em>or</em> whitespace-only
+	/// (see <c>LinkObjectConverter.Write</c>), so two link objects differing only between those
+	/// forms serialize identically and compare equal here. Comparison of present values is exact.
+	/// </remarks>
+	public bool Equals(LinkObject? other)
+	{
+		if (other is null)
+		{
+			return false;
+		}
+
+		if (ReferenceEquals(this, other))
+		{
+			return true;
+		}
+
+		return Href == other.Href
+			&& Templated == other.Templated
+			&& Normalized(Type) == Normalized(other.Type)
+			&& Normalized(Deprecation) == Normalized(other.Deprecation)
+			&& Normalized(Name) == Normalized(other.Name)
+			&& Normalized(Profile) == Normalized(other.Profile)
+			&& Normalized(Title) == Normalized(other.Title)
+			&& Normalized(Hreflang) == Normalized(other.Hreflang);
+	}
+
+	/// <inheritdoc cref="Equals(LinkObject?)"/>
+	public override int GetHashCode()
+	{
+		unchecked
+		{
+			var hash = 17;
+			hash = (hash * 31) + Href.GetHashCode();
+			hash = (hash * 31) + Templated.GetHashCode();
+			hash = (hash * 31) + (Normalized(Type)?.GetHashCode() ?? 0);
+			hash = (hash * 31) + (Normalized(Deprecation)?.GetHashCode() ?? 0);
+			hash = (hash * 31) + (Normalized(Name)?.GetHashCode() ?? 0);
+			hash = (hash * 31) + (Normalized(Profile)?.GetHashCode() ?? 0);
+			hash = (hash * 31) + (Normalized(Title)?.GetHashCode() ?? 0);
+			hash = (hash * 31) + (Normalized(Hreflang)?.GetHashCode() ?? 0);
+			return hash;
+		}
+	}
+
+	/// <summary>An optional value as the converter serializes it: whitespace-only becomes absent.</summary>
+	private static string? Normalized(string? value)
+		=> string.IsNullOrWhiteSpace(value) ? null : value;
+
+	/// <summary>
 	/// Returns all variable names referenced in the URI template, in order of appearance, deduplicated.
 	/// Returns an empty list when <see cref="Templated"/> is not true or <see cref="Href"/> is empty.
 	/// </summary>
