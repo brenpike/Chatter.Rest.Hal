@@ -27,6 +27,27 @@ public sealed record LinkObject : IHalPart
 	}
 
 	/// <summary>
+	/// Initializes a new instance of the <see cref="LinkObject"/> record whose href is the empty string.
+	/// </summary>
+	private LinkObject()
+	{
+		Href = string.Empty;
+	}
+
+	/// <summary>
+	/// Creates a Link Object whose <see cref="Href"/> is the empty string, a valid same-document
+	/// URI reference as defined by RFC 3986 section 4.4.
+	/// </summary>
+	/// <remarks>
+	/// https://datatracker.ietf.org/doc/html/rfc3986#section-4.4
+	/// 
+	/// Reachable only from the deserialization path; public construction continues to reject null
+	/// or whitespace-only href values. The factory takes no parameter, so it cannot produce an href
+	/// other than the empty string.
+	/// </remarks>
+	internal static LinkObject SameDocumentReference() => new();
+
+	/// <summary>
 	/// The REQUIRED href property of the Link Object as defined by the HAL specification
 	/// </summary>
 	/// <remarks>
@@ -38,6 +59,10 @@ public sealed record LinkObject : IHalPart
 	/// 
 	/// If the value is a URI Template then the Link Object SHOULD have a
 	/// "templated" attribute whose value is true.
+	/// 
+	/// The empty string is reachable only via deserialization (see <see cref="SameDocumentReference"/>),
+	/// where it denotes an RFC 3986 section 4.4 same-document reference. Public construction rejects
+	/// null or whitespace-only values.
 	/// </remarks>
 	public string Href { get; }
 

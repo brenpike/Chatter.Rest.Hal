@@ -51,7 +51,10 @@ public sealed record Link : IHalPart
 ```csharp
 public sealed record LinkObject : IHalPart
 {
-    public LinkObject(string href);   // throws ArgumentNullException if null/whitespace
+    public LinkObject(string href);   // throws ArgumentException if null/whitespace
+    private LinkObject();             // same-document reference; Href == string.Empty
+
+    internal static LinkObject SameDocumentReference();
 
     public string Href { get; }           // REQUIRED
     public bool? Templated { get; set; }  // OPTIONAL
@@ -65,6 +68,8 @@ public sealed record LinkObject : IHalPart
 ```
 
 All properties except `Href` are optional per the HAL specification.
+
+- `SameDocumentReference()` — internal seam backed by the private parameterless constructor, producing a `LinkObject` whose `Href` is `string.Empty` (an RFC 3986 same-document reference). It is reachable only from the deserialization path, and it takes no parameter precisely so it cannot produce a null or whitespace-only href.
 
 ### `EmbeddedResource`
 
@@ -328,7 +333,7 @@ Expects a single-property JSON object where the key is the relation name. Return
 - Input is not a `JsonObject`.
 - The object does not have exactly one property.
 - The relation key is null or whitespace.
-- The value is an object without a valid `href`.
+- The value is an object without a valid `href` — absent, JSON null, or whitespace-only. An empty-string `href` is valid (RFC 3986 same-document reference) and is not rejected.
 
 **`EmbeddedResourceCollectionConverter.Read`**
 
