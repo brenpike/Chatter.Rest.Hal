@@ -1,5 +1,4 @@
 using System.Collections.Immutable;
-using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
@@ -10,28 +9,44 @@ public class HalResponseGenerator : IIncrementalGenerator
 {
 	public void Initialize(IncrementalGeneratorInitializationContext context)
 	{
-		var halResponseTypes = context.SyntaxProvider
+		// Ship the marker attribute with the generator so installing this package alone is enough
+		// for [HalResponse] to resolve and the generator to fire.
+		context.RegisterPostInitializationOutput(static ctx =>
+			ctx.AddSource(AttributeSource.HintName, AttributeSource.Source));
+
+		// The projection onto the equatable model happens inside the attribute transform, before
+		// Collect. Keeping the syntax node in the pipeline would hand Collect a value with a new
+		// identity after every keystroke and re-emit every source on every unrelated edit.
+		var targets = context.SyntaxProvider
 			.ForAttributeWithMetadataName(
-				"Chatter.Rest.Hal.HalResponseAttribute",
-				static (node, _) => node is ClassDeclarationSyntax,
-				static (ctx, _) => (ClassDeclarationSyntax)ctx.TargetNode
-			);
+				Parser.HalResponseAttributeMetadataName,
+				static (node, _) => Parser.IsCandidate(node),
+				static (ctx, cancellationToken) =>
+					ctx.TargetSymbol is INamedTypeSymbol symbol && ctx.TargetNode is TypeDeclarationSyntax declaration
+						? Parser.Transform(symbol, declaration, cancellationToken)
+						: HalTarget.None)
+			.WithTrackingName(TrackingNames.Targets);
 
-		var processedTypes = halResponseTypes
+		context.RegisterSourceOutput(targets, static (ctx, target) =>
+		{
+			foreach (var diagnostic in target.Diagnostics)
+			{
+				ctx.ReportDiagnostic(diagnostic.ToDiagnostic());
+			}
+		});
+
+		var models = targets
+			.Where(static target => target.Info.HasValue)
+			.Select(static (target, _) => target.Info!.Value)
+			.WithTrackingName(TrackingNames.Models)
 			.Collect()
-			.Select(static (types, _) =>
-				types
-					.Where(static t => t is not null)
-					.Select(static c => new HalClassInfo(
-						c!.Identifier.Text,
-						Emitter.GetNamespaceFrom(c)))
-					.GroupBy(static x => (x.Namespace ?? string.Empty, x.Name))
-					.Select(static g => g.First())
-					.OrderBy(static x => x.Namespace ?? string.Empty, StringComparer.Ordinal)
-					.ThenBy(static x => x.Name, StringComparer.Ordinal)
-					.ToImmutableArray());
+			.Select(static (collected, _) => collected
+				.GroupBy(static info => info.MetadataName, StringComparer.Ordinal)
+				.Select(static g => g.First())
+				.OrderBy(static info => info.MetadataName, StringComparer.Ordinal)
+				.ToImmutableArray())
+			.WithTrackingName(TrackingNames.DeduplicatedModels);
 
-		context.RegisterSourceOutput(processedTypes, static (ctx, classes) =>
-			Emitter.Emit(ctx, classes));
+		context.RegisterSourceOutput(models, static (ctx, classes) => Emitter.Emit(ctx, classes));
 	}
 }

@@ -8,8 +8,11 @@
     <IsPackable>true</IsPackable>
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <!-- This is an analyzer-only package: the assembly ships under analyzers/, never lib/, so the
+         dependency group has no matching lib folder by design. -->
+    <NoWarn>$(NoWarn);NU5128</NoWarn>
 
-    <Version>0.3.0</Version>
+    <Version>0.4.0</Version>
     <Authors>Brennan Pike</Authors>
     <Owners>Brennan Pike</Owners>
     <Description>Generates the appropriate additional attributes of a response object to match the HAL specification</Description>
@@ -21,7 +24,19 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.3.1" PrivateAssets="all" />
+    <!-- The generator uses Microsoft.CodeAnalysis plus the C# syntax model only; the Workspaces
+         layer is not used and its dependency graph does not belong in an analyzer. -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.3.1" PrivateAssets="all" />
+    <!-- The generated members are typed as Chatter.Rest.Hal.LinkCollection and
+         Chatter.Rest.Hal.EmbeddedResourceCollection, so consumers need that package for the
+         generated source to compile. Declaring it here co-installs it. -->
+    <PackageReference Include="Chatter.Rest.Hal" Version="1.1.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>$(AssemblyName).Tests</_Parameter1>
+    </AssemblyAttribute>
   </ItemGroup>
 
   <ItemGroup>

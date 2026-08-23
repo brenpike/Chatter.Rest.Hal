@@ -506,23 +506,25 @@ The `UriTemplate` class in `Chatter.Rest.UriTemplates` can be used independently
 
 ### Attribute
 
-Package: `Chatter.Rest.Hal.Core`
+Emitted by the generator into the consuming compilation (since 0.4.0); `Chatter.Rest.Hal.Core` is not published.
 Namespace: `Chatter.Rest.Hal`
 
 ```csharp
-[AttributeUsage(AttributeTargets.Class)]
-public class HalResponseAttribute : Attribute { }
+[AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
+internal sealed class HalResponseAttribute : Attribute { }
 ```
 
 ### Generator
 
-Package: `Chatter.Rest.Hal.CodeGenerators` (analyzer; referenced as `<PackageReference>` with `OutputItemType="Analyzer"`)
+Package: `Chatter.Rest.Hal.CodeGenerators` (analyzer; reference with `PrivateAssets="all"`; packable libraries also add a direct `Chatter.Rest.Hal` reference)
 
 ### Constraints on the decorated class
 
-- Must be `partial`
-- Must be non-generic
-- Must be non-nested
+- Must be `partial` (diagnostic `HAL0001` otherwise; containing types must also be `partial` — `HAL0002`)
+- Must not be a `record` (`HAL0003`)
+- Must not already declare `Links` or `Embedded` members (`HAL0004`)
+- Must not be file-local, nor nested in a file-local type (`HAL0005`)
+- Generic and nested classes are supported since 0.4.0
 
 ### Generated output
 

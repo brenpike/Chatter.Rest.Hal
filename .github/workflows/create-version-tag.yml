@@ -24,7 +24,7 @@ jobs:
       contents: write
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           fetch-depth: 0
 
@@ -34,12 +34,47 @@ jobs:
           VERSION=$(grep -m1 '<Version>' '${{ inputs.csproj-path }}' | sed 's/.*<Version>\(.*\)<\/Version>.*/\1/' | tr -d ' \r')
           TAG="${{ inputs.tag-prefix }}/v${VERSION}"
 
-          if git rev-parse "$TAG" >/dev/null 2>&1; then
-            echo "Tag $TAG already exists. Skipping."
-          else
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            git tag -a "$TAG" -m "${{ inputs.package-name }} v${VERSION}"
-            git push origin "$TAG"
-            echo "Created and pushed tag $TAG"
+          # Fast path: the tag was already present when this run checked out.
+          # It must anchor THIS deployment's commit; a same-version tag on a
+          # different commit means a version was reused across commits and the
+          # published package may not match the tagged source.
+          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+            EXISTING=$(git rev-parse "refs/tags/$TAG^{commit}")
+            if [ "$EXISTING" = "$GITHUB_SHA" ]; then
+              echo "Tag $TAG already exists on this commit. Skipping."
+              exit 0
+            fi
+            echo "ERROR: tag $TAG exists but targets $EXISTING, not this run's $GITHUB_SHA. A package version was likely reused across commits; reconcile the tag manually." >&2
+            exit 1
           fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "${{ inputs.package-name }} v${VERSION}"
+
+          # Creating a ref that does not yet exist is atomic on the server, so a
+          # concurrent run racing for the same tag loses the push rather than
+          # silently overwriting it. The push is the arbiter, which closes the
+          # check-then-create window without queueing runs behind each other.
+          if git push origin "refs/tags/$TAG"; then
+            echo "Created and pushed tag $TAG"
+            exit 0
+          fi
+
+          # The push lost. If the remote tag now exists AND anchors this same
+          # commit, another run of this commit won the race and the outcome is
+          # the one this job wanted. A tag on a different commit is a version
+          # reuse across commits and must fail loudly, because the NuGet publish
+          # winner and the tag winner can be different runs.
+          REMOTE=$(git ls-remote origin "refs/tags/$TAG^{}" "refs/tags/$TAG" | tail -1 | cut -f1)
+          if [ -n "$REMOTE" ]; then
+            if [ "$REMOTE" = "$GITHUB_SHA" ]; then
+              echo "Tag $TAG was created concurrently by another run for this commit. Nothing to do."
+              exit 0
+            fi
+            echo "ERROR: tag $TAG was created concurrently but targets $REMOTE, not this run's $GITHUB_SHA. Reconcile the tag manually." >&2
+            exit 1
+          fi
+
+          echo "ERROR: failed to push tag $TAG and it is absent from the remote." >&2
+          exit 1

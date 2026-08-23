@@ -298,8 +298,8 @@ The fluent builder must produce Resource Objects that conform to the spec.
 
 ### 9.5 Generator handles edge cases: generic classes, nested classes, abstract classes
 - ✅ `CodeGeneratorTests.Abstract_Class_With_HalResponse_Gets_Generated_Properties` — verifies abstract partial classes receive generated `Links` and `Embedded` properties
-- ❌ Generic classes: the emitter (`Emitter.cs`) reads only `Identifier.Text` and omits `TypeParameterList` and `ConstraintClauses`, so generated output drops type parameters and produces a compile error. Not supported by design — generic HAL response types are outside the spec scope.
-- ❌ Nested classes: `GetNamespaceFrom` walks ancestors for namespace/file-scoped namespace nodes only and does not accumulate outer class wrappers. The generated file emits a top-level partial class with the inner class name, which collides or produces errors. Not supported by design.
+- ✅ Generic classes: supported since CodeGenerators 0.4.0 — the emitter carries the type parameter list; covered by `GenericTargetGenerationTests`.
+- ✅ Nested classes: supported since CodeGenerators 0.4.0 — the emitter re-declares the full containing-type chain (including `static`/`readonly`/`ref` modifiers); covered by `NestedTargetGenerationTests` and `ContainerModifierTests`.
 
 ---
 
@@ -315,14 +315,14 @@ The fluent builder must produce Resource Objects that conform to the spec.
 | Normative Rules | 4 | 4 | 0 | 0 |
 | Builder API | 6 | 6 | 0 | 0 |
 | Extension Methods | 5 | 5 | 0 | 0 |
-| Source Generator | 5 | 4 | 0 | 1 |
-| **Total** | **56** | **54** | **0** | **2** |
+| Source Generator | 5 | 5 | 0 | 0 |
+| **Total** | **56** | **56** | **0** | **0** |
 
 ---
 
 ## 11. Priority Gap List
 
-All 20 gaps have been addressed or classified. 18 are fully covered (✅); 2 are classified as known out-of-scope limitations (❌): generic class support and nested class support in the source generator emitter.
+All 20 gaps have been addressed. As of CodeGenerators 0.4.0 the two former out-of-scope limitations (generic and nested class support in the source generator emitter) are implemented and covered.
 
 1. ✅ **COMPLETED** — **[CURIE expansion]** Now tested via `HalCuriesAndTemplatedTests.Curie_Short_Form_Expands_To_Full_Uri` and `LinkCollectionExtensionsTests.ExpandCurieRelation_Should_Return_Full_Uri_When_Curie_Exists`. The `ExpandCurieRelation` extension method was also implemented.
 2. ✅ **COMPLETED** — **[Root object validation]** Now tested via 5 new tests in `HalDeserializationRobustnessTests` covering array, string, number, boolean, and null roots.
@@ -343,4 +343,4 @@ All 20 gaps have been addressed or classified. 18 are fully covered (✅); 2 are
 17. ✅ **COMPLETED** — **[Builder state transitions]** Now tested via `BuilderTests.Builder_Staged_Interfaces_Enforce_Valid_Construction_Order`; compile-time enforcement documented via reflection assertions.
 18. ✅ **COMPLETED** — **[Builder round-trip]** Tested via `BuilderTests.Builder_RoundTrip_BuiltResource_SerializesAndDeserializesCorrectly`. The chained `.AddLinkObject()` bug was fixed in commit `83dfb97` (delegate chained calls to parent collection). The test asserts `collectionLink.LinkObjects.Should().HaveCount(2)` confirming two chained link objects survive round-trip.
 19. ✅ **COMPLETED** — **[Source generator: classes without attribute]** Now tested via `CodeGeneratorTests.Class_Without_HalResponse_Attribute_Is_Not_Modified`.
-20. ✅ **COMPLETED** — **[Source generator: edge cases]** Abstract classes tested via `CodeGeneratorTests.Abstract_Class_With_HalResponse_Gets_Generated_Properties`. Generic and nested classes are classified as ❌ known emitter limitations (see section 9.5) — outside HAL spec scope; no tests planned.
+20. ✅ **COMPLETED** — **[Source generator: edge cases]** Abstract classes tested via `CodeGeneratorTests.Abstract_Class_With_HalResponse_Gets_Generated_Properties`. Generic and nested classes are supported since CodeGenerators 0.4.0 and covered by `GenericTargetGenerationTests` and `NestedTargetGenerationTests` (see section 9.5).
