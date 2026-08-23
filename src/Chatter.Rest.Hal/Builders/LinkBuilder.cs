@@ -47,9 +47,14 @@ public sealed class LinkBuilder : HalBuilder<Link>, ILinkCreationStage, ICuriesL
 	/// <summary>
 	/// Creates a new link builder for a "curies" link.
 	/// </summary>
+	/// <remarks>
+	/// The link is array-form by default: HAL (draft-kelly-json-hal §8.3) establishes CURIEs via an
+	/// array of Link Objects, and common HAL clients index <c>_links.curies</c> as an array, so a
+	/// single definition must still serialize as <c>[{…}]</c>. <c>AsArray()</c> remains a no-op.
+	/// </remarks>
 	/// <param name="parent">The parent link collection builder.</param>
 	/// <returns>A new link builder.</returns>
-	public static LinkBuilder Curies(IBuildHalPart<LinkCollection> parent) => new(parent, CuriesLink);
+	public static LinkBuilder Curies(IBuildHalPart<LinkCollection> parent) => new(parent, CuriesLink) { _isArray = true };
 
 	internal void SetIsArray() => _isArray = true;
 
