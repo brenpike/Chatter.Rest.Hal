@@ -10,7 +10,7 @@ _Avoid_: HalAttribute, HAL marker, response marker
 
 ## Relationships
 
-- **HalResponseAttribute** is declared here and consumed by consumer projects and test projects; HAL Code Generation discovers it by metadata name at compile time to find annotated classes; generated code references HAL Domain & Serialization types (**Link Collection**, **Embedded Resource Collection**) at the consuming project's compile time
+- **HalResponseAttribute** is declared here as the declaration of record only; the generator emits the consumer-facing copy of the attribute into each consuming compilation (since CodeGenerators 0.4.0) and discovers it by metadata name at compile time to find annotated classes; generated code references HAL Domain & Serialization types (**Link Collection**, **Embedded Resource Collection**) at the consuming project's compile time
 
 ## Example dialogue
 
