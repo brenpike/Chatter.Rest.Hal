@@ -65,11 +65,28 @@ public sealed class ResourceCollectionBuilder : HalBuilder<ResourceCollection>, 
 		return this;
 	}
 
-	IEmbeddedCuriesLinkCreationStage IAddCuriesLinkToEmbeddedStage.AddCuries()
+	/// <summary>
+	/// Resolves the link collection of the resource that owns this collection's "_embedded" entry.
+	/// </summary>
+	/// <returns>The owning resource's link collection builder.</returns>
+	/// <exception cref="InvalidOperationException">Thrown when no owning resource builder exists.</exception>
+	/// <remarks>
+	/// A LinkCollectionBuilder is always a child of a resource builder, never an ancestor of a
+	/// ResourceCollectionBuilder, so the previous FindParent&lt;LinkCollection&gt;() lookup was
+	/// null in every case. Links added from this stage belong to the resource that owns the
+	/// embedded entry; per-resource links are configured inside the AddResources callback.
+	/// </remarks>
+	private LinkCollectionBuilder OwningResourceLinks()
 	{
-		var linkCollectionBuilder = FindParent<LinkCollection>() as IAddCuriesLinkStage;
-		return linkCollectionBuilder!.AddCuries();
+		if (FindParent<Resource>() is ResourceBuilder owner)
+		{
+			return owner.Links;
+		}
+
+		throw new InvalidOperationException("No owning resource builder was found to add a link to. Add links to an individual embedded resource via the AddResources builder callback.");
 	}
+
+	IEmbeddedCuriesLinkCreationStage IAddCuriesLinkToEmbeddedStage.AddCuries() => OwningResourceLinks().AddCuries();
 
 	IAddResourceStage IAddEmbeddedResourceToResourceStage.AddEmbedded(string name)
 	{
@@ -88,17 +105,9 @@ public sealed class ResourceCollectionBuilder : HalBuilder<ResourceCollection>, 
 		throw new InvalidOperationException("No parent EmbeddedResourceCollection or Resource builder found to add an embedded resource.");
 	}
 
-	IEmbeddedLinkCreationStage IAddLinkToEmbeddedStage.AddLink(string rel)
-	{
-		var linkCollectionBuilder = FindParent<LinkCollection>() as IAddLinkStage;
-		return linkCollectionBuilder!.AddLink(rel);
-	}
+	IEmbeddedLinkCreationStage IAddLinkToEmbeddedStage.AddLink(string rel) => OwningResourceLinks().AddLink(rel);
 
-	IEmbeddedLinkCreationStage IAddSelfLinkToEmbeddedStage.AddSelf()
-	{
-		var linkCollectionBuilder = FindParent<LinkCollection>() as IAddSelfLinkStage;
-		return linkCollectionBuilder!.AddSelf();
-	}
+	IEmbeddedLinkCreationStage IAddSelfLinkToEmbeddedStage.AddSelf() => OwningResourceLinks().AddSelf();
 
 	/// <summary>
 	/// Builds the resource collection from all added resources.
@@ -138,10 +147,7 @@ public sealed class ResourceCollectionResourceBuilder : ResourceBuilder, IEmbedd
 	/// </summary>
 	/// <returns>An embedded resource creation stage.</returns>
 	public IEmbeddedResourceCreationStage AddResource()
-	{
-		var resourceCollectionBuilder = FindParent<ResourceCollection>() as IAddResourceStage;
-		return resourceCollectionBuilder!.AddResource();
-	}
+		=> OwningResourceCollection().AddResource();
 
 	/// <summary>
 	/// Adds a sibling resource to the collection with the specified state.
@@ -149,10 +155,7 @@ public sealed class ResourceCollectionResourceBuilder : ResourceBuilder, IEmbedd
 	/// <param name="state">The state object for the resource.</param>
 	/// <returns>An embedded resource creation stage.</returns>
 	public IEmbeddedResourceCreationStage AddResource(object? state)
-	{
-		var resourceCollectionBuilder = FindParent<ResourceCollection>() as IAddResourceStage;
-		return resourceCollectionBuilder!.AddResource(state);
-	}
+		=> OwningResourceCollection().AddResource(state);
 
 	/// <summary>
 	/// Adds multiple sibling resources to the collection from an enumerable source.
@@ -162,9 +165,22 @@ public sealed class ResourceCollectionResourceBuilder : ResourceBuilder, IEmbedd
 	/// <param name="builder">Optional builder action to configure each resource.</param>
 	/// <returns>An embedded resource creation stage.</returns>
 	public IEmbeddedResourceCreationStage AddResources<T>(IEnumerable<T> resources, Action<T, IEmbeddedResourceCreationStage>? builder = null)
+		=> OwningResourceCollection().AddResources(resources, builder);
+
+	/// <summary>
+	/// Resolves the collection builder this resource belongs to, so sibling resources are added
+	/// to the same "_embedded" entry.
+	/// </summary>
+	/// <returns>The owning resource collection builder.</returns>
+	/// <exception cref="InvalidOperationException">Thrown when no owning resource collection builder exists.</exception>
+	private IAddResourceStage OwningResourceCollection()
 	{
-		var resourceCollectionBuilder = FindParent<ResourceCollection>() as IAddResourceStage;
-		return resourceCollectionBuilder!.AddResources(resources, builder);
+		if (FindParent<ResourceCollection>() is IAddResourceStage collection)
+		{
+			return collection;
+		}
+
+		throw new InvalidOperationException("No owning resource collection builder was found to add a sibling resource to.");
 	}
 
 	IEmbeddedCuriesLinkCreationStage IAddCuriesLinkToEmbeddedStage.AddCuries() => base.AddCuries();

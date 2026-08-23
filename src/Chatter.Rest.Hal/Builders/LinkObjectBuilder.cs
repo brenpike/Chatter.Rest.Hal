@@ -73,23 +73,31 @@ public sealed class LinkObjectBuilder : HalBuilder<LinkObject>, ILinkObjectPrope
 		return this;
 	}
 
-	private ILinkCreationStage AddLink(string rel)
+	private LinkCollectionBuilder OwningLinkCollection()
 	{
-		var linkCollectionBuilder = FindParent<LinkCollection>() as IAddLinkStage;
-		return linkCollectionBuilder!.AddLink(rel);
+		if (FindParent<LinkCollection>() is LinkCollectionBuilder linkCollectionBuilder)
+		{
+			return linkCollectionBuilder;
+		}
+
+		throw new InvalidOperationException("No parent link collection builder was found to add a link to.");
 	}
 
-	private ILinkCreationStage AddSelf()
+	private IAddResourceStage OwningResourceCollection()
 	{
-		var linkCollectionBuilder = FindParent<LinkCollection>() as IAddSelfLinkStage;
-		return linkCollectionBuilder!.AddSelf();
+		if (FindParent<ResourceCollection>() is IAddResourceStage resourceCollectionBuilder)
+		{
+			return resourceCollectionBuilder;
+		}
+
+		throw new InvalidOperationException("No parent resource collection builder was found to add a resource to. Resources can only be added from a link object on a resource that is itself part of an embedded collection.");
 	}
 
-	private ICuriesLinkCreationStage AddCuries()
-	{
-		var linkCollectionBuilder = FindParent<LinkCollection>() as IAddCuriesLinkStage;
-		return linkCollectionBuilder!.AddCuries();
-	}
+	private ILinkCreationStage AddLink(string rel) => OwningLinkCollection().AddLink(rel);
+
+	private ILinkCreationStage AddSelf() => OwningLinkCollection().AddSelf();
+
+	private ICuriesLinkCreationStage AddCuries() => OwningLinkCollection().AddCuries();
 
 	private ILinkObjectPropertiesSelectionStage AddLinkObject(string href)
 		=> ((LinkObjectCollectionBuilder)Parent!).AddLinkObject(href);
@@ -169,25 +177,14 @@ public sealed class LinkObjectBuilder : HalBuilder<LinkObject>, ILinkObjectPrope
 	IEmbeddedLinkObjectPropertiesSelectionStage IEmbeddedLinkObjectPropertiesSelectionStage.WithHreflang(string hreflang) => WithHreflang(hreflang);
 
 	///<inheritdoc/>
-	IEmbeddedResourceCreationStage IAddResourceStage.AddResource()
-	{
-		var resource = FindParent<ResourceCollection>() as IAddResourceStage;
-		return resource!.AddResource();
-	}
+	IEmbeddedResourceCreationStage IAddResourceStage.AddResource() => OwningResourceCollection().AddResource();
 
 	///<inheritdoc/>
-	IEmbeddedResourceCreationStage IAddResourceStage.AddResource(object? state)
-	{
-		var resource = FindParent<ResourceCollection>() as IAddResourceStage;
-		return resource!.AddResource(state);
-	}
+	IEmbeddedResourceCreationStage IAddResourceStage.AddResource(object? state) => OwningResourceCollection().AddResource(state);
 
 	///<inheritdoc/>
 	IEmbeddedResourceCreationStage IAddResourceStage.AddResources<T>(IEnumerable<T> resources, Action<T, IEmbeddedResourceCreationStage>? builder)
-	{
-		var resource = FindParent<ResourceCollection>() as IAddResourceStage;
-		return resource!.AddResources(resources, builder);
-	}
+		=> OwningResourceCollection().AddResources(resources, builder);
 
 	///<inheritdoc/>
 	IAddResourceStage IAddEmbeddedResourceToResourceStage.AddEmbedded(string name)
