@@ -97,15 +97,29 @@ internal static class Parser
 		return new HalTarget(info, diagnostics.ToImmutable());
 	}
 
-	/// <summary>The declaration keyword to repeat when re-declaring <paramref name="declaration"/> as a partial.</summary>
-	internal static string KeywordFor(TypeDeclarationSyntax declaration) => declaration switch
+	/// <summary>
+	/// The declaration text (required modifiers, <c>partial</c>, and the keyword) to repeat when
+	/// re-declaring <paramref name="declaration"/>. <c>readonly</c> and <c>ref</c> are required on
+	/// every partial declaration of a struct, so dropping them would make the generated
+	/// re-declaration of a <c>readonly partial struct</c> or <c>ref partial struct</c> container
+	/// fail to compile.
+	/// </summary>
+	internal static string KeywordFor(TypeDeclarationSyntax declaration)
 	{
-		RecordDeclarationSyntax record =>
-			record.ClassOrStructKeyword.IsKind(SyntaxKind.StructKeyword) ? "record struct" : "record",
-		StructDeclarationSyntax => "struct",
-		InterfaceDeclarationSyntax => "interface",
-		_ => "class"
-	};
+		var keyword = declaration switch
+		{
+			RecordDeclarationSyntax record =>
+				record.ClassOrStructKeyword.IsKind(SyntaxKind.StructKeyword) ? "record struct" : "record",
+			StructDeclarationSyntax => "struct",
+			InterfaceDeclarationSyntax => "interface",
+			_ => "class"
+		};
+
+		var prefix = string.Empty;
+		if (declaration.Modifiers.Any(SyntaxKind.ReadOnlyKeyword)) prefix += "readonly ";
+		if (declaration.Modifiers.Any(SyntaxKind.RefKeyword)) prefix += "ref ";
+		return $"{prefix}partial {keyword}";
+	}
 
 	/// <summary>
 	/// The declared name plus its type parameter list. Constraints and type-parameter attributes are

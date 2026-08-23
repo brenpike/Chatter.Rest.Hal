@@ -432,8 +432,8 @@ Chatter.Rest.Hal.sln
 │   │
 │   ├── Chatter.Rest.Hal.Core/       # Shared attribute (unpublished)
 │   │   ├── contains: HalResponseAttribute only
-│   │   ├── referenced at runtime by consumer projects
-│   │   └── NuGet: referenced transitively by consumers
+│   │   └── not packed; the generator emits its own copy of the
+│   │       attribute into consuming compilations (see Section 4)
 │   │
 │   └── Chatter.Rest.Hal.CodeGenerators/   # Roslyn source generator
 │       ├── depends on: Chatter.Rest.Hal (types used by generated source)

@@ -16,7 +16,10 @@ internal class Emitter
 			return;
 		}
 
-		var hintNames = new HashSet<string>(StringComparer.Ordinal);
+		// Seed the reserved marker hint: a valid global-namespace target named HalResponseAttribute
+		// would otherwise sanitize onto the post-initialization attribute's hint name and make
+		// AddSource throw instead of generating the target.
+		var hintNames = new HashSet<string>(StringComparer.Ordinal) { "HalResponseAttribute" };
 		foreach (var entry in halResponseClasses)
 		{
 			context.AddSource(HintNameFor(entry.MetadataName, hintNames), GenerateCode(entry));
@@ -60,7 +63,8 @@ internal class Emitter
 
 		foreach (var containingType in info.ContainingTypes)
 		{
-			sb.AppendLine($"{Indent(depth)}partial {containingType.Keyword} {containingType.NameWithTypeParameters}");
+			// Keyword carries any required modifiers plus "partial" (e.g. "readonly partial struct").
+			sb.AppendLine($"{Indent(depth)}{containingType.Keyword} {containingType.NameWithTypeParameters}");
 			sb.AppendLine($"{Indent(depth)}{{");
 			depth++;
 		}
