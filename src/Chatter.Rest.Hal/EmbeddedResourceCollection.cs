@@ -123,6 +123,62 @@ public sealed record EmbeddedResourceCollection : ICollection<EmbeddedResource>,
 		=> _index.TryGetValue(name, out embedded);
 
 	/// <summary>
+	/// Determines whether this collection holds the same embedded resources as another collection.
+	/// </summary>
+	/// <remarks>
+	/// Entries are compared by name rather than by position: a HAL "_embedded" value is a JSON
+	/// object and JSON object members are unordered, so two collections holding the same entries in
+	/// a different order represent the same HAL document. The name index is derived from the
+	/// entries and therefore takes no part in the comparison.
+	/// </remarks>
+	/// <param name="other">The collection to compare with.</param>
+	/// <returns>true if both collections hold equal embedded resources for the same names; otherwise, false.</returns>
+	public bool Equals(EmbeddedResourceCollection? other)
+	{
+		if (other is null)
+		{
+			return false;
+		}
+
+		if (ReferenceEquals(this, other))
+		{
+			return true;
+		}
+
+		if (_embedded.Count != other._embedded.Count)
+		{
+			return false;
+		}
+
+		foreach (var embedded in _embedded)
+		{
+			if (!other._index.TryGetValue(embedded.Name, out var candidate) || !Equals(embedded, candidate))
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	/// <summary>
+	/// Returns a hash code derived from the embedded resources in the collection, independent of their order.
+	/// </summary>
+	/// <returns>A hash code for the collection.</returns>
+	public override int GetHashCode()
+	{
+		unchecked
+		{
+			var hash = _embedded.Count;
+			foreach (var embedded in _embedded)
+			{
+				hash += embedded?.GetHashCode() ?? 0;
+			}
+			return hash;
+		}
+	}
+
+	/// <summary>
 	/// Returns an enumerator that iterates through the collection.
 	/// </summary>
 	/// <returns>An enumerator for the collection.</returns>

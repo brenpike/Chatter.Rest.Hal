@@ -222,4 +222,81 @@ public sealed record Resource : IHalPart
 	/// <returns>The deserialized <see cref="Resource"/>, or <c>null</c> if the JSON represents <c>null</c>.</returns>
 	public static Resource? Parse(string json, JsonSerializerOptions? options = null)
 		=> JsonSerializer.Deserialize<Resource>(json, options);
+
+	/// <summary>
+	/// Determines whether this Resource represents the same HAL content as another Resource.
+	/// </summary>
+	/// <remarks>
+	/// Equality is defined over the HAL content of the resource: its links, its embedded resources
+	/// and its state. The mutable internal caches populated by reading <see cref="Links"/>,
+	/// <see cref="Embedded"/>, <see cref="State{T}()"/> and <see cref="As{T}()"/> are deliberately
+	/// excluded, so reading a property never changes whether two resources compare equal, and never
+	/// changes the value returned by <see cref="GetHashCode"/>. Mutating a resource (for example by
+	/// adding a link) does change its content and therefore does change its hash code.
+	/// </remarks>
+	/// <param name="other">The Resource to compare with.</param>
+	/// <returns>true if both resources hold the same links, embedded resources and state; otherwise, false.</returns>
+	public bool Equals(Resource? other)
+	{
+		if (other is null)
+		{
+			return false;
+		}
+
+		if (ReferenceEquals(this, other))
+		{
+			return true;
+		}
+
+		return Links.Equals(other.Links)
+			&& Embedded.Equals(other.Embedded)
+			&& string.Equals(StateEqualityKey(), other.StateEqualityKey(), StringComparison.Ordinal);
+	}
+
+	/// <summary>
+	/// Returns a hash code derived from the HAL content of the resource.
+	/// </summary>
+	/// <remarks>
+	/// The mutable internal caches are excluded, so the hash code is stable across repeated reads of
+	/// <see cref="Links"/>, <see cref="Embedded"/>, <see cref="State{T}()"/> and <see cref="As{T}()"/>.
+	/// </remarks>
+	/// <returns>A hash code for the resource.</returns>
+	public override int GetHashCode()
+	{
+		unchecked
+		{
+			var hash = 17;
+			hash = (hash * 31) + Links.GetHashCode();
+			hash = (hash * 31) + Embedded.GetHashCode();
+			hash = (hash * 31) + (StateEqualityKey()?.GetHashCode() ?? 0);
+			return hash;
+		}
+	}
+
+	/// <summary>
+	/// Produces a stable JSON representation of the resource state for equality purposes.
+	/// </summary>
+	/// <remarks>
+	/// For a parsed resource the key is derived from the original JSON state rather than from
+	/// <c>_stateObject</c>, because <see cref="State{T}(JsonSerializerOptions?)"/> replaces the
+	/// cached state with whichever type was last requested. For a resource constructed with a state
+	/// object the key is derived from that object, which no read path mutates.
+	/// </remarks>
+	private string? StateEqualityKey()
+	{
+		try
+		{
+			var rawState = _stateCreator();
+			if (rawState != null)
+			{
+				return rawState.ToJsonString();
+			}
+
+			return _stateObject == null ? null : JsonSerializer.Serialize(_stateObject, _jsonOptions);
+		}
+		catch (Exception)
+		{
+			return null;
+		}
+	}
 }

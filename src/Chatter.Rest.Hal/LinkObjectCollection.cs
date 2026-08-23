@@ -75,6 +75,60 @@ public sealed record LinkObjectCollection : ICollection<LinkObject>, IHalPart
 	public bool Remove(LinkObject item) => _linkObjects.Remove(item);
 
 	/// <summary>
+	/// Determines whether this collection holds the same link objects, in the same order, as another collection.
+	/// </summary>
+	/// <remarks>
+	/// A relation holding multiple link objects serializes as a JSON array, and JSON array order is
+	/// significant, so the comparison is positional.
+	/// </remarks>
+	/// <param name="other">The collection to compare with.</param>
+	/// <returns>true if both collections hold equal link objects in the same order; otherwise, false.</returns>
+	public bool Equals(LinkObjectCollection? other)
+	{
+		if (other is null)
+		{
+			return false;
+		}
+
+		if (ReferenceEquals(this, other))
+		{
+			return true;
+		}
+
+		if (_linkObjects.Count != other._linkObjects.Count)
+		{
+			return false;
+		}
+
+		for (var i = 0; i < _linkObjects.Count; i++)
+		{
+			if (!Equals(_linkObjects[i], other._linkObjects[i]))
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	/// <summary>
+	/// Returns a hash code derived from the link objects in the collection and their order.
+	/// </summary>
+	/// <returns>A hash code for the collection.</returns>
+	public override int GetHashCode()
+	{
+		unchecked
+		{
+			var hash = 17;
+			foreach (var linkObject in _linkObjects)
+			{
+				hash = (hash * 31) + (linkObject?.GetHashCode() ?? 0);
+			}
+			return hash;
+		}
+	}
+
+	/// <summary>
 	/// Returns an enumerator that iterates through the collection.
 	/// </summary>
 	/// <returns>An enumerator for the collection.</returns>
