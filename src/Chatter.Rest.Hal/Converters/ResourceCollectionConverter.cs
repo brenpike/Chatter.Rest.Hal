@@ -19,8 +19,16 @@ public sealed class ResourceCollectionConverter : JsonConverter<ResourceCollecti
 	/// <returns>The deserialized ResourceCollection.</returns>
 	public override ResourceCollection? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
 	{
-		var node = JsonNode.Parse(ref reader, new JsonNodeOptions() { PropertyNameCaseInsensitive = true });
+		var node = ConverterHelpers.ParseNode(ref reader);
+		return ReadFromNode(node, options);
+	}
 
+	/// <summary>
+	/// Materializes a ResourceCollection directly from an already-parsed node, so nested converters
+	/// can reuse the existing tree instead of round-tripping each subtree through UTF-8 bytes.
+	/// </summary>
+	internal static ResourceCollection ReadFromNode(JsonNode? node, JsonSerializerOptions options)
+	{
 		var resources = new ResourceCollection();
 
 		if (node is JsonObject jo)
@@ -47,11 +55,30 @@ public sealed class ResourceCollectionConverter : JsonConverter<ResourceCollecti
 	/// <param name="node">The JSON node containing resource data.</param>
 	private static void CreateAndAddResource(JsonSerializerOptions options, ResourceCollection resources, JsonNode? node)
 	{
-		var resource = node.Deserialize<Resource>(options);
-		if (resource != null)
+		if (node is null || ConverterHelpers.IsJsonNull(node))
 		{
-			resources.Add(resource);
+			return;
 		}
+
+		// A custom options-registered Resource converter sees every item, whatever its shape — it may
+		// deliberately accept representations (e.g. scalars) the built-in one rejects.
+		if (ConverterHelpers.HasCustomConverter<Resource>(options, typeof(ResourceConverter)))
+		{
+			var custom = node.Deserialize<Resource>(options);
+			if (custom != null)
+			{
+				resources.Add(custom);
+			}
+			return;
+		}
+
+		// Mirrors ResourceConverter.Read's contract for the reader-based path.
+		if (node is not JsonObject resourceObject)
+		{
+			throw new JsonException("A HAL Resource must be a JSON object.");
+		}
+
+		resources.Add(ResourceConverter.ReadFromNode(resourceObject, options));
 	}
 
 	/// <summary>

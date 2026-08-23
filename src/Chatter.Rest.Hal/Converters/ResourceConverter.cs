@@ -17,23 +17,61 @@ public sealed class ResourceConverter : JsonConverter<Resource>
 	/// <param name="typeToConvert">The type to convert.</param>
 	/// <param name="options">Serializer options.</param>
 	/// <returns>The deserialized Resource.</returns>
+	/// <exception cref="JsonException">
+	/// Thrown when the JSON is not a Resource Object, or when its <c>_links</c>/<c>_embedded</c> members
+	/// are structurally invalid.
+	/// </exception>
 	public override Resource? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
 	{
-		var node = JsonNode.Parse(ref reader, new JsonNodeOptions() { PropertyNameCaseInsensitive = true })!;
+		var node = ConverterHelpers.ParseNode(ref reader);
 
-		LinkCollection? linkCollectionCreator()
-			=> node?["_links"]?.Deserialize<LinkCollection>(options);
+		// A HAL Resource Object is a JSON object. Rejecting anything else here — rather than letting
+		// the lazy creators index a primitive or an array later — keeps the failure at the
+		// deserialization call instead of deferring an InvalidOperationException to property access.
+		if (node is not JsonObject resourceObject)
+		{
+			throw new JsonException("A HAL Resource must be a JSON object.");
+		}
 
-		EmbeddedResourceCollection? embeddedCollectionCreator()
-			=> node?["_embedded"]?.Deserialize<EmbeddedResourceCollection>(options);
+		return ReadFromNode(resourceObject, options);
+	}
+
+	/// <summary>
+	/// Materializes a Resource directly from an already-parsed node. Nested converters call this
+	/// instead of <see cref="JsonNode.Deserialize"/>, which would re-serialize the subtree to UTF-8
+	/// and re-parse it — repeating that once per ancestor turns a deeply nested <c>_embedded</c>
+	/// chain into O(depth × size) work; walking the existing tree keeps the whole document at O(size).
+	/// </summary>
+	internal static Resource ReadFromNode(JsonObject resourceObject, JsonSerializerOptions options)
+	{
+		// The HAL reserved names are literal and case-sensitive, so they are matched ordinally
+		// regardless of the caller's PropertyNameCaseInsensitive setting. This keeps the reserved
+		// lookups consistent with the state stripping in jsonObjectCreator.
+		// Both collections are materialized eagerly so a malformed _links/_embedded member fails
+		// at the deserialization call, not on a later property read.
+		var linksNode = ConverterHelpers.GetReservedProperty(resourceObject, ConverterHelpers.LinksProperty);
+		var links = linksNode is null
+			? null
+			: ConverterHelpers.HasCustomConverter<LinkCollection>(options, typeof(LinkCollectionConverter))
+				? linksNode.Deserialize<LinkCollection>(options)
+				: LinkCollectionConverter.ReadFromNode(linksNode, options);
+		var embeddedNode = ConverterHelpers.GetReservedProperty(resourceObject, ConverterHelpers.EmbeddedProperty);
+		var embedded = embeddedNode is null
+			? null
+			: ConverterHelpers.HasCustomConverter<EmbeddedResourceCollection>(options, typeof(EmbeddedResourceCollectionConverter))
+				? embeddedNode.Deserialize<EmbeddedResourceCollection>(options)
+				: EmbeddedResourceCollectionConverter.ReadFromNode(embeddedNode, options);
+
+		LinkCollection? linkCollectionCreator() => links;
+
+		EmbeddedResourceCollection? embeddedCollectionCreator() => embedded;
 
 		JsonObject? jsonObjectCreator()
 		{
-			if (node is not JsonObject sourceObj) return null;
 			var result = new JsonObject();
-			foreach (var kvp in sourceObj)
+			foreach (var kvp in resourceObject)
 			{
-				if (kvp.Key == "_links" || kvp.Key == "_embedded") continue;
+				if (ConverterHelpers.IsReservedProperty(kvp.Key)) continue;
 #if NET8_0_OR_GREATER
 				result.Add(kvp.Key, kvp.Value?.DeepClone());
 #else
@@ -43,7 +81,7 @@ public sealed class ResourceConverter : JsonConverter<Resource>
 			return result;
 		};
 
-		return new Resource(node, jsonObjectCreator, linkCollectionCreator, embeddedCollectionCreator, options);
+		return new Resource(resourceObject, jsonObjectCreator, linkCollectionCreator, embeddedCollectionCreator, options);
 	}
 
 	/// <summary>
