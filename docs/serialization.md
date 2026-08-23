@@ -226,7 +226,7 @@ There is no public builder API to set `ForceWriteAsCollection` independently. It
 
 ## 5. Deserialization Behavior
 
-Every read path that produces a `LinkObject` applies the same tolerance ladder to the incoming `href` value:
+Every read path that materializes a Link Object from its **object form** — `{ "href": ... }`, whether standalone, nested under a `_links` relation, or inside a Link Object array — applies the same tolerance ladder to the incoming `href` value:
 
 | Input | Behavior |
 |---|---|
@@ -240,6 +240,8 @@ Every read path that produces a `LinkObject` applies the same tolerance ladder t
 **Why the empty string is accepted.** HAL Section 5.1 defines `href` as a URI or URI Template, deferring to RFC 3986 for the former. RFC 3986 Section 4.4 defines the empty string as a *same-document reference* — a legal URI reference that resolves to the current document. An empty `href` is therefore spec-legal input, not malformed input, so it is preserved rather than dropped: it deserializes to `Href == string.Empty` and re-serializes as `"href": ""`, with no value lost on either leg of the round trip.
 
 **Why whitespace-only and `null` are not.** A whitespace-only string is not a URI reference under RFC 3986, and an absent or `null` `href` violates HAL Section 5.1's requirement that a Link Object have an `href`. Both are malformed and are dropped tolerantly, consistent with the rest of the read pipeline (see Section 5.3).
+
+**The bare-string shorthand is not on this ladder.** The shorthand form (`"rel": "/orders/1"`) is a library convenience that the HAL specification does not define, and it deliberately diverges from the ladder on the empty string: an empty shorthand yields no `LinkObject` at all. See Section 5.2 for the rationale.
 
 **Why a non-string throws.** A non-string `href` is a JSON type violation rather than a malformed URI. Tolerance applies to values that are the right JSON type but the wrong content; a structurally wrong document is surfaced as a `JsonException` rather than silently discarded.
 

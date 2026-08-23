@@ -110,6 +110,55 @@ namespace Chatter.Rest.Hal.Tests
 			deserializing.Should().Throw<JsonException>();
 		}
 
+		// The bare-string shorthand ("rel": "/orders/1") is a library convenience the HAL specification does
+		// not define, so an empty shorthand is not a spec-valid Link Object and deliberately stays OFF the
+		// object-form tolerance ladder above (see docs/serialization.md section 5.2). The three tests below
+		// pin that divergence at every shorthand read path so it cannot drift silently now that the object
+		// form accepts an empty href.
+
+		[Fact]
+		public void Empty_Href_Shorthand_Under_A_Links_Relation_Yields_No_LinkObject()
+		{
+			// LinkCollectionConverter shorthand path.
+			var json = "{ \"_links\": { \"self\": \"\" } }";
+			var node = JsonNode.Parse(json, new JsonNodeOptions { PropertyNameCaseInsensitive = true });
+			var resource = node.Deserialize<Chatter.Rest.Hal.Resource>(new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+			resource.Should().NotBeNull();
+			var link = resource!.Links.Single(l => l.Rel == "self");
+
+			link.LinkObjects.Should().BeEmpty();
+		}
+
+		[Fact]
+		public void Empty_Href_Shorthand_Inside_A_Link_Object_Array_Yields_No_LinkObject()
+		{
+			// LinkObjectCollectionConverter shorthand path.
+			var json = "{ \"_links\": { \"self\": [ \"\" ] } }";
+			var node = JsonNode.Parse(json, new JsonNodeOptions { PropertyNameCaseInsensitive = true });
+			var resource = node.Deserialize<Chatter.Rest.Hal.Resource>(new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+			resource.Should().NotBeNull();
+			var link = resource!.Links.Single(l => l.Rel == "self");
+
+			link.LinkObjects.Should().BeEmpty();
+		}
+
+		[Fact]
+		public void Empty_Href_Shorthand_On_A_Standalone_Link_Yields_Null()
+		{
+			// LinkConverter shorthand path. The non-empty case is asserted alongside it so the null result is
+			// pinned to the empty href specifically, not to the standalone-Link shape.
+			var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+
+			var empty = JsonSerializer.Deserialize<Chatter.Rest.Hal.Link>("{ \"self\": \"\" }", options);
+			var populated = JsonSerializer.Deserialize<Chatter.Rest.Hal.Link>("{ \"self\": \"/orders/1\" }", options);
+
+			empty.Should().BeNull();
+			populated.Should().NotBeNull();
+			populated!.LinkObjects.Single().Href.Should().Be("/orders/1");
+		}
+
 		[Fact]
 		public void NonString_Optional_Attributes_Are_Treated_As_Null()
 		{
