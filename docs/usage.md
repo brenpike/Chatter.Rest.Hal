@@ -269,6 +269,9 @@ public partial class OrderResponse
 
 | Constraint | Reason |
 |---|---|
-| Class must be `partial` | The generator needs to emit into the same type declaration |
-| Class must be non-generic | Type parameter substitution is not supported by the generator |
-| Class must be non-nested | Roslyn emit targets top-level type declarations only |
+| Class must be `partial` (`HAL0001`), and so must every containing type (`HAL0002`) | The generator emits a supplementary partial declaration that the compiler merges |
+| Class must not be a `record` (`HAL0003`) | Only class declarations are supported |
+| Class must not already declare `Links` or `Embedded` (`HAL0004`) | The generated members would collide |
+| Class must not be file-local, nor nested in a file-local type (`HAL0005`) | Generated sources are separate files, where a re-declared `file` type is unrelated |
+
+Generic and nested classes are supported since 0.4.0.
