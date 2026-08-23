@@ -25,7 +25,10 @@ public sealed class LinkObjectConverter : JsonConverter<LinkObject>
 	/// <param name="reader">The JSON reader.</param>
 	/// <param name="typeToConvert">The type to convert.</param>
 	/// <param name="options">Serializer options.</param>
-	/// <returns>The deserialized LinkObject, or null if href is missing or invalid.</returns>
+	/// <returns>
+	/// The deserialized LinkObject, or null when href is missing, null, or whitespace-only. An empty href is
+	/// accepted and yields a same-document reference (RFC 3986 section 4.4).
+	/// </returns>
 	/// <exception cref="JsonException">
 	/// Thrown when the JSON is not a Link Object, or when its <c>href</c> property is present but not a string.
 	/// </exception>
@@ -38,7 +41,10 @@ public sealed class LinkObjectConverter : JsonConverter<LinkObject>
 	/// </summary>
 	/// <param name="node">The already-parsed Link Object node.</param>
 	/// <param name="options">Serializer options.</param>
-	/// <returns>The deserialized LinkObject, or null if href is missing or invalid.</returns>
+	/// <returns>
+	/// The deserialized LinkObject, or null when href is missing, null, or whitespace-only. An empty href is
+	/// accepted and yields a same-document reference (RFC 3986 section 4.4).
+	/// </returns>
 	/// <exception cref="JsonException">
 	/// Thrown when the node is not a JSON object, or when its <c>href</c> property is present but not a string.
 	/// </exception>
@@ -69,21 +75,44 @@ public sealed class LinkObjectConverter : JsonConverter<LinkObject>
 			throw new JsonException("The 'href' property of a HAL Link Object must be a string.");
 		}
 
+		if (href is null)
+		{
+			return null;
+		}
+
+		if (href.Length == 0)
+		{
+			// INVARIANT: the empty-string test must precede any IsNullOrWhiteSpace test so an empty href is
+			// kept as an RFC 3986 section 4.4 same-document reference instead of being dropped as blank.
+			return PopulateOptionalAttributes(LinkObject.SameDocumentReference(), linkObjectNode, options);
+		}
+
 		if (string.IsNullOrWhiteSpace(href))
 		{
 			return null;
 		}
 
-		return new LinkObject(href)
-		{
-			Templated = TryGetBooleanAsTrue(ConverterHelpers.GetProperty(linkObjectNode, "templated", options)),
-			Type = TryGetString(ConverterHelpers.GetProperty(linkObjectNode, "type", options)),
-			Deprecation = TryGetString(ConverterHelpers.GetProperty(linkObjectNode, "deprecation", options)),
-			Name = TryGetString(ConverterHelpers.GetProperty(linkObjectNode, "name", options)),
-			Title = TryGetString(ConverterHelpers.GetProperty(linkObjectNode, "title", options)),
-			Profile = TryGetString(ConverterHelpers.GetProperty(linkObjectNode, "profile", options)),
-			Hreflang = TryGetString(ConverterHelpers.GetProperty(linkObjectNode, "hreflang", options))
-		};
+		return PopulateOptionalAttributes(new LinkObject(href), linkObjectNode, options);
+	}
+
+	/// <summary>
+	/// Populates the optional Link Object attributes onto a link object, shared by every accepted href
+	/// form so the same-document-reference path and the normal path cannot drift apart.
+	/// </summary>
+	/// <param name="linkObject">The link object to populate.</param>
+	/// <param name="linkObjectNode">The already-parsed Link Object node.</param>
+	/// <param name="options">Serializer options.</param>
+	/// <returns>The same link object, with its optional attributes populated.</returns>
+	private static LinkObject PopulateOptionalAttributes(LinkObject linkObject, JsonObject linkObjectNode, JsonSerializerOptions options)
+	{
+		linkObject.Templated = TryGetBooleanAsTrue(ConverterHelpers.GetProperty(linkObjectNode, "templated", options));
+		linkObject.Type = TryGetString(ConverterHelpers.GetProperty(linkObjectNode, "type", options));
+		linkObject.Deprecation = TryGetString(ConverterHelpers.GetProperty(linkObjectNode, "deprecation", options));
+		linkObject.Name = TryGetString(ConverterHelpers.GetProperty(linkObjectNode, "name", options));
+		linkObject.Title = TryGetString(ConverterHelpers.GetProperty(linkObjectNode, "title", options));
+		linkObject.Profile = TryGetString(ConverterHelpers.GetProperty(linkObjectNode, "profile", options));
+		linkObject.Hreflang = TryGetString(ConverterHelpers.GetProperty(linkObjectNode, "hreflang", options));
+		return linkObject;
 	}
 
 	/// <summary>
@@ -123,11 +152,8 @@ public sealed class LinkObjectConverter : JsonConverter<LinkObject>
 	{
 		writer.WriteStartObject();
 
-		if (!string.IsNullOrWhiteSpace(linkObject.Href))
-		{
-			writer.WritePropertyName(HrefProperty);
-			writer.WriteStringValue(linkObject.Href);
-		}
+		writer.WritePropertyName(HrefProperty);
+		writer.WriteStringValue(linkObject.Href);
 
 		if (linkObject.Templated.HasValue)
 		{
