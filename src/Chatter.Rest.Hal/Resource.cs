@@ -128,8 +128,10 @@ public sealed record Resource : IHalPart
 	/// using the provided <see cref="JsonSerializerOptions"/> for deserialization.
 	/// </summary>
 	/// <remarks>
-	/// If the state has already been deserialized and cached from a prior <see cref="State{T}()"/>
-	/// call, the cached object is returned regardless of the supplied options.
+	/// The cached state is only reused when it is already an instance of <typeparamref name="T"/>;
+	/// when a prior call materialized the state as a different type, the state is deserialized again
+	/// from the underlying JSON. A resource can therefore be projected onto several state types.
+	/// When the cached state is reused, the supplied options do not apply.
 	/// </remarks>
 	/// <typeparam name="T">The expected reference type of the Resource state.</typeparam>
 	/// <param name="options">The <see cref="JsonSerializerOptions"/> to use for deserialization, or <c>null</c> to use default options.</param>
@@ -151,13 +153,22 @@ public sealed record Resource : IHalPart
 				_stateObject = je.Deserialize<T>(options);
 			}
 
-			if (_stateObject == null)
+			if (_stateObject is T cached)
 			{
-				var stateObject = _stateCreator();
-				_stateObject = stateObject?.Deserialize<T>(options);
+				return cached;
 			}
 
-			return (T?)_stateObject;
+			// The cache either is empty or holds a different type from a prior call, so the state is
+			// materialized from the underlying JSON. Only an empty cache is populated, so a projection
+			// onto a second state type cannot replace the state the resource serializes from.
+			var stateObject = _stateCreator();
+			var materialized = stateObject?.Deserialize<T>(options);
+			if (_stateObject == null)
+			{
+				_stateObject = materialized;
+			}
+
+			return materialized;
 		}
 		catch (Exception)
 		{
@@ -180,8 +191,11 @@ public sealed record Resource : IHalPart
 	/// using the provided <see cref="JsonSerializerOptions"/>.
 	/// </summary>
 	/// <remarks>
-	/// The internal JSON node is cached on the first serialize call. Subsequent calls with different
-	/// options apply those options only to deserialization, not to re-serialization of the node.
+	/// A resource produced by <see cref="Parse(string, JsonSerializerOptions?)"/> converts from the
+	/// JSON node it was parsed from, so the original document shape is preserved and the supplied
+	/// options apply only to deserialization. A resource constructed in memory is serialized on every
+	/// call, so links, embedded resources and state added after an earlier <see cref="As{T}()"/> call
+	/// are reflected in the result.
 	/// </remarks>
 	/// <typeparam name="T">The expected reference type to convert the Resource to.</typeparam>
 	/// <param name="options">The <see cref="JsonSerializerOptions"/> to use, or <c>null</c> to use default options.</param>
@@ -190,12 +204,11 @@ public sealed record Resource : IHalPart
 	{
 		try
 		{
-			if (_resourceNode is null)
-			{
-				_resourceNode = JsonSerializer.SerializeToNode(this, options);
-			}
-
-			return _resourceNode?.Deserialize<T>(options);
+			// _resourceNode is only ever set for a parsed resource, where it is the source document.
+			// A resource constructed in memory is mutable, so it is re-serialized on every call
+			// rather than answering from a node captured by an earlier call.
+			var node = _resourceNode ?? JsonSerializer.SerializeToNode(this, options);
+			return node?.Deserialize<T>(options);
 		}
 		catch (Exception)
 		{
