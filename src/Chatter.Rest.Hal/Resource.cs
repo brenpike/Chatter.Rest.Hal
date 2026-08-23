@@ -312,11 +312,14 @@ public sealed record Resource : IHalPart
 	/// Produces a canonical JSON representation of the resource state for equality purposes.
 	/// </summary>
 	/// <remarks>
-	/// For a parsed resource the key is derived from the original JSON state — the same source
-	/// <see cref="State{T}(JsonSerializerOptions?)"/> materializes its detached projections from,
-	/// so a projection can never desynchronize equality from serialization. For a resource
-	/// constructed with a state object the key is derived from that object, which no read path
-	/// mutates.
+	/// The key is derived from the actual serializer: the exact member set
+	/// <see cref="ResourceConverter"/> emits for this resource (via
+	/// <c>SerializeStateMembersToUtf8</c>, the same code path <c>Write</c> uses) is canonicalized
+	/// and compared. There is deliberately no re-implementation of the writer's rules here — null
+	/// omission, reserved-name suppression, or any future writer behavior — so equality can never
+	/// drift from serialization: two resources are state-equal exactly when the writer emits the
+	/// same members for both. A resource that emits no members (absent state, empty state, or state
+	/// serializing to JSON null) keys as absent.
 	/// <para>
 	/// The key is canonical: object properties are ordered by name, because JSON object members are
 	/// unordered, while array element order is preserved, because JSON array order is significant.
@@ -325,79 +328,25 @@ public sealed record Resource : IHalPart
 	/// </para>
 	/// </remarks>
 	/// <param name="key">When this method returns true, contains the canonical state key, which is
-	/// null when the resource has no state.</param>
-	/// <returns>true if the state could be represented as JSON; false if it could not, in which case
-	/// the state has no comparable content.</returns>
+	/// null when the resource emits no state members.</param>
+	/// <returns>true if the state could be serialized; false if it could not (including a state the
+	/// writer would reject), in which case the state has no comparable content.</returns>
 	private bool TryGetStateEqualityKey(out string? key)
 	{
 		try
 		{
-			JsonNode? stateNode = _stateCreator();
-			if (stateNode == null)
+			var utf8 = ResourceConverter.SerializeStateMembersToUtf8(
+				this, _jsonOptions ?? JsonSerializerOptions.Default);
+			if (utf8 == null)
 			{
-				if (_stateObject == null)
-				{
-					key = null;
-					return true;
-				}
-
-				stateNode = JsonSerializer.SerializeToNode(_stateObject, _jsonOptions);
-
-				// A state that serializes to JSON null writes no members at all, so it is the
-				// same HAL content as an absent state.
-				if (stateNode is null || ConverterHelpers.IsJsonNull(stateNode))
-				{
-					key = null;
-					return true;
-				}
+				key = null;
+				return true;
 			}
 
-			// Mirror WriteStateMembers' narrow reserved-name suppression: a state property carrying
-			// the exact literal "_links"/"_embedded" is skipped only when the resource's own
-			// nonempty collection is written under that same name (emitting both would produce a
-			// duplicate JSON member), so the key skips it under the same condition.
-			if (stateNode is JsonObject reserved)
-			{
-				if (Links is { Count: > 0 })
-				{
-					reserved.Remove(Converters.ConverterHelpers.LinksProperty);
-				}
-
-				if (Embedded is { Count: > 0 })
-				{
-					reserved.Remove(Converters.ConverterHelpers.EmbeddedProperty);
-				}
-			}
-
-			// Mirror ResourceConverter.Write exactly: with WhenWritingNull in this resource's own
-			// options, top-level null-valued state properties are omitted from the document, so
-			// they are omitted from the key. Nested nulls are written by both, and _jsonOptions is
-			// immutable per-instance state, so the key stays deterministic for this resource.
-			if (stateNode is JsonObject withNulls
-				&& _jsonOptions?.DefaultIgnoreCondition == JsonIgnoreCondition.WhenWritingNull)
-			{
-				List<string>? nullProperties = null;
-				foreach (var kvp in withNulls)
-				{
-					if (kvp.Value is null || ConverterHelpers.IsJsonNull(kvp.Value))
-					{
-						(nullProperties ??= new List<string>()).Add(kvp.Key);
-					}
-				}
-
-				if (nullProperties != null)
-				{
-					foreach (var name in nullProperties)
-					{
-						withNulls.Remove(name);
-					}
-				}
-			}
-
-			// An empty state object serializes to the same HAL document as no state at all
-			// (Resource.Parse("{}") vs new Resource()), so it normalizes to the absent-state key.
+			var stateNode = JsonNode.Parse(utf8);
 			if (stateNode is JsonObject { Count: 0 })
 			{
+				// No members emitted: the same HAL document as an absent state.
 				key = null;
 				return true;
 			}
