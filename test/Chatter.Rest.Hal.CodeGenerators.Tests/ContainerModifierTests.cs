@@ -51,6 +51,26 @@ namespace Sample
 	}
 
 	[Fact]
+	public void TargetNestedInStaticPartialClassCompiles()
+	{
+		var outcome = GeneratorTestHarness.Run(@"
+namespace Sample
+{
+	public static partial class Wrapper
+	{
+		[Chatter.Rest.Hal.HalResponse]
+		public partial class Payload
+		{
+		}
+	}
+}");
+
+		Assert.Empty(outcome.CompilationErrors);
+		var generated = outcome.SourceFor(outcome.GeneratedSources.Single().HintName);
+		Assert.Contains("static partial class Wrapper", generated, StringComparison.Ordinal);
+	}
+
+	[Fact]
 	public void GlobalNamespaceTargetNamedHalResponseAttributeDoesNotCollideWithMarkerHint()
 	{
 		var outcome = GeneratorTestHarness.Run(@"

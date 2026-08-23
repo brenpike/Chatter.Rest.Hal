@@ -115,7 +115,9 @@ internal static class Parser
 			_ => "class"
 		};
 
+		// static (classes) and readonly/ref (structs) are required on every partial declaration.
 		var prefix = string.Empty;
+		if (declaration.Modifiers.Any(SyntaxKind.StaticKeyword)) prefix += "static ";
 		if (declaration.Modifiers.Any(SyntaxKind.ReadOnlyKeyword)) prefix += "readonly ";
 		if (declaration.Modifiers.Any(SyntaxKind.RefKeyword)) prefix += "ref ";
 		return $"{prefix}partial {keyword}";

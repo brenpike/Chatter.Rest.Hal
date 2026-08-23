@@ -231,12 +231,13 @@ The `Chatter.Rest.Hal.CodeGenerators` package generates HAL properties on your D
 
 ```bash
 dotnet add package Chatter.Rest.Hal.CodeGenerators
-dotnet add package Chatter.Rest.Hal.Core
 ```
+
+Since 0.4.0 the generator ships `HalResponseAttribute` itself and declares its dependency on `Chatter.Rest.Hal`, so this single package is all a project needs. (`Chatter.Rest.Hal.Core` is not published; remove any old source-declared copy of the attribute or set the `CHATTER_REST_HAL_CODEGEN_EXCLUDE_ATTRIBUTE` define — see the CodeGenerators changelog.) A class library that packs and exposes the generated members should also add a direct `Chatter.Rest.Hal` reference; see `docs/architecture.md`.
 
 **Decorate your DTO**
 
-Your class must be `partial`, non-generic, and non-nested.
+Your class must be `partial` (and not a `record`). Generic and nested classes are supported since 0.4.0; containing types must themselves be `partial`.
 
 ```csharp
 using Chatter.Rest.Hal;
