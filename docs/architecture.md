@@ -36,7 +36,7 @@ public sealed record Resource : IHalPart
 ```csharp
 public sealed record Link : IHalPart
 {
-    public Link(string rel);      // throws ArgumentNullException if null/whitespace
+    public Link(string rel);      // throws ArgumentException if null/whitespace
 
     public string Rel { get; }
     public LinkObjectCollection LinkObjects { get; set; }
