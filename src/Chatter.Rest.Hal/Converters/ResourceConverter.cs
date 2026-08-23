@@ -23,7 +23,7 @@ public sealed class ResourceConverter : JsonConverter<Resource>
 	/// </exception>
 	public override Resource? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
 	{
-		var node = ConverterHelpers.ParseNode(ref reader, options);
+		var node = ConverterHelpers.ParseNode(ref reader);
 
 		// A HAL Resource Object is a JSON object. Rejecting anything else here — rather than letting
 		// the lazy creators index a primitive or an array later — keeps the failure at the
@@ -49,7 +49,7 @@ public sealed class ResourceConverter : JsonConverter<Resource>
 
 		JsonObject? jsonObjectCreator()
 		{
-			var result = new JsonObject(ConverterHelpers.NodeOptions(options));
+			var result = new JsonObject();
 			foreach (var kvp in resourceObject)
 			{
 				if (ConverterHelpers.IsReservedProperty(kvp.Key)) continue;

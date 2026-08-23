@@ -33,7 +33,7 @@ public sealed class LinkCollectionConverter : JsonConverter<LinkCollection>
 	/// <exception cref="JsonException">Thrown when the JSON is not a valid HAL link collection.</exception>
 	public override LinkCollection? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
 	{
-		var node = ConverterHelpers.ParseNode(ref reader, options);
+		var node = ConverterHelpers.ParseNode(ref reader);
 
 		// Duplicate rels are normalized last-wins before anything reaches the collection: HAL models
 		// _links as a JSON object keyed by rel, so a rel can only appear once, and a duplicate must

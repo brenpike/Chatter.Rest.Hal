@@ -31,7 +31,7 @@ public sealed class LinkObjectCollectionConverter : JsonConverter<LinkObjectColl
 	/// <returns>The deserialized LinkObjectCollection.</returns>
 	public override LinkObjectCollection? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
 	{
-		var node = ConverterHelpers.ParseNode(ref reader, options);
+		var node = ConverterHelpers.ParseNode(ref reader);
 
 		var linkObjects = new LinkObjectCollection();
 

@@ -21,7 +21,7 @@ public sealed class EmbeddedResourceCollectionConverter : JsonConverter<Embedded
 	/// <exception cref="JsonException">Thrown when the JSON is not a valid HAL embedded resource collection.</exception>
 	public override EmbeddedResourceCollection? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
 	{
-		var node = ConverterHelpers.ParseNode(ref reader, options);
+		var node = ConverterHelpers.ParseNode(ref reader);
 
 		// Duplicate names are normalized last-wins before anything reaches the collection: HAL models
 		// _embedded as a JSON object keyed by relation name, so a name can only appear once, and a

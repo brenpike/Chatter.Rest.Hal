@@ -19,7 +19,7 @@ public sealed class ResourceCollectionConverter : JsonConverter<ResourceCollecti
 	/// <returns>The deserialized ResourceCollection.</returns>
 	public override ResourceCollection? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
 	{
-		var node = ConverterHelpers.ParseNode(ref reader, options);
+		var node = ConverterHelpers.ParseNode(ref reader);
 
 		var resources = new ResourceCollection();
 

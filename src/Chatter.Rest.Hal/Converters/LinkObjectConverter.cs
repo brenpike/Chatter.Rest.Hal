@@ -31,7 +31,7 @@ public sealed class LinkObjectConverter : JsonConverter<LinkObject>
 	/// </exception>
 	public override LinkObject? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
 	{
-		var node = ConverterHelpers.ParseNode(ref reader, options);
+		var node = ConverterHelpers.ParseNode(ref reader);
 
 		if (node == null)
 		{
@@ -43,7 +43,10 @@ public sealed class LinkObjectConverter : JsonConverter<LinkObject>
 			throw new JsonException("A HAL Link Object must be a JSON object.");
 		}
 
-		var hrefNode = linkObjectNode["href"];
+		// Link Object attribute names are ordinary property names, so they follow the caller's
+		// PropertyNameCaseInsensitive setting. The node tree itself is always ordinal, so a document
+		// carrying both "href" and "HREF" keeps them distinct and the exact name still wins.
+		var hrefNode = ConverterHelpers.GetProperty(linkObjectNode, "href", options);
 		if (hrefNode is null)
 		{
 			// Href is required for a valid LinkObject. Be tolerant and return null for malformed input.
@@ -62,13 +65,13 @@ public sealed class LinkObjectConverter : JsonConverter<LinkObject>
 
 		return new LinkObject(href)
 		{
-			Templated = TryGetBooleanAsTrue(linkObjectNode["templated"]),
-			Type = TryGetString(linkObjectNode["type"]),
-			Deprecation = TryGetString(linkObjectNode["deprecation"]),
-			Name = TryGetString(linkObjectNode["name"]),
-			Title = TryGetString(linkObjectNode["title"]),
-			Profile = TryGetString(linkObjectNode["profile"]),
-			Hreflang = TryGetString(linkObjectNode["hreflang"])
+			Templated = TryGetBooleanAsTrue(ConverterHelpers.GetProperty(linkObjectNode, "templated", options)),
+			Type = TryGetString(ConverterHelpers.GetProperty(linkObjectNode, "type", options)),
+			Deprecation = TryGetString(ConverterHelpers.GetProperty(linkObjectNode, "deprecation", options)),
+			Name = TryGetString(ConverterHelpers.GetProperty(linkObjectNode, "name", options)),
+			Title = TryGetString(ConverterHelpers.GetProperty(linkObjectNode, "title", options)),
+			Profile = TryGetString(ConverterHelpers.GetProperty(linkObjectNode, "profile", options)),
+			Hreflang = TryGetString(ConverterHelpers.GetProperty(linkObjectNode, "hreflang", options))
 		};
 	}
 

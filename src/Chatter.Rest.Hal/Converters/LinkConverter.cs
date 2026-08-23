@@ -33,7 +33,7 @@ public sealed class LinkConverter : JsonConverter<Link>
 	/// <returns>The deserialized Link, or null if the JSON is malformed.</returns>
 	public override Link? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
 	{
-		var node = ConverterHelpers.ParseNode(ref reader, options);
+		var node = ConverterHelpers.ParseNode(ref reader);
 
 		// Only accept a single-property object representing a HAL link entry (e.g. { "rel": { ... } })
 		if (node is not JsonObject jsonObject)
