@@ -345,13 +345,23 @@ public sealed record Resource : IHalPart
 			JsonNode? stateNode = _stateCreator();
 			if (stateNode == null)
 			{
-				if (_stateObject == null)
+				// A constructor-supplied JsonElement is the state source of record: after State<T>()
+				// projects it onto a DTO, deriving the key from that DTO would let a pure read change
+				// the hash code (the DTO may drop properties or rename them). The preserved element
+				// plays the same role the original JSON does for parsed resources.
+				if (_sourceStateElement is JsonElement source)
+				{
+					stateNode = JsonSerializer.SerializeToNode(source, _jsonOptions);
+				}
+				else if (_stateObject == null)
 				{
 					key = null;
 					return true;
 				}
-
-				stateNode = JsonSerializer.SerializeToNode(_stateObject, _jsonOptions);
+				else
+				{
+					stateNode = JsonSerializer.SerializeToNode(_stateObject, _jsonOptions);
+				}
 			}
 
 			// An empty state object serializes to the same HAL document as no state at all

@@ -43,4 +43,46 @@ public sealed record Link : IHalPart
 	/// contain one and sometimes multiple links.
 	/// </summary>
 	public bool IsArray { get; set; } = false;
+
+	/// <summary>
+	/// Determines whether this link represents the same HAL content as another link.
+	/// </summary>
+	/// <remarks>
+	/// <see cref="IsArray"/> only affects the serialized document when the link holds exactly one
+	/// link object (zero or many always serialize as an array), so the flag participates in
+	/// equality only in that case. Two links differing solely in a flag that cannot change the
+	/// serialized shape are the same HAL content.
+	/// </remarks>
+	public bool Equals(Link? other)
+	{
+		if (other is null)
+		{
+			return false;
+		}
+
+		if (ReferenceEquals(this, other))
+		{
+			return true;
+		}
+
+		return Rel == other.Rel
+			&& EffectiveIsArray == other.EffectiveIsArray
+			&& LinkObjects.Equals(other.LinkObjects);
+	}
+
+	/// <inheritdoc cref="Equals(Link?)"/>
+	public override int GetHashCode()
+	{
+		unchecked
+		{
+			var hash = 17;
+			hash = (hash * 31) + Rel.GetHashCode();
+			hash = (hash * 31) + EffectiveIsArray.GetHashCode();
+			hash = (hash * 31) + LinkObjects.GetHashCode();
+			return hash;
+		}
+	}
+
+	/// <summary>The array flag as it affects serialization: fixed when the count already forces an array.</summary>
+	private bool EffectiveIsArray => LinkObjects.Count == 1 ? IsArray : true;
 }
