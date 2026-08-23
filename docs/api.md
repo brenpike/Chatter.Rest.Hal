@@ -134,6 +134,7 @@ public interface IResourceCuriesLinkCreationStage
     IResourceLinkObjectPropertiesSelectionStage AddLinkObject(string href, string name);
 
     // Force the "curies" relation to serialize as a JSON array.
+    // No-op since 2.0.0: curies is array-form by default per HAL §8.3.
     IResourceCuriesLinkCreationStage AsArray();
 }
 ```

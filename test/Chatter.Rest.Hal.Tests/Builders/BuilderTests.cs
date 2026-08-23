@@ -132,11 +132,10 @@ public class BuilderTests
 		//
 		// This test validates that the ResourceBuilder's .AddCuries() method
 		// correctly constructs the CURIE structure and serializes to valid HAL JSON.
-		// Note: Current serialization behavior follows link object conventions:
-		// single LinkObject = object, multiple LinkObjects = array.
+		// Since 2.0.0 (#119) curies is array-form by default: HAL §8.3 establishes CURIEs via an
+		// array of Link Objects, so a single definition still serializes as [{...}].
 
-		// Test case 1: Single CURIE definition via builder
-		// Note: Single link object serializes as an object (not array) per current implementation
+		// Test case 1: Single CURIE definition via builder serializes as a one-element array
 		var resourceSingleCurie = ResourceBuilder.New()
 			.AddSelf().AddLinkObject("/orders")
 			.AddCuries().AddLinkObject("https://docs.acme.com/relations/{rel}", "acme")
@@ -146,15 +145,16 @@ public class BuilderTests
 		var docSingleCurie = JsonDocument.Parse(jsonSingleCurie);
 		var curiesProperty = docSingleCurie.RootElement.GetProperty("_links").GetProperty("curies");
 
-		// Single CURIE serializes as an object (consistent with other single link objects)
-		curiesProperty.ValueKind.Should().Be(JsonValueKind.Object);
+		curiesProperty.ValueKind.Should().Be(JsonValueKind.Array);
+		curiesProperty.GetArrayLength().Should().Be(1);
+		var curieDefinition = curiesProperty[0];
 
-		curiesProperty.GetProperty("name").GetString().Should().Be("acme");
-		curiesProperty.GetProperty("href").GetString().Should().Be("https://docs.acme.com/relations/{rel}");
-		curiesProperty.GetProperty("templated").GetBoolean().Should().BeTrue();
+		curieDefinition.GetProperty("name").GetString().Should().Be("acme");
+		curieDefinition.GetProperty("href").GetString().Should().Be("https://docs.acme.com/relations/{rel}");
+		curieDefinition.GetProperty("templated").GetBoolean().Should().BeTrue();
 
 		// Verify href contains the {rel} token
-		curiesProperty.GetProperty("href").GetString().Should().Contain("{rel}");
+		curieDefinition.GetProperty("href").GetString().Should().Contain("{rel}");
 
 		// Test case 2: CURIE used in subsequent link relation
 		// This validates the complete workflow: define CURIE, then use it in a link
@@ -168,12 +168,13 @@ public class BuilderTests
 		var docWithCuriedLink = JsonDocument.Parse(jsonWithCuriedLink);
 		var linksWithCurie = docWithCuriedLink.RootElement.GetProperty("_links");
 
-		// Verify CURIE definition exists as an object (single CURIE)
+		// Verify the CURIE definition array (array-form default since 2.0.0)
 		var curiesWithLink = linksWithCurie.GetProperty("curies");
-		curiesWithLink.ValueKind.Should().Be(JsonValueKind.Object);
-		curiesWithLink.GetProperty("name").GetString().Should().Be("acme");
-		curiesWithLink.GetProperty("href").GetString().Should().Be("https://docs.acme.com/relations/{rel}");
-		curiesWithLink.GetProperty("templated").GetBoolean().Should().BeTrue();
+		curiesWithLink.ValueKind.Should().Be(JsonValueKind.Array);
+		var curieEntry = curiesWithLink[0];
+		curieEntry.GetProperty("name").GetString().Should().Be("acme");
+		curieEntry.GetProperty("href").GetString().Should().Be("https://docs.acme.com/relations/{rel}");
+		curieEntry.GetProperty("templated").GetBoolean().Should().BeTrue();
 
 		// Verify the curied link exists (validates the full CURIE pattern)
 		var curiedLink = linksWithCurie.GetProperty("acme:widgets");
@@ -187,7 +188,7 @@ public class BuilderTests
 
 		var jsonPrefixToken = JsonSerializer.Serialize(resourcePrefixToken);
 		var docPrefixToken = JsonDocument.Parse(jsonPrefixToken);
-		var curiePrefix = docPrefixToken.RootElement.GetProperty("_links").GetProperty("curies");
+		var curiePrefix = docPrefixToken.RootElement.GetProperty("_links").GetProperty("curies")[0];
 
 		curiePrefix.GetProperty("href").GetString().Should().Be("https://example.com/{rel}");
 		curiePrefix.GetProperty("href").GetString().Should().Contain("{rel}");
@@ -200,7 +201,7 @@ public class BuilderTests
 
 		var jsonMiddleToken = JsonSerializer.Serialize(resourceMiddleToken);
 		var docMiddleToken = JsonDocument.Parse(jsonMiddleToken);
-		var curieMiddle = docMiddleToken.RootElement.GetProperty("_links").GetProperty("curies");
+		var curieMiddle = docMiddleToken.RootElement.GetProperty("_links").GetProperty("curies")[0];
 
 		curieMiddle.GetProperty("href").GetString().Should().Be("https://example.org/docs/{rel}/info");
 		curieMiddle.GetProperty("href").GetString().Should().Contain("{rel}");
@@ -213,7 +214,7 @@ public class BuilderTests
 
 		var jsonQueryToken = JsonSerializer.Serialize(resourceQueryToken);
 		var docQueryToken = JsonDocument.Parse(jsonQueryToken);
-		var curieQuery = docQueryToken.RootElement.GetProperty("_links").GetProperty("curies");
+		var curieQuery = docQueryToken.RootElement.GetProperty("_links").GetProperty("curies")[0];
 
 		curieQuery.GetProperty("href").GetString().Should().Be("https://api.test.com/relations/{rel}?format=json");
 		curieQuery.GetProperty("href").GetString().Should().Contain("{rel}");
@@ -348,6 +349,21 @@ public class BuilderTests
 		var selfLink = resource!.Links.FirstOrDefault(l => l.Rel == "self");
 		selfLink.Should().NotBeNull();
 		selfLink!.IsArray.Should().BeTrue();
+	}
+
+	[Fact]
+	public void Builder_AddLink_Curies_Path_Also_Defaults_To_Array()
+	{
+		// The array-form default applies to every builder path that creates the reserved
+		// relation, including the generic AddLink("curies") path (#119 review round).
+		var resource = ResourceBuilder.New()
+			.AddSelf().AddLinkObject("/orders")
+			.AddLink("curies").AddLinkObject("https://docs.acme.com/relations/{rel}")
+			.Build();
+
+		var doc = JsonDocument.Parse(JsonSerializer.Serialize(resource));
+		doc.RootElement.GetProperty("_links").GetProperty("curies").ValueKind
+			.Should().Be(JsonValueKind.Array);
 	}
 
 	[Fact]
