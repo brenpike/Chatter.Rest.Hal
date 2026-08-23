@@ -18,6 +18,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The package now declares its dependency on `Chatter.Rest.Hal`, which supplies the `LinkCollection`
   and `EmbeddedResourceCollection` types the generated members are typed as
   ([#109](https://github.com/brenpike/Chatter.Rest.Hal/issues/109)).
+- Documented that packable class libraries must pair the `PrivateAssets="all"` generator reference
+  with a direct `Chatter.Rest.Hal` reference: `PrivateAssets="all"` keeps the transitive runtime
+  dependency out of the packed nuspec, so without the direct reference downstream consumers would
+  not restore the types the generated members expose
+  ([#109](https://github.com/brenpike/Chatter.Rest.Hal/issues/109)).
 - `CHATTER_REST_HAL_CODEGEN_EXCLUDE_ATTRIBUTE`: projects that declared
   `Chatter.Rest.Hal.HalResponseAttribute` in their own source under 0.3.x (the workaround for the
   missing attribute) add this symbol to `DefineConstants` to suppress the generated copy and avoid

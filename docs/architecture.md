@@ -406,6 +406,13 @@ Output file name: the fully qualified metadata name with `+` mapped to `.` and `
 
 The package declares a dependency on `Chatter.Rest.Hal`, which supplies the `LinkCollection` and `EmbeddedResourceCollection` types the generated members are typed as. Consumers still add the generator itself with `PrivateAssets="all"`.
 
+> **Packable libraries need a direct runtime reference.** `PrivateAssets="all"` keeps the generator reference (and everything transitive under it, including `Chatter.Rest.Hal`) out of the nuspec produced by `dotnet pack`. An application project needs nothing more, but a class library that packs and exposes the generated `Links`/`Embedded` members must also add a direct, non-private `<PackageReference Include="Chatter.Rest.Hal" ... />` so its own consumers restore the assembly those members are typed against:
+>
+> ```xml
+> <PackageReference Include="Chatter.Rest.Hal.CodeGenerators" Version="0.4.0" PrivateAssets="all" />
+> <PackageReference Include="Chatter.Rest.Hal" Version="1.1.0" />
+> ```
+
 ### Known Limitations
 
 - **Records are not supported** — a `record` (or `record class`) target reports `HAL0003` and generates nothing. `AttributeTargets.Class` permits the annotation, so the diagnostic exists to make the gap visible.
@@ -444,7 +451,7 @@ Chatter.Rest.Hal.sln
 
 **`Chatter.Rest.Hal.Core`** — declares `HalResponseAttribute`. It is not published as a NuGet package; since 0.4.0 the generator emits its own copy of the attribute, so consumers do not need this project. See Section 4, Attribute Delivery.
 
-**`Chatter.Rest.Hal.CodeGenerators`** — the Roslyn incremental source generator. It emits `HalResponseAttribute` into the compilation it runs in and depends on `Chatter.Rest.Hal` for the types the generated members use. Consumers add the generator itself as a build-time-only reference (`PrivateAssets="all"`), meaning the analyzer assembly does not appear in the consumer's published output.
+**`Chatter.Rest.Hal.CodeGenerators`** — the Roslyn incremental source generator. It emits `HalResponseAttribute` into the compilation it runs in and depends on `Chatter.Rest.Hal` for the types the generated members use. Consumers add the generator itself as a build-time-only reference (`PrivateAssets="all"`), meaning the analyzer assembly does not appear in the consumer's published output. Packable libraries additionally declare a direct `Chatter.Rest.Hal` reference — `PrivateAssets="all"` suppresses the transitive runtime dependency from the packed nuspec (see Section 4, Attribute Delivery).
 
 ---
 
