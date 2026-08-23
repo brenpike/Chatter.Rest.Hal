@@ -1,5 +1,4 @@
 using System.Collections.Immutable;
-using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
@@ -12,23 +11,23 @@ public class HalResponseGenerator : IIncrementalGenerator
 	{
 		var halResponseTypes = context.SyntaxProvider
 			.ForAttributeWithMetadataName(
-				"Chatter.Rest.Hal.HalResponseAttribute",
-				static (node, _) => node is ClassDeclarationSyntax,
-				static (ctx, _) => (ClassDeclarationSyntax)ctx.TargetNode
+				Parser.HalResponseAttributeMetadataName,
+				static (node, _) => Parser.IsCandidate(node),
+				static (ctx, _) => (Symbol: ctx.TargetSymbol as INamedTypeSymbol,
+					Declaration: ctx.TargetNode as TypeDeclarationSyntax)
 			);
 
 		var processedTypes = halResponseTypes
 			.Collect()
-			.Select(static (types, _) =>
+			.Select(static (types, cancellationToken) =>
 				types
-					.Where(static t => t is not null)
-					.Select(static c => new HalClassInfo(
-						c!.Identifier.Text,
-						Emitter.GetNamespaceFrom(c)))
-					.GroupBy(static x => (x.Namespace ?? string.Empty, x.Name))
+					.Where(static t => t.Symbol is not null && t.Declaration is not null)
+					.Select(t => Parser.Transform(t.Symbol!, t.Declaration!, cancellationToken))
+					.Where(static info => info.HasValue)
+					.Select(static info => info!.Value)
+					.GroupBy(static info => info.MetadataName, StringComparer.Ordinal)
 					.Select(static g => g.First())
-					.OrderBy(static x => x.Namespace ?? string.Empty, StringComparer.Ordinal)
-					.ThenBy(static x => x.Name, StringComparer.Ordinal)
+					.OrderBy(static info => info.MetadataName, StringComparer.Ordinal)
 					.ToImmutableArray());
 
 		context.RegisterSourceOutput(processedTypes, static (ctx, classes) =>
