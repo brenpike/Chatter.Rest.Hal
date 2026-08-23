@@ -66,7 +66,13 @@ public sealed class ResourceCollectionConverter : JsonConverter<ResourceCollecti
 			throw new JsonException("A HAL Resource must be a JSON object.");
 		}
 
-		resources.Add(ResourceConverter.ReadFromNode(resourceObject, options));
+		var resource = ConverterHelpers.HasCustomConverter<Resource>(options, typeof(ResourceConverter))
+			? resourceObject.Deserialize<Resource>(options)
+			: ResourceConverter.ReadFromNode(resourceObject, options);
+		if (resource != null)
+		{
+			resources.Add(resource);
+		}
 	}
 
 	/// <summary>

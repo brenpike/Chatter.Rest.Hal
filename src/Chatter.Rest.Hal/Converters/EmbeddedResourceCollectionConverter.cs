@@ -87,14 +87,20 @@ public sealed class EmbeddedResourceCollectionConverter : JsonConverter<Embedded
 			var embedded = new EmbeddedResource(kvp.Key);
 			if (kvp.Value is JsonObject val)
 			{
-				embedded.Resources.Add(ResourceConverter.ReadFromNode(val, options));
+				var res = ConverterHelpers.HasCustomConverter<Resource>(options, typeof(ResourceConverter))
+					? val.Deserialize<Resource>(options)
+					: ResourceConverter.ReadFromNode(val, options);
+				if (res != null) embedded.Resources.Add(res);
 			}
 
 			else if (kvp.Value is JsonArray ja)
 			{
+				var rc = ConverterHelpers.HasCustomConverter<ResourceCollection>(options, typeof(ResourceCollectionConverter))
+					? ja.Deserialize<ResourceCollection>(options) ?? new ResourceCollection()
+					: ResourceCollectionConverter.ReadFromNode(ja, options);
 				embedded = new EmbeddedResource(kvp.Key)
 				{
-					Resources = ResourceCollectionConverter.ReadFromNode(ja, options)
+					Resources = rc
 				};
 			}
 

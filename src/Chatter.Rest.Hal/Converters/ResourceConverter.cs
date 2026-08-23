@@ -50,9 +50,17 @@ public sealed class ResourceConverter : JsonConverter<Resource>
 		// Both collections are materialized eagerly so a malformed _links/_embedded member fails
 		// at the deserialization call, not on a later property read.
 		var linksNode = ConverterHelpers.GetReservedProperty(resourceObject, ConverterHelpers.LinksProperty);
-		var links = linksNode is null ? null : LinkCollectionConverter.ReadFromNode(linksNode, options);
+		var links = linksNode is null
+			? null
+			: ConverterHelpers.HasCustomConverter<LinkCollection>(options, typeof(LinkCollectionConverter))
+				? linksNode.Deserialize<LinkCollection>(options)
+				: LinkCollectionConverter.ReadFromNode(linksNode, options);
 		var embeddedNode = ConverterHelpers.GetReservedProperty(resourceObject, ConverterHelpers.EmbeddedProperty);
-		var embedded = embeddedNode is null ? null : EmbeddedResourceCollectionConverter.ReadFromNode(embeddedNode, options);
+		var embedded = embeddedNode is null
+			? null
+			: ConverterHelpers.HasCustomConverter<EmbeddedResourceCollection>(options, typeof(EmbeddedResourceCollectionConverter))
+				? embeddedNode.Deserialize<EmbeddedResourceCollection>(options)
+				: EmbeddedResourceCollectionConverter.ReadFromNode(embeddedNode, options);
 
 		LinkCollection? linkCollectionCreator() => links;
 
