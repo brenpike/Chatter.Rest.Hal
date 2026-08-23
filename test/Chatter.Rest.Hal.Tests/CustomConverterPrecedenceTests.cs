@@ -30,6 +30,30 @@ public class CustomConverterPrecedenceTests
 			=> throw new NotSupportedException();
 	}
 
+	private sealed class ScalarToleratingResourceConverter : JsonConverter<Resource>
+	{
+		public override Resource? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+		{
+			reader.Skip();
+			return new Resource(new { fromCustom = true });
+		}
+
+		public override void Write(Utf8JsonWriter writer, Resource value, JsonSerializerOptions options)
+			=> throw new NotSupportedException();
+	}
+
+	[Fact]
+	public void CustomResourceConverterSeesScalarCollectionItems()
+	{
+		var options = new JsonSerializerOptions();
+		options.Converters.Add(new ScalarToleratingResourceConverter());
+
+		var collection = JsonSerializer.Deserialize<ResourceCollection>("[42, {\"id\":1}]", options);
+
+		Assert.NotNull(collection);
+		Assert.Equal(2, collection!.Count);
+	}
+
 	[Fact]
 	public void CustomLinkCollectionConverterRunsForNestedLinks()
 	{

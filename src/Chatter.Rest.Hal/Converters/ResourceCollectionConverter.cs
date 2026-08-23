@@ -60,19 +60,25 @@ public sealed class ResourceCollectionConverter : JsonConverter<ResourceCollecti
 			return;
 		}
 
+		// A custom options-registered Resource converter sees every item, whatever its shape — it may
+		// deliberately accept representations (e.g. scalars) the built-in one rejects.
+		if (ConverterHelpers.HasCustomConverter<Resource>(options, typeof(ResourceConverter)))
+		{
+			var custom = node.Deserialize<Resource>(options);
+			if (custom != null)
+			{
+				resources.Add(custom);
+			}
+			return;
+		}
+
 		// Mirrors ResourceConverter.Read's contract for the reader-based path.
 		if (node is not JsonObject resourceObject)
 		{
 			throw new JsonException("A HAL Resource must be a JSON object.");
 		}
 
-		var resource = ConverterHelpers.HasCustomConverter<Resource>(options, typeof(ResourceConverter))
-			? resourceObject.Deserialize<Resource>(options)
-			: ResourceConverter.ReadFromNode(resourceObject, options);
-		if (resource != null)
-		{
-			resources.Add(resource);
-		}
+		resources.Add(ResourceConverter.ReadFromNode(resourceObject, options));
 	}
 
 	/// <summary>
