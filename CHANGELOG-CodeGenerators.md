@@ -18,6 +18,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The package now declares its dependency on `Chatter.Rest.Hal`, which supplies the `LinkCollection`
   and `EmbeddedResourceCollection` types the generated members are typed as
   ([#109](https://github.com/brenpike/Chatter.Rest.Hal/issues/109)).
+- `CHATTER_REST_HAL_CODEGEN_EXCLUDE_ATTRIBUTE`: projects that declared
+  `Chatter.Rest.Hal.HalResponseAttribute` in their own source under 0.3.x (the workaround for the
+  missing attribute) add this symbol to `DefineConstants` to suppress the generated copy and avoid
+  a same-assembly `CS0101` collision when upgrading
+  ([#109](https://github.com/brenpike/Chatter.Rest.Hal/issues/109)).
 - Diagnostics for annotated declarations that cannot receive the HAL members
   ([#107](https://github.com/brenpike/Chatter.Rest.Hal/issues/107)):
   - `HAL0001` (error) — the target is not declared `partial`.

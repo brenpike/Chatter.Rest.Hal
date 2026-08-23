@@ -6,6 +6,15 @@ namespace Chatter.Rest.Hal.CodeGenerators;
 /// to make <c>[HalResponse]</c> available; without it the attribute has to come from somewhere else
 /// and the generator never fires.
 /// </summary>
+/// <remarks>
+/// The emitted source is wrapped in <c>#if !CHATTER_REST_HAL_CODEGEN_EXCLUDE_ATTRIBUTE</c>. A
+/// consumer that already declares <c>Chatter.Rest.Hal.HalResponseAttribute</c> in its own source
+/// (the 0.3.x workaround, when no package shipped the attribute) would otherwise hit CS0101 —
+/// a same-assembly duplicate that removing a package reference cannot resolve. Such projects add
+/// <c>CHATTER_REST_HAL_CODEGEN_EXCLUDE_ATTRIBUTE</c> to <c>DefineConstants</c> to suppress the
+/// generated copy; post-initialization sources are parsed with the consuming project's parse
+/// options, so the define takes effect there.
+/// </remarks>
 internal static class AttributeSource
 {
 	internal const string HintName = "HalResponseAttribute.g.cs";
@@ -14,6 +23,7 @@ internal static class AttributeSource
 
 #nullable enable
 
+#if !CHATTER_REST_HAL_CODEGEN_EXCLUDE_ATTRIBUTE
 namespace Chatter.Rest.Hal
 {
     /// <summary>
@@ -25,5 +35,6 @@ namespace Chatter.Rest.Hal
     {
     }
 }
+#endif
 ";
 }
