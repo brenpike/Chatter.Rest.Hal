@@ -341,7 +341,7 @@ For each key in the `_embedded` object, dispatches:
 
 ## Section 4 — Source Generator Pipeline
 
-The generator lives in `Chatter.Rest.Hal.CodeGenerators` and consists of three files.
+The generator lives in `Chatter.Rest.Hal.CodeGenerators`.
 
 ### `HalResponseGenerator` — Entry Point
 
@@ -353,44 +353,63 @@ public class HalResponseGenerator : IIncrementalGenerator
 }
 ```
 
-Registers a `SyntaxProvider.CreateSyntaxProvider` pipeline:
+The pipeline has three stages:
 
-1. **Syntax filter**: `Parser.IsSyntaxTargetForGeneration` — fast check, runs on every syntax node.
-2. **Semantic filter**: `Parser.GetSemanticTargetForGeneration` — resolves the attribute symbol.
-3. Results are collected via `.Collect()` and forwarded to `Emitter.Emit`.
+1. **Post-initialization output** — emits `HalResponseAttribute` into the compilation, so the attribute is available to any project that installs the package.
+2. **Discovery** — `SyntaxProvider.ForAttributeWithMetadataName("Chatter.Rest.Hal.HalResponseAttribute", ...)` with a syntax-only predicate matching `ClassDeclarationSyntax` and `RecordDeclarationSyntax`. The transform projects each match straight onto the equatable `HalTarget` model; nothing that changes identity per edit (syntax nodes, symbols, `Location`s) survives past this stage, which is what makes the downstream `Collect` cacheable.
+3. **Emission** — targets with a model are collected, deduplicated, ordered, and handed to `Emitter.Emit`; diagnostics are reported from a separate per-target output.
 
-### `Parser` — Filter Stage
+Pipeline steps are named via `WithTrackingName` (see `TrackingNames`) so tests can assert that an unrelated edit reuses cached results.
 
-**Syntax filter** (`IsSyntaxTargetForGeneration`): matches any `AttributeSyntax` whose name resolves to `"HalResponse"` or `"HalResponseAttribute"` (unqualified, to handle both forms).
+### `Parser` — Projection and Validation Stage
 
-**Semantic filter** (`GetSemanticTargetForGeneration`): resolves the attribute's constructor symbol, checks `ContainingType.ToDisplayString() == "Chatter.Rest.Hal.HalResponseAttribute"`. On match, returns the nearest enclosing `ClassDeclarationSyntax` by walking `attributeSyntax.Ancestors()`.
+Builds `HalClassInfo` for one annotated declaration: containing namespace, the declared name with its type parameter list, the chain of containing types (each with its own declaration keyword and type parameters), and the fully qualified metadata name (for example ``Ns.Outer`1+Inner``) used as the dedup key and hint-name basis.
+
+It also reports why a declaration cannot receive the HAL members:
+
+| Id | Severity | Condition |
+|---|---|---|
+| `HAL0001` | Error | The target is not declared `partial`. |
+| `HAL0002` | Error | A type containing the target is not declared `partial`. |
+| `HAL0003` | Warning | The target is a record; only class declarations are supported. |
+| `HAL0004` | Error | The target already declares a member named `Links` or `Embedded`. |
+
+Generation is skipped for a target that reports any of these, so the diagnostic is what the user sees rather than an unrelated `CS0260` or `CS0102`.
 
 ### `Emitter` — Code Generation Stage
 
-Deduplicates by `(Namespace, Name)` pair (handles partial classes and multiple attributes on the same class). For each unique class, generates a `partial class` with two properties:
+For each unique model, re-declares the containing-type chain and the target itself as partials and adds the two HAL members with fully qualified type names:
 
 ```csharp
 // Generated output shape
 namespace MyApp
 {
-    partial class MyResponse
+    partial class Outer<TOuter>
     {
-        [JsonPropertyName("_links")]
-        public LinkCollection? Links { get; set; }
+        partial class MyResponse<TValue>
+        {
+            [global::System.Text.Json.Serialization.JsonPropertyName("_links")]
+            public global::Chatter.Rest.Hal.LinkCollection? Links { get; set; }
 
-        [JsonPropertyName("_embedded")]
-        public EmbeddedResourceCollection? Embedded { get; set; }
+            [global::System.Text.Json.Serialization.JsonPropertyName("_embedded")]
+            public global::Chatter.Rest.Hal.EmbeddedResourceCollection? Embedded { get; set; }
+        }
     }
 }
 ```
 
-Output file name: `{Namespace}.{ClassName}.g.cs`.
+Output file name: the fully qualified metadata name with `+` mapped to `.` and `` ` `` to `_`, plus `.g.cs` — for example `MyApp.Outer_1.MyResponse_1.g.cs`. A numeric suffix is appended if two metadata names sanitize onto the same hint.
+
+### Attribute Delivery
+
+`HalResponseAttribute` is emitted into the consuming compilation by the generator itself, as an `internal sealed` class in the `Chatter.Rest.Hal` namespace. `Chatter.Rest.Hal.Core` still declares a public copy for source compatibility, but it is not published as a package; a project referencing both sees `CS0436` and should drop the `Chatter.Rest.Hal.Core` reference.
+
+The package declares a dependency on `Chatter.Rest.Hal`, which supplies the `LinkCollection` and `EmbeddedResourceCollection` types the generated members are typed as. Consumers still add the generator itself with `PrivateAssets="all"`.
 
 ### Known Limitations
 
-- **Non-generic classes only** — `ClassDeclarationSyntax` is returned without generic parameter handling; generic classes are not supported.
-- **Non-nested classes only** — `GetNamespaceFrom` walks ancestors looking for `NamespaceDeclarationSyntax` or `FileScopedNamespaceDeclarationSyntax`. Classes nested inside other classes produce incorrect namespace resolution.
-- **Attribute location** — `[HalResponse]` is defined in `Chatter.Rest.Hal.Core`, not in the generator assembly. Consumer projects reference `Chatter.Rest.Hal.Core` at runtime and the generator assembly with `PrivateAssets="all"`.
+- **Records are not supported** — a `record` (or `record class`) target reports `HAL0003` and generates nothing. `AttributeTargets.Class` permits the annotation, so the diagnostic exists to make the gap visible.
+- **Type-parameter constraints are not repeated** — a supplementary partial declaration may omit them, and repeating type-parameter attributes risks duplicate-attribute errors.
 
 ---
 
@@ -404,15 +423,15 @@ Chatter.Rest.Hal.sln
 │   │   ├── depends on: Chatter.Rest.UriTemplates (external NuGet package)
 │   │   └── NuGet: Chatter.Rest.Hal v1.1.0
 │   │
-│   ├── Chatter.Rest.Hal.Core/       # Shared attribute
+│   ├── Chatter.Rest.Hal.Core/       # Shared attribute (unpublished)
 │   │   ├── contains: HalResponseAttribute only
 │   │   ├── referenced at runtime by consumer projects
 │   │   └── NuGet: referenced transitively by consumers
 │   │
 │   └── Chatter.Rest.Hal.CodeGenerators/   # Roslyn source generator
-│       ├── references: Chatter.Rest.Hal.Core
+│       ├── depends on: Chatter.Rest.Hal (types used by generated source)
 │       ├── consumers add: <PackageReference ... PrivateAssets="all" />
-│       └── NuGet: Chatter.Rest.Hal.CodeGenerators v0.3.0
+│       └── NuGet: Chatter.Rest.Hal.CodeGenerators v0.4.0
 │
 └── test/
     ├── Chatter.Rest.Hal.Tests/                   # Tests for core library
@@ -423,9 +442,9 @@ Chatter.Rest.Hal.sln
 
 **`Chatter.Rest.Hal`** — the core library. Provides all domain types, fluent builder API, JSON converters, and query extension methods. Depends on `System.Text.Json` and the external NuGet package [`Chatter.Rest.UriTemplates`](https://www.nuget.org/packages/Chatter.Rest.UriTemplates/) for RFC 6570 URI template expansion. Consumers reference this package to build and consume HAL documents.
 
-**`Chatter.Rest.Hal.Core`** — ships only `HalResponseAttribute`. Exists as a separate package so consumer projects can reference the attribute at runtime without taking a dependency on the Roslyn analyzer assembly.
+**`Chatter.Rest.Hal.Core`** — declares `HalResponseAttribute`. It is not published as a NuGet package; since 0.4.0 the generator emits its own copy of the attribute, so consumers do not need this project. See Section 4, Attribute Delivery.
 
-**`Chatter.Rest.Hal.CodeGenerators`** — the Roslyn incremental source generator. References `Chatter.Rest.Hal.Core` to access `HalResponseAttribute` during compilation. Consumers add it as a build-time-only reference (`PrivateAssets="all"`), meaning it does not appear in the consumer's published output or transitive dependency graph.
+**`Chatter.Rest.Hal.CodeGenerators`** — the Roslyn incremental source generator. It emits `HalResponseAttribute` into the compilation it runs in and depends on `Chatter.Rest.Hal` for the types the generated members use. Consumers add the generator itself as a build-time-only reference (`PrivateAssets="all"`), meaning the analyzer assembly does not appear in the consumer's published output.
 
 ---
 
