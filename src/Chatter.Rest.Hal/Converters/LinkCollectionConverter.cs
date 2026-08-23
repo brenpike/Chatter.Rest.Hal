@@ -118,14 +118,20 @@ public sealed class LinkCollectionConverter : JsonConverter<LinkCollection>
 
 				if (!string.IsNullOrWhiteSpace(href)) link.LinkObjects.Add(new LinkObject(href!));
 			}
+			// The nested parts are materialized from the retained node rather than re-serialized to UTF-8
+			// and re-parsed, which would walk each relation's subtree a second time.
 			else if (kvp.Value is JsonObject val)
 			{
-				var lo = val.Deserialize<LinkObject>(options);
+				var lo = ConverterHelpers.HasCustomConverter<LinkObject>(options, typeof(LinkObjectConverter))
+					? val.Deserialize<LinkObject>(options)
+					: LinkObjectConverter.ReadFromNode(val, options);
 				if (lo != null) link.LinkObjects.Add(lo);
 			}
 			else if (kvp.Value is JsonArray ja)
 			{
-				var loc = ja.Deserialize<LinkObjectCollection>(options);
+				var loc = ConverterHelpers.HasCustomConverter<LinkObjectCollection>(options, typeof(LinkObjectCollectionConverter))
+					? ja.Deserialize<LinkObjectCollection>(options)
+					: LinkObjectCollectionConverter.ReadFromNode(ja, options);
 				if (loc != null) link.LinkObjects = loc;
 				link.IsArray = true;
 			}
@@ -153,6 +159,14 @@ public sealed class LinkCollectionConverter : JsonConverter<LinkCollection>
 	/// <summary>
 	/// Writes a LinkCollection to JSON, serializing each link as a property with its relation as the key.
 	/// </summary>
+	/// <remarks>
+	/// A relation that carries no link objects — which is what tolerated input such as <c>"self": null</c>
+	/// or an href-less <c>"self": {}</c> reads to — writes as the empty array <c>[]</c>. That is the only
+	/// spec-conformant rendering available: HAL requires the value of a relation to be a Link Object or an
+	/// array of Link Objects (draft-kelly-json-hal section 4.1.1), so <c>null</c> may never be written back,
+	/// and dropping the relation would lose it entirely. The round trip therefore normalizes the shape
+	/// rather than preserving it, and the relation itself survives.
+	/// </remarks>
 	/// <param name="writer">The JSON writer.</param>
 	/// <param name="links">The LinkCollection to serialize.</param>
 	/// <param name="options">Serializer options.</param>

@@ -80,7 +80,9 @@ public sealed class LinkConverter : JsonConverter<Link>
 				return null;
 			}
 
-			var lo = obj.Deserialize<LinkObject>(options);
+			var lo = ConverterHelpers.HasCustomConverter<LinkObject>(options, typeof(LinkObjectConverter))
+				? obj.Deserialize<LinkObject>(options)
+				: LinkObjectConverter.ReadFromNode(obj, options);
 			if (lo != null) link.LinkObjects.Add(lo);
 			return link;
 		}
@@ -101,7 +103,9 @@ public sealed class LinkConverter : JsonConverter<Link>
 				}
 			}
 
-			var loc = ja.Deserialize<LinkObjectCollection>(options);
+			var loc = ConverterHelpers.HasCustomConverter<LinkObjectCollection>(options, typeof(LinkObjectCollectionConverter))
+				? ja.Deserialize<LinkObjectCollection>(options)
+				: LinkObjectCollectionConverter.ReadFromNode(ja, options);
 			if (loc != null) link.LinkObjects = loc;
 			link.IsArray = true;
 			return link;

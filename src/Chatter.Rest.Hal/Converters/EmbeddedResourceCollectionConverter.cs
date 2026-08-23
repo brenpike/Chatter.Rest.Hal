@@ -100,7 +100,11 @@ public sealed class EmbeddedResourceCollectionConverter : JsonConverter<Embedded
 					: ResourceCollectionConverter.ReadFromNode(ja, options);
 				embedded = new EmbeddedResource(kvp.Key)
 				{
-					Resources = rc
+					Resources = rc,
+					// HAL clients read array-vs-object shape as the signal that a relation is a collection
+					// (draft-kelly-json-hal section 4.1.2), so an incoming array must serialize back as an
+					// array even when it holds a single resource. This mirrors Link.IsArray on the link side.
+					ForceWriteAsCollection = true
 				};
 			}
 
@@ -135,21 +139,7 @@ public sealed class EmbeddedResourceCollectionConverter : JsonConverter<Embedded
 		foreach (var embeddedvalue in embeddedResources)
 		{
 			writer.WritePropertyName(embeddedvalue.Name);
-			// If there is only one resource in collection, write as Object (unless collection has been explicitly
-			// flagged as a collection, in which case it should be written as an array even if only one element)
-			if (embeddedvalue.Resources.Count == 1 && !embeddedvalue.ForceWriteAsCollection)
-			{
-				JsonSerializer.Serialize(writer, embeddedvalue.Resources[0], options);
-			}
-			else
-			{
-				writer.WriteStartArray();
-				foreach (var resource in embeddedvalue.Resources)
-				{
-					JsonSerializer.Serialize(writer, resource, options);
-				}
-				writer.WriteEndArray();
-			}
+			ConverterHelpers.WriteEmbeddedResources(writer, embeddedvalue, options);
 		}
 		writer.WriteEndObject();
 	}
