@@ -19,7 +19,7 @@ public sealed class ResourceConverter : JsonConverter<Resource>
 	/// <returns>The deserialized Resource.</returns>
 	public override Resource? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
 	{
-		var node = JsonNode.Parse(ref reader, ConverterHelpers.NodeOptions(options))!;
+		var node = ConverterHelpers.ParseNode(ref reader, options)!;
 
 		// The HAL reserved names are literal and case-sensitive, so they are matched ordinally
 		// regardless of the caller's PropertyNameCaseInsensitive setting. This keeps the reserved

@@ -44,6 +44,68 @@ internal static class ConverterHelpers
 		=> new() { PropertyNameCaseInsensitive = options?.PropertyNameCaseInsensitive ?? false };
 
 	/// <summary>
+	/// Parses the JSON at the current reader position into a node tree.
+	/// </summary>
+	/// <remarks>
+	/// Two guarantees the raw <see cref="JsonNode.Parse(ref Utf8JsonReader, JsonNodeOptions?)"/>
+	/// does not provide:
+	/// <list type="bullet">
+	/// <item>
+	/// Duplicate property names are normalized last-wins, matching the behavior most JSON parsers
+	/// exhibit for a construct RFC 8259 leaves undefined. <see cref="JsonNode"/> otherwise defers a
+	/// duplicate-key <see cref="ArgumentException"/> to whenever the object is first materialized —
+	/// often at property-access time, long after deserialization returned.
+	/// </item>
+	/// <item>
+	/// Malformed JSON surfaces as <see cref="JsonException"/> from
+	/// <see cref="JsonDocument.ParseValue(ref Utf8JsonReader)"/>.
+	/// </item>
+	/// </list>
+	/// </remarks>
+	/// <param name="reader">The reader positioned at the value to parse.</param>
+	/// <param name="options">The caller's serializer options.</param>
+	/// <returns>The parsed node, or <c>null</c> when the value is JSON null.</returns>
+	/// <exception cref="JsonException">Thrown when the JSON is malformed or exceeds the configured maximum depth.</exception>
+	internal static JsonNode? ParseNode(ref Utf8JsonReader reader, JsonSerializerOptions? options)
+	{
+		using var document = JsonDocument.ParseValue(ref reader);
+		return ToNode(document.RootElement, NodeOptions(options));
+	}
+
+	private static JsonNode? ToNode(JsonElement element, JsonNodeOptions nodeOptions)
+	{
+		switch (element.ValueKind)
+		{
+			case JsonValueKind.Object:
+			{
+				var obj = new JsonObject(nodeOptions);
+				foreach (var property in element.EnumerateObject())
+				{
+					// The indexer overwrites rather than throwing, which is what makes duplicate
+					// property names resolve last-wins instead of deferring an ArgumentException.
+					obj[property.Name] = ToNode(property.Value, nodeOptions);
+				}
+				return obj;
+			}
+			case JsonValueKind.Array:
+			{
+				var array = new JsonArray(nodeOptions);
+				foreach (var item in element.EnumerateArray())
+				{
+					array.Add(ToNode(item, nodeOptions));
+				}
+				return array;
+			}
+			case JsonValueKind.Null:
+			case JsonValueKind.Undefined:
+				return null;
+			default:
+				// Clone detaches the value from the JsonDocument, which is disposed by ParseNode.
+				return JsonValue.Create(element.Clone(), nodeOptions);
+		}
+	}
+
+	/// <summary>
 	/// Reads a HAL reserved property (<c>_links</c>/<c>_embedded</c>) using a literal, case-sensitive
 	/// match regardless of the node tree's configured property-name comparer.
 	/// </summary>

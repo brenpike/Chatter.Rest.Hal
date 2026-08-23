@@ -19,7 +19,7 @@ public sealed class ResourceCollectionConverter : JsonConverter<ResourceCollecti
 	/// <returns>The deserialized ResourceCollection.</returns>
 	public override ResourceCollection? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
 	{
-		var node = JsonNode.Parse(ref reader, ConverterHelpers.NodeOptions(options));
+		var node = ConverterHelpers.ParseNode(ref reader, options);
 
 		var resources = new ResourceCollection();
 
@@ -47,6 +47,11 @@ public sealed class ResourceCollectionConverter : JsonConverter<ResourceCollecti
 	/// <param name="node">The JSON node containing resource data.</param>
 	private static void CreateAndAddResource(JsonSerializerOptions options, ResourceCollection resources, JsonNode? node)
 	{
+		if (node is null || ConverterHelpers.IsJsonNull(node))
+		{
+			return;
+		}
+
 		var resource = node.Deserialize<Resource>(options);
 		if (resource != null)
 		{
