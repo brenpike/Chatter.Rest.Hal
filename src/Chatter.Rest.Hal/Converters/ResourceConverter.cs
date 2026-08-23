@@ -17,28 +17,40 @@ public sealed class ResourceConverter : JsonConverter<Resource>
 	/// <param name="typeToConvert">The type to convert.</param>
 	/// <param name="options">Serializer options.</param>
 	/// <returns>The deserialized Resource.</returns>
+	/// <exception cref="JsonException">
+	/// Thrown when the JSON is not a Resource Object, or when its <c>_links</c>/<c>_embedded</c> members
+	/// are structurally invalid.
+	/// </exception>
 	public override Resource? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
 	{
-		var node = ConverterHelpers.ParseNode(ref reader, options)!;
+		var node = ConverterHelpers.ParseNode(ref reader, options);
+
+		// A HAL Resource Object is a JSON object. Rejecting anything else here — rather than letting
+		// the lazy creators index a primitive or an array later — keeps the failure at the
+		// deserialization call instead of deferring an InvalidOperationException to property access.
+		if (node is not JsonObject resourceObject)
+		{
+			throw new JsonException("A HAL Resource must be a JSON object.");
+		}
 
 		// The HAL reserved names are literal and case-sensitive, so they are matched ordinally
 		// regardless of the caller's PropertyNameCaseInsensitive setting. This keeps the reserved
-		// lookups below consistent with the state stripping in jsonObjectCreator.
-		LinkCollection? linkCollectionCreator()
-			=> node is JsonObject linksObj
-				? ConverterHelpers.GetReservedProperty(linksObj, ConverterHelpers.LinksProperty)?.Deserialize<LinkCollection>(options)
-				: node?[ConverterHelpers.LinksProperty]?.Deserialize<LinkCollection>(options);
+		// lookups consistent with the state stripping in jsonObjectCreator.
+		// Both collections are materialized eagerly for the same reason as the check above: a
+		// malformed _links/_embedded member must fail here, not on a later property read.
+		var links = ConverterHelpers.GetReservedProperty(resourceObject, ConverterHelpers.LinksProperty)
+			?.Deserialize<LinkCollection>(options);
+		var embedded = ConverterHelpers.GetReservedProperty(resourceObject, ConverterHelpers.EmbeddedProperty)
+			?.Deserialize<EmbeddedResourceCollection>(options);
 
-		EmbeddedResourceCollection? embeddedCollectionCreator()
-			=> node is JsonObject embeddedObj
-				? ConverterHelpers.GetReservedProperty(embeddedObj, ConverterHelpers.EmbeddedProperty)?.Deserialize<EmbeddedResourceCollection>(options)
-				: node?[ConverterHelpers.EmbeddedProperty]?.Deserialize<EmbeddedResourceCollection>(options);
+		LinkCollection? linkCollectionCreator() => links;
+
+		EmbeddedResourceCollection? embeddedCollectionCreator() => embedded;
 
 		JsonObject? jsonObjectCreator()
 		{
-			if (node is not JsonObject sourceObj) return null;
 			var result = new JsonObject(ConverterHelpers.NodeOptions(options));
-			foreach (var kvp in sourceObj)
+			foreach (var kvp in resourceObject)
 			{
 				if (ConverterHelpers.IsReservedProperty(kvp.Key)) continue;
 #if NET8_0_OR_GREATER
@@ -50,7 +62,7 @@ public sealed class ResourceConverter : JsonConverter<Resource>
 			return result;
 		};
 
-		return new Resource(node, jsonObjectCreator, linkCollectionCreator, embeddedCollectionCreator, options);
+		return new Resource(resourceObject, jsonObjectCreator, linkCollectionCreator, embeddedCollectionCreator, options);
 	}
 
 	/// <summary>
