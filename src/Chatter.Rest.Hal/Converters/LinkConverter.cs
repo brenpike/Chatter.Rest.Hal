@@ -70,9 +70,11 @@ public sealed class LinkConverter : JsonConverter<Link>
 		}
 
 		// If the value is an object, ensure it contains an href (required by HAL) before deserializing.
+		// The lookup honors the caller's PropertyNameCaseInsensitive, matching LinkObjectConverter.
 		if (kvp.Value is JsonObject obj)
 		{
-			if (obj["href"] == null || ConverterHelpers.IsJsonNull(obj["href"]))
+			var href = ConverterHelpers.GetProperty(obj, "href", options);
+			if (href == null || ConverterHelpers.IsJsonNull(href))
 			{
 				// Not a valid Link Object shape
 				return null;
@@ -92,7 +94,8 @@ public sealed class LinkConverter : JsonConverter<Link>
 				{
 					return null;
 				}
-				if (itemObj["href"] == null || ConverterHelpers.IsJsonNull(itemObj["href"]))
+				var itemHref = ConverterHelpers.GetProperty(itemObj, "href", options);
+				if (itemHref == null || ConverterHelpers.IsJsonNull(itemHref))
 				{
 					return null;
 				}

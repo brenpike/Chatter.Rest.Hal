@@ -147,7 +147,8 @@ internal static class ConverterHelpers
 	{
 		Span<long> inlineHashes = stackalloc long[InlinePropertyNameCapacity];
 		var count = 0;
-		List<long>? overflowHashes = null;
+		// Hash-based after the inline threshold so wide objects stay ~linear instead of O(n²).
+		HashSet<long>? overflowHashes = null;
 
 		while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
 		{
@@ -171,12 +172,9 @@ internal static class ConverterHelpers
 				if (inlineHashes[i] == hash) return true;
 			}
 
-			if (overflowHashes != null)
+			if (overflowHashes != null && overflowHashes.Contains(hash))
 			{
-				for (var i = 0; i < overflowHashes.Count; i++)
-				{
-					if (overflowHashes[i] == hash) return true;
-				}
+				return true;
 			}
 
 			if (count < InlinePropertyNameCapacity)
@@ -185,7 +183,7 @@ internal static class ConverterHelpers
 			}
 			else
 			{
-				(overflowHashes ??= new List<long>()).Add(hash);
+				(overflowHashes ??= new HashSet<long>()).Add(hash);
 			}
 
 			count++;
