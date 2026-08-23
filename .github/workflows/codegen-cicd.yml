@@ -47,12 +47,12 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           fetch-depth: 0
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
         with:
           dotnet-version: ${{ env.dotnet-version }}
           cache: true
@@ -83,7 +83,7 @@ jobs:
           done
 
       - name: Upload NuGet artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: nuget
           path: /home/runner/work/Chatter.Rest.Hal/Chatter.Rest.Hal/publish/nuget/**
@@ -117,7 +117,7 @@ jobs:
 
     steps:
       - name: Download NuGet artifact
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
         with:
           name: nuget
           path: ./dist/nuget
@@ -126,7 +126,7 @@ jobs:
         shell: bash
         run: |
           dotnet nuget push "./dist/nuget/*.nupkg" \
-            -k "${{ env.NUGET_AUTH_TOKEN }}" \
+            -k "$NUGET_AUTH_TOKEN" \
             -s "${{ env.NUGET_URL }}" \
             --skip-duplicate
 
