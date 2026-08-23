@@ -36,13 +36,15 @@ public class EmbeddedResourceCollectionExtensionsTests
 	}
 
 	[Fact]
-	public void GetEmbeddedResource_ByName_Should_Throw_If_More_Than_One_Matching_Name()
+	public void GetEmbeddedResource_ByName_Can_Never_See_More_Than_One_Matching_Name()
 	{
+		// Duplicate names are rejected by EmbeddedResourceCollection.Add, so GetEmbeddedResource can
+		// never observe more than one entry for a name.
 		var erc = new EmbeddedResourceCollection
 		{
-			new EmbeddedResource("sameName"),
 			new EmbeddedResource("sameName")
 		};
-		Assert.Throws<InvalidOperationException>(() => erc.GetEmbeddedResource("sameName"));
+		Assert.Throws<ArgumentException>(() => erc.Add(new EmbeddedResource("sameName")));
+		Assert.NotNull(erc.GetEmbeddedResource("sameName"));
 	}
 }

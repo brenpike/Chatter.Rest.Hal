@@ -36,11 +36,29 @@ public sealed record EmbeddedResourceCollection : ICollection<EmbeddedResource>,
 	/// <summary>
 	/// Adds an embedded resource to the collection.
 	/// </summary>
+	/// <remarks>
+	/// Embedded resource names are unique within a collection. The HAL specification models
+	/// "_embedded" as a JSON object keyed by link relation name, so two entries sharing a name can
+	/// never serialize into spec-valid output. Adding a duplicate name therefore throws rather than
+	/// silently overwriting the name index.
+	/// </remarks>
 	/// <param name="item">The embedded resource to add.</param>
+	/// <exception cref="ArgumentNullException">Thrown when <paramref name="item"/> is null.</exception>
+	/// <exception cref="ArgumentException">Thrown when an embedded resource with the same name has already been added.</exception>
 	public void Add(EmbeddedResource item)
 	{
+		if (item is null)
+		{
+			throw new ArgumentNullException(nameof(item));
+		}
+
+		if (_index.ContainsKey(item.Name))
+		{
+			throw new ArgumentException($"An embedded resource with name '{item.Name}' has already been added. Embedded resource names must be unique within an embedded resource collection.", nameof(item));
+		}
+
 		_embedded.Add(item);
-		_index[item.Name] = item;
+		_index.Add(item.Name, item);
 	}
 
 	/// <summary>
@@ -79,10 +97,20 @@ public sealed record EmbeddedResourceCollection : ICollection<EmbeddedResource>,
 	/// <returns>true if the item was successfully removed; otherwise, false.</returns>
 	public bool Remove(EmbeddedResource item)
 	{
-		var removed = _embedded.Remove(item);
-		if (removed)
-			_index.Remove(item.Name);
-		return removed;
+		if (item is null)
+		{
+			return false;
+		}
+
+		if (!_embedded.Remove(item))
+		{
+			return false;
+		}
+
+		// Names are unique, so the removed entry was the only holder of its name and the index entry
+		// keyed by that name can no longer refer to an embedded resource still in the list.
+		_index.Remove(item.Name);
+		return true;
 	}
 
 	/// <summary>

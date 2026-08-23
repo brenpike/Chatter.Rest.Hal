@@ -36,11 +36,29 @@ public sealed record LinkCollection : ICollection<Link>, IHalPart
 	/// <summary>
 	/// Adds a link to the collection.
 	/// </summary>
+	/// <remarks>
+	/// Link relations are unique within a collection. The HAL specification models "_links" as a
+	/// JSON object keyed by relation, so two links sharing a relation can never serialize into
+	/// spec-valid output. Adding a duplicate relation therefore throws rather than silently
+	/// overwriting the relation index.
+	/// </remarks>
 	/// <param name="item">The link to add.</param>
+	/// <exception cref="ArgumentNullException">Thrown when <paramref name="item"/> is null.</exception>
+	/// <exception cref="ArgumentException">Thrown when a link with the same relation has already been added.</exception>
 	public void Add(Link item)
 	{
+		if (item is null)
+		{
+			throw new ArgumentNullException(nameof(item));
+		}
+
+		if (_index.ContainsKey(item.Rel))
+		{
+			throw new ArgumentException($"A link with relation '{item.Rel}' has already been added. Link relations must be unique within a link collection.", nameof(item));
+		}
+
 		_links.Add(item);
-		_index[item.Rel] = item;
+		_index.Add(item.Rel, item);
 	}
 
 	/// <summary>
@@ -79,10 +97,20 @@ public sealed record LinkCollection : ICollection<Link>, IHalPart
 	/// <returns>true if the item was successfully removed; otherwise, false.</returns>
 	public bool Remove(Link item)
 	{
-		var removed = _links.Remove(item);
-		if (removed)
-			_index.Remove(item.Rel);
-		return removed;
+		if (item is null)
+		{
+			return false;
+		}
+
+		if (!_links.Remove(item))
+		{
+			return false;
+		}
+
+		// Relations are unique, so the removed link was the only holder of its relation and the
+		// index entry keyed by that relation can no longer refer to a link still in the list.
+		_index.Remove(item.Rel);
+		return true;
 	}
 
 	/// <summary>

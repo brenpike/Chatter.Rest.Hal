@@ -133,13 +133,14 @@ public class ResourceExtensionsTests
 	}
 
 	[Fact]
-	public void GetLink_Should_Throw_If_More_Than_One_Link_Matches_Relation()
+	public void GetLink_Can_Never_See_More_Than_One_Link_Matching_Relation()
 	{
+		// Duplicate relations are rejected by LinkCollection.Add, so a Resource can never hold two
+		// links for the same relation.
 		var lo = new LinkObject("/orders/1") { Name = "name" };
 		var l = new Link("self") { LinkObjects = new LinkObjectCollection() { lo } };
-		var resource = new Resource() { Links = new LinkCollection() { l, l } };
 
-		Assert.ThrowsAny<Exception>(() => resource.GetLinkOrDefault("self"));
+		Assert.ThrowsAny<ArgumentException>(() => new Resource() { Links = new LinkCollection() { l, l } });
 	}
 
 	[Fact]
