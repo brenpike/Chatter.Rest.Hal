@@ -34,6 +34,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `HAL0002` (error) — a type containing the target is not declared `partial`.
   - `HAL0003` (warning) — the target is a record; only class declarations are supported.
   - `HAL0004` (error) — the target already declares a member named `Links` or `Embedded`.
+  - `HAL0005` (error) — the target or a containing type is file-local (`file` modifier); generated
+    sources are separate syntax trees, where a re-declared file-local type would be unrelated.
 
   Generation is skipped for the offending target so the diagnostic is what the user sees, rather
   than an unrelated `CS0260` or `CS0102`.

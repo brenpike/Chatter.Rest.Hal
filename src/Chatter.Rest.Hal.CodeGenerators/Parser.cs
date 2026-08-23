@@ -52,6 +52,20 @@ internal static class Parser
 			canGenerate = false;
 		}
 
+		// Generated sources are separate syntax trees, and a file-local type re-declared there is an
+		// unrelated type, so a 'file' modifier anywhere in the chain makes generation impossible.
+		// Text-based: the pinned Microsoft.CodeAnalysis (4.3.1) predates SyntaxKind.FileKeyword,
+		// but any host compiler that can parse the 'file' modifier produces a token with this text.
+		if (HasFileModifier(declaration))
+		{
+			diagnostics.Add(DiagnosticInfo.Create(
+				Diagnostics.FileLocalTargetNotSupported,
+				declaration.Identifier.GetLocation(),
+				typeName,
+				declaration.Identifier.Text));
+			canGenerate = false;
+		}
+
 		var containingTypes = ImmutableArray.CreateBuilder<ContainingTypeInfo>();
 		for (var parent = declaration.Parent as TypeDeclarationSyntax;
 			parent is not null;
@@ -61,6 +75,16 @@ internal static class Parser
 			{
 				diagnostics.Add(DiagnosticInfo.Create(
 					Diagnostics.ContainingTypeMustBePartial,
+					parent.Identifier.GetLocation(),
+					typeName,
+					parent.Identifier.Text));
+				canGenerate = false;
+			}
+
+			if (HasFileModifier(parent))
+			{
+				diagnostics.Add(DiagnosticInfo.Create(
+					Diagnostics.FileLocalTargetNotSupported,
 					parent.Identifier.GetLocation(),
 					typeName,
 					parent.Identifier.Text));
@@ -95,6 +119,15 @@ internal static class Parser
 			MetadataNameOf(symbol));
 
 		return new HalTarget(info, diagnostics.ToImmutable());
+	}
+
+	private static bool HasFileModifier(TypeDeclarationSyntax declaration)
+	{
+		foreach (var modifier in declaration.Modifiers)
+		{
+			if (modifier.ValueText == "file") return true;
+		}
+		return false;
 	}
 
 	/// <summary>

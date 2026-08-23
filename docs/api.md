@@ -519,6 +519,7 @@ Package: `Chatter.Rest.Hal.CodeGenerators` (analyzer; reference with `PrivateAss
 - Must be `partial` (diagnostic `HAL0001` otherwise; containing types must also be `partial` — `HAL0002`)
 - Must not be a `record` (`HAL0003`)
 - Must not already declare `Links` or `Embedded` members (`HAL0004`)
+- Must not be file-local, nor nested in a file-local type (`HAL0005`)
 - Generic and nested classes are supported since 0.4.0
 
 ### Generated output

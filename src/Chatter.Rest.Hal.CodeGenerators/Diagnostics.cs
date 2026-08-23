@@ -38,6 +38,15 @@ internal static class Diagnostics
 		defaultSeverity: DiagnosticSeverity.Warning,
 		isEnabledByDefault: true);
 
+	/// <summary>HAL0005: the annotated type or a containing type is file-local.</summary>
+	internal static readonly DiagnosticDescriptor FileLocalTargetNotSupported = new(
+		id: "HAL0005",
+		title: "[HalResponse] does not support file-local types",
+		messageFormat: "'{0}' is annotated with [HalResponse] but '{1}' is declared with the 'file' modifier. Generated sources live in a separate file, where a re-declared file-local type would be an unrelated type, so no HAL members are generated. Remove the 'file' modifier.",
+		category: Category,
+		defaultSeverity: DiagnosticSeverity.Error,
+		isEnabledByDefault: true);
+
 	/// <summary>HAL0004: the annotated type already declares a member the generator would add.</summary>
 	internal static readonly DiagnosticDescriptor HalMemberAlreadyDeclared = new(
 		id: "HAL0004",
