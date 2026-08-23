@@ -333,7 +333,9 @@ Expects a single-property JSON object where the key is the relation name. Return
 - Input is not a `JsonObject`.
 - The object does not have exactly one property.
 - The relation key is null or whitespace.
-- The value is an object without a valid `href` — absent, JSON null, or whitespace-only. An empty-string `href` is valid (RFC 3986 same-document reference) and is not rejected.
+- The value is an object whose `href` is absent or JSON null.
+
+A whitespace-only `href` does **not** yield `null` here — the precheck passes and the `Link` is returned with an empty `LinkObjectCollection`. An empty-string `href` is valid (RFC 3986 same-document reference) and materializes a `LinkObject`.
 
 **`EmbeddedResourceCollectionConverter.Read`**
 

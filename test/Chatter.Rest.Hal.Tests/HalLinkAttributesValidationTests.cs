@@ -97,15 +97,14 @@ namespace Chatter.Rest.Hal.Tests
 		public void Href_NonString_Throws_JsonException_On_Deserialization()
 		{
 			// A non-string href is malformed rather than blank, so it keeps failing loudly instead of
-			// being tolerated. The link collection materializes lazily, so touching it forces the read.
+			// being tolerated. The failure is EAGER: the Deserialize call itself throws, before any lazy
+			// Links access. Only the Deserialize call is inside the asserted action, which is what pins
+			// that timing - folding a resource.Links access into the same action would pass whether the
+			// throw were eager or lazy and would leave the accept/reject timing unpinned.
 			var json = "{ \"_links\": { \"self\": { \"href\": 123 } } }";
 			var node = JsonNode.Parse(json, new JsonNodeOptions { PropertyNameCaseInsensitive = true });
 
-			Action deserializing = () =>
-			{
-				var resource = node.Deserialize<Chatter.Rest.Hal.Resource>(new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-				_ = resource!.Links;
-			};
+			Action deserializing = () => node.Deserialize<Chatter.Rest.Hal.Resource>(new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
 			deserializing.Should().Throw<JsonException>();
 		}

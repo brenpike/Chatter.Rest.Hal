@@ -20,7 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   constructor and the fluent builder path still reject null and whitespace hrefs.
   ([#120](https://github.com/brenpike/Chatter.Rest.Hal/issues/120))
 
-## [2.0.0] - 2026-08-24
+## [2.0.0] - 2026-08-23
 
 A hardening and correctness release: a full-repository review produced 22 verified fixes across
 converters, domain types, builders, and extensions, followed by a clause-by-clause conformance

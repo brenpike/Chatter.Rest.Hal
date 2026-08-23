@@ -275,8 +275,10 @@ Expects a single-property JSON object where the property name is the link relati
 - Not a JSON object
 - A JSON object with more than one property
 - A blank relation key
-- A link object value whose `href` is absent, `null`, or whitespace-only (an empty-string `href` is accepted — see the tolerance ladder above)
-- An array entry whose `href` is absent, `null`, or whitespace-only
+- A link object value whose `href` is absent or JSON `null`
+- An array entry that is not a JSON object, or whose `href` is absent or JSON `null`
+
+A whitespace-only `href` is **not** on that list. It passes the presence precheck, `LinkObjectConverter` then rejects it, and `LinkConverter` returns the `Link` carrying an **empty** `LinkObjects` collection rather than `null`. An empty-string `href` is accepted and materializes a same-document `LinkObject` (see the tolerance ladder above).
 
 When the value is a JSON array, sets `Link.IsArray = true` on the resulting `Link`.
 
