@@ -54,6 +54,25 @@ public class EqualityShapeNormalizationTests
 	}
 
 	[Fact]
+	public void MutatingProjectedStateAffectsNeitherEqualityNorSerialization()
+	{
+		var a = Resource.Parse("{\"name\":\"a\"}");
+		var b = Resource.Parse("{\"name\":\"a\"}");
+
+		var projected = a!.State<MutableState>(new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+		projected!.Name = "b";
+
+		// Projections are detached: the resource still serializes and compares as its original JSON.
+		Assert.Equal(b, a);
+		Assert.Equal(JsonSerializer.Serialize(b), JsonSerializer.Serialize(a));
+	}
+
+	private sealed class MutableState
+	{
+		public string? Name { get; set; }
+	}
+
+	[Fact]
 	public void ReadingStateDoesNotChangeHashCodeForJsonElementResources()
 	{
 		using var doc = JsonDocument.Parse("{\"name\":\"widget\",\"extra\":1}");

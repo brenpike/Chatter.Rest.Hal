@@ -73,14 +73,17 @@ public class ResourceStateAndAsCacheTests
 	}
 
 	[Fact]
-	public void State_Returns_The_Same_Cached_Instance_For_A_Repeated_Type()
+	public void State_Returns_Detached_Projections_For_A_Repeated_Type()
 	{
 		var resource = Resource.Parse(OrderJson)!;
 
 		var first = resource.State<OrderSummary>();
 		var second = resource.State<OrderSummary>();
 
-		first.Should().BeSameAs(second);
+		// Each call materializes a detached snapshot from the original JSON: equal content, never
+		// the same instance, so a mutated projection cannot desynchronize equality from Write.
+		first.Should().NotBeSameAs(second);
+		first.Should().BeEquivalentTo(second);
 	}
 
 	[Fact]

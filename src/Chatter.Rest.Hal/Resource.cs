@@ -29,10 +29,6 @@ public sealed record Resource : IHalPart
 
 	private JsonNode? _resourceNode = null;
 	private object? _stateObject = null;
-
-	// A constructor-supplied JsonElement state, preserved so later State<T>() calls can re-project
-	// it onto other types after the first projection replaces _stateObject.
-	private JsonElement? _sourceStateElement = null;
 	private LinkCollection? _linksImpl = null;
 	private EmbeddedResourceCollection? _embeddedImpl = null;
 	private readonly Func<LinkCollection?> _linksCreator = () => new LinkCollection();
@@ -139,10 +135,13 @@ public sealed record Resource : IHalPart
 	/// using the provided <see cref="JsonSerializerOptions"/> for deserialization.
 	/// </summary>
 	/// <remarks>
-	/// The cached state is only reused when it is already an instance of <typeparamref name="T"/>;
-	/// when a prior call materialized the state as a different type, the state is deserialized again
-	/// from the underlying JSON. A resource can therefore be projected onto several state types.
-	/// When the cached state is reused, the supplied options do not apply.
+	/// A state supplied to the constructor as an instance of <typeparamref name="T"/> is returned
+	/// directly, so mutating it changes what the resource serializes and how it compares. Every
+	/// other case — a parsed resource, or a constructor-supplied <see cref="JsonElement"/> — returns
+	/// a detached projection materialized from the underlying JSON on each call: the projection
+	/// never becomes the serialization source, so mutating the returned object affects neither
+	/// <see cref="Equals(Resource?)"/> nor serialization, and the resource can be projected onto
+	/// several state types.
 	/// </remarks>
 	/// <typeparam name="T">The expected reference type of the Resource state.</typeparam>
 	/// <param name="options">The <see cref="JsonSerializerOptions"/> to use for deserialization, or <c>null</c> to use default options.</param>
@@ -161,8 +160,8 @@ public sealed record Resource : IHalPart
 					}
 				}
 
-				_sourceStateElement = je;
-				_stateObject = je.Deserialize<T>(options);
+				// Detached projection: the element remains the state of record.
+				return je.Deserialize<T>(options);
 			}
 
 			if (_stateObject is T cached)
@@ -170,21 +169,10 @@ public sealed record Resource : IHalPart
 				return cached;
 			}
 
-			// The cache either is empty or holds a different type from a prior call, so the state is
-			// materialized from the underlying JSON. Only an empty cache is populated, so a projection
-			// onto a second state type cannot replace the state the resource serializes from.
-			// For a public-constructor resource the creator is always null, so a constructor-supplied
-			// JsonElement preserved above is the rematerialization source.
-			var stateObject = _stateCreator();
-			var materialized = stateObject != null
-				? stateObject.Deserialize<T>(options)
-				: _sourceStateElement?.Deserialize<T>(options);
-			if (_stateObject == null)
-			{
-				_stateObject = materialized;
-			}
-
-			return materialized;
+			// Parsed resources materialize a detached projection from the original JSON on every
+			// call. Keeping projections out of the serialization source means a mutated DTO can
+			// never make Write and equality disagree.
+			return _stateCreator()?.Deserialize<T>(options);
 		}
 		catch (Exception)
 		{
@@ -345,23 +333,13 @@ public sealed record Resource : IHalPart
 			JsonNode? stateNode = _stateCreator();
 			if (stateNode == null)
 			{
-				// A constructor-supplied JsonElement is the state source of record: after State<T>()
-				// projects it onto a DTO, deriving the key from that DTO would let a pure read change
-				// the hash code (the DTO may drop properties or rename them). The preserved element
-				// plays the same role the original JSON does for parsed resources.
-				if (_sourceStateElement is JsonElement source)
-				{
-					stateNode = JsonSerializer.SerializeToNode(source, _jsonOptions);
-				}
-				else if (_stateObject == null)
+				if (_stateObject == null)
 				{
 					key = null;
 					return true;
 				}
-				else
-				{
-					stateNode = JsonSerializer.SerializeToNode(_stateObject, _jsonOptions);
-				}
+
+				stateNode = JsonSerializer.SerializeToNode(_stateObject, _jsonOptions);
 			}
 
 			// An empty state object serializes to the same HAL document as no state at all
