@@ -16,10 +16,6 @@ on:
         required: true
         type: string
 
-concurrency:
-  group: create-version-tag-${{ inputs.tag-prefix }}
-  cancel-in-progress: false
-
 jobs:
   tag:
     name: tag
@@ -38,12 +34,31 @@ jobs:
           VERSION=$(grep -m1 '<Version>' '${{ inputs.csproj-path }}' | sed 's/.*<Version>\(.*\)<\/Version>.*/\1/' | tr -d ' \r')
           TAG="${{ inputs.tag-prefix }}/v${VERSION}"
 
-          if git rev-parse "$TAG" >/dev/null 2>&1; then
+          # Fast path: the tag was already present when this run checked out.
+          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
             echo "Tag $TAG already exists. Skipping."
-          else
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            git tag -a "$TAG" -m "${{ inputs.package-name }} v${VERSION}"
-            git push origin "$TAG"
-            echo "Created and pushed tag $TAG"
+            exit 0
           fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "${{ inputs.package-name }} v${VERSION}"
+
+          # Creating a ref that does not yet exist is atomic on the server, so a
+          # concurrent run racing for the same tag loses the push rather than
+          # silently overwriting it. The push is the arbiter, which closes the
+          # check-then-create window without queueing runs behind each other.
+          if git push origin "refs/tags/$TAG"; then
+            echo "Created and pushed tag $TAG"
+            exit 0
+          fi
+
+          # The push lost. If the tag is now on the remote another run created it,
+          # which is the outcome this job wanted; anything else is a real failure.
+          if [ -n "$(git ls-remote --tags origin "refs/tags/$TAG")" ]; then
+            echo "Tag $TAG was created concurrently by another run. Nothing to do."
+            exit 0
+          fi
+
+          echo "ERROR: failed to push tag $TAG and it is absent from the remote." >&2
+          exit 1
