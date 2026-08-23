@@ -18,14 +18,24 @@ public sealed class LinkCollectionBuilder : HalBuilder<LinkCollection>, IAddLink
 	/// <summary>
 	/// Adds a link with the specified relation to the collection.
 	/// </summary>
-	/// <param name="rel">The link relation.</param>
+	/// <param name="rel">The link relation. Must not be null or whitespace.</param>
 	/// <returns>A link creation stage.</returns>
+	/// <exception cref="ArgumentException">Thrown when <paramref name="rel"/> is null or whitespace.</exception>
 	/// <remarks>
 	/// Repeating a relation returns the builder already registered for it, so its link objects
 	/// merge into the single link for that relation. HAL's "_links" is a JSON object keyed by
 	/// relation, so two links sharing a relation could never serialize into spec-valid output.
 	/// </remarks>
-	public ILinkCreationStage AddLink(string rel) => GetOrAddLink(rel, r => LinkBuilder.WithRel(this, r));
+	public ILinkCreationStage AddLink(string rel)
+	{
+		// Validated here rather than in Build() so the exception points at the faulting call.
+		if (string.IsNullOrWhiteSpace(rel))
+		{
+			throw new ArgumentException("Value cannot be null or whitespace.", nameof(rel));
+		}
+
+		return GetOrAddLink(rel, r => LinkBuilder.WithRel(this, r));
+	}
 
 	/// <summary>
 	/// Adds a "self" link to the collection.

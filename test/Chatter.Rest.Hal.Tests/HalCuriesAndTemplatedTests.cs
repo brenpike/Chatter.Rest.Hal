@@ -292,10 +292,11 @@ namespace Chatter.Rest.Hal.Tests
 				.Build();
 
 			// Test relation with multiple colons ("foo:bar:baz")
-			// Should expand using first colon as delimiter; "bar:baz" becomes the reference value
+			// Should expand using first colon as delimiter; "bar:baz" becomes the reference value.
+			// RFC 6570 simple string expansion percent-encodes the reserved colon.
 			var expandedRelation = resource.Links.ExpandCurieRelation("foo:bar:baz");
 
-			expandedRelation.Should().Be("http://example.com/docs/bar:baz");
+			expandedRelation.Should().Be("http://example.com/docs/bar%3Abaz");
 		}
 
 		[Fact]
