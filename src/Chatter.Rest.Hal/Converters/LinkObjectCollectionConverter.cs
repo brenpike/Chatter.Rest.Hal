@@ -30,9 +30,17 @@ public sealed class LinkObjectCollectionConverter : JsonConverter<LinkObjectColl
 	/// <param name="options">Serializer options.</param>
 	/// <returns>The deserialized LinkObjectCollection.</returns>
 	public override LinkObjectCollection? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-	{
-		var node = ConverterHelpers.ParseNode(ref reader);
+		=> ReadFromNode(ConverterHelpers.ParseNode(ref reader), options);
 
+	/// <summary>
+	/// Materializes a LinkObjectCollection directly from an already-parsed node, so enclosing converters
+	/// can reuse the existing tree instead of re-serializing the subtree to UTF-8 and re-parsing it.
+	/// </summary>
+	/// <param name="node">The already-parsed node.</param>
+	/// <param name="options">Serializer options.</param>
+	/// <returns>The deserialized LinkObjectCollection.</returns>
+	internal static LinkObjectCollection ReadFromNode(JsonNode? node, JsonSerializerOptions options)
+	{
 		var linkObjects = new LinkObjectCollection();
 
 		if (node is JsonObject jo)
@@ -77,7 +85,9 @@ public sealed class LinkObjectCollectionConverter : JsonConverter<LinkObjectColl
 			return;
 		}
 
-		var linkObject = node.Deserialize<LinkObject>(options);
+		var linkObject = ConverterHelpers.HasCustomConverter<LinkObject>(options, typeof(LinkObjectConverter))
+			? node.Deserialize<LinkObject>(options)
+			: LinkObjectConverter.ReadFromNode(node, options);
 		if (linkObject != null)
 		{
 			linkObjects.Add(linkObject);

@@ -118,14 +118,20 @@ public sealed class LinkCollectionConverter : JsonConverter<LinkCollection>
 
 				if (!string.IsNullOrWhiteSpace(href)) link.LinkObjects.Add(new LinkObject(href!));
 			}
+			// The nested parts are materialized from the retained node rather than re-serialized to UTF-8
+			// and re-parsed, which would walk each relation's subtree a second time.
 			else if (kvp.Value is JsonObject val)
 			{
-				var lo = val.Deserialize<LinkObject>(options);
+				var lo = ConverterHelpers.HasCustomConverter<LinkObject>(options, typeof(LinkObjectConverter))
+					? val.Deserialize<LinkObject>(options)
+					: LinkObjectConverter.ReadFromNode(val, options);
 				if (lo != null) link.LinkObjects.Add(lo);
 			}
 			else if (kvp.Value is JsonArray ja)
 			{
-				var loc = ja.Deserialize<LinkObjectCollection>(options);
+				var loc = ConverterHelpers.HasCustomConverter<LinkObjectCollection>(options, typeof(LinkObjectCollectionConverter))
+					? ja.Deserialize<LinkObjectCollection>(options)
+					: LinkObjectCollectionConverter.ReadFromNode(ja, options);
 				if (loc != null) link.LinkObjects = loc;
 				link.IsArray = true;
 			}

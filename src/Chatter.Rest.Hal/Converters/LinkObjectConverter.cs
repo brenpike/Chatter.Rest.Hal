@@ -30,9 +30,20 @@ public sealed class LinkObjectConverter : JsonConverter<LinkObject>
 	/// Thrown when the JSON is not a Link Object, or when its <c>href</c> property is present but not a string.
 	/// </exception>
 	public override LinkObject? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-	{
-		var node = ConverterHelpers.ParseNode(ref reader);
+		=> ReadFromNode(ConverterHelpers.ParseNode(ref reader), options);
 
+	/// <summary>
+	/// Materializes a LinkObject directly from an already-parsed node, so enclosing converters can reuse
+	/// the existing tree instead of re-serializing the subtree to UTF-8 and re-parsing it.
+	/// </summary>
+	/// <param name="node">The already-parsed Link Object node.</param>
+	/// <param name="options">Serializer options.</param>
+	/// <returns>The deserialized LinkObject, or null if href is missing or invalid.</returns>
+	/// <exception cref="JsonException">
+	/// Thrown when the node is not a JSON object, or when its <c>href</c> property is present but not a string.
+	/// </exception>
+	internal static LinkObject? ReadFromNode(JsonNode? node, JsonSerializerOptions options)
+	{
 		if (node == null)
 		{
 			return null;

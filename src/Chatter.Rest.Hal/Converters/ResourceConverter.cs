@@ -90,6 +90,10 @@ public sealed class ResourceConverter : JsonConverter<Resource>
 	/// <param name="writer">The JSON writer.</param>
 	/// <param name="value">The Resource to serialize.</param>
 	/// <param name="options">Serializer options.</param>
+	/// <exception cref="JsonException">
+	/// Thrown when the resource's state serializes to something other than a JSON object (or JSON null),
+	/// because a HAL Resource Object has no place to put a primitive or array state.
+	/// </exception>
 	public override void Write(Utf8JsonWriter writer, Resource value, JsonSerializerOptions options)
 	{
 		writer.WriteStartObject();
@@ -101,22 +105,20 @@ public sealed class ResourceConverter : JsonConverter<Resource>
 		{
 			var utf8Bytes = JsonSerializer.SerializeToUtf8Bytes(value.CachedState, options);
 			using var doc = JsonDocument.Parse(utf8Bytes);
-			foreach (var prop in doc.RootElement.EnumerateObject())
-			{
-				// HAL's reserved names are the literal strings "_links"/"_embedded"; a state property the
-				// naming policy maps to "Links"/"Embedded" is ordinary user data and is always written.
-				// A state property already carrying a reserved name is skipped only when the resource's
-				// own collection is about to be written under that same name, because emitting both would
-				// produce a duplicate JSON member, which RFC 8259 leaves undefined.
-				if ((writesLinks && string.Equals(prop.Name, ConverterHelpers.LinksProperty, StringComparison.Ordinal))
-					|| (writesEmbedded && string.Equals(prop.Name, ConverterHelpers.EmbeddedProperty, StringComparison.Ordinal)))
-					continue;
 
-				if (prop.Value.ValueKind != JsonValueKind.Null || options.DefaultIgnoreCondition != JsonIgnoreCondition.WhenWritingNull)
-				{
-					prop.WriteTo(writer);
-				}
+			// A HAL Resource Object is a JSON object, so its state members can only be merged into the
+			// envelope when the state itself serializes to an object. A state that serializes to a
+			// primitive or an array has no representable HAL form; report that as a JsonException rather
+			// than letting JsonElement.EnumerateObject leak an InvalidOperationException. State that
+			// serializes to JSON null simply contributes no members.
+			if (doc.RootElement.ValueKind is not JsonValueKind.Object and not JsonValueKind.Null)
+			{
+				throw new JsonException(
+					$"A HAL Resource's state must serialize to a JSON object, but it serialized to {doc.RootElement.ValueKind}. "
+					+ "Wrap the value in an object (or place it in an _embedded resource) to serialize it as HAL.");
 			}
+
+			WriteStateMembers(writer, doc.RootElement, options, writesLinks, writesEmbedded);
 		}
 
 		if (writesLinks)
@@ -132,5 +134,38 @@ public sealed class ResourceConverter : JsonConverter<Resource>
 		}
 
 		writer.WriteEndObject();
+	}
+
+	/// <summary>
+	/// Writes the members of the serialized state object into the enclosing Resource Object.
+	/// </summary>
+	/// <param name="writer">The JSON writer.</param>
+	/// <param name="state">The serialized state; a JSON object, or JSON null for no members.</param>
+	/// <param name="options">Serializer options.</param>
+	/// <param name="writesLinks">Whether the resource writes its own <c>_links</c> member.</param>
+	/// <param name="writesEmbedded">Whether the resource writes its own <c>_embedded</c> member.</param>
+	private static void WriteStateMembers(Utf8JsonWriter writer, JsonElement state, JsonSerializerOptions options, bool writesLinks, bool writesEmbedded)
+	{
+		if (state.ValueKind != JsonValueKind.Object)
+		{
+			return;
+		}
+
+		foreach (var prop in state.EnumerateObject())
+		{
+			// HAL's reserved names are the literal strings "_links"/"_embedded"; a state property the
+			// naming policy maps to "Links"/"Embedded" is ordinary user data and is always written.
+			// A state property already carrying a reserved name is skipped only when the resource's
+			// own collection is about to be written under that same name, because emitting both would
+			// produce a duplicate JSON member, which RFC 8259 leaves undefined.
+			if ((writesLinks && string.Equals(prop.Name, ConverterHelpers.LinksProperty, StringComparison.Ordinal))
+				|| (writesEmbedded && string.Equals(prop.Name, ConverterHelpers.EmbeddedProperty, StringComparison.Ordinal)))
+				continue;
+
+			if (prop.Value.ValueKind != JsonValueKind.Null || options.DefaultIgnoreCondition != JsonIgnoreCondition.WhenWritingNull)
+			{
+				prop.WriteTo(writer);
+			}
+		}
 	}
 }
