@@ -33,7 +33,7 @@ public sealed class LinkConverter : JsonConverter<Link>
 	/// <returns>The deserialized Link, or null if the JSON is malformed.</returns>
 	public override Link? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
 	{
-		var node = JsonNode.Parse(ref reader, new JsonNodeOptions() { PropertyNameCaseInsensitive = true });
+		var node = ConverterHelpers.ParseNode(ref reader);
 
 		// Only accept a single-property object representing a HAL link entry (e.g. { "rel": { ... } })
 		if (node is not JsonObject jsonObject)
@@ -70,15 +70,19 @@ public sealed class LinkConverter : JsonConverter<Link>
 		}
 
 		// If the value is an object, ensure it contains an href (required by HAL) before deserializing.
+		// The lookup honors the caller's PropertyNameCaseInsensitive, matching LinkObjectConverter.
 		if (kvp.Value is JsonObject obj)
 		{
-			if (obj["href"] == null || ConverterHelpers.IsJsonNull(obj["href"]))
+			var href = ConverterHelpers.GetProperty(obj, "href", options);
+			if (href == null || ConverterHelpers.IsJsonNull(href))
 			{
 				// Not a valid Link Object shape
 				return null;
 			}
 
-			var lo = obj.Deserialize<LinkObject>(options);
+			var lo = ConverterHelpers.HasCustomConverter<LinkObject>(options, typeof(LinkObjectConverter))
+				? obj.Deserialize<LinkObject>(options)
+				: LinkObjectConverter.ReadFromNode(obj, options);
 			if (lo != null) link.LinkObjects.Add(lo);
 			return link;
 		}
@@ -92,13 +96,16 @@ public sealed class LinkConverter : JsonConverter<Link>
 				{
 					return null;
 				}
-				if (itemObj["href"] == null || ConverterHelpers.IsJsonNull(itemObj["href"]))
+				var itemHref = ConverterHelpers.GetProperty(itemObj, "href", options);
+				if (itemHref == null || ConverterHelpers.IsJsonNull(itemHref))
 				{
 					return null;
 				}
 			}
 
-			var loc = ja.Deserialize<LinkObjectCollection>(options);
+			var loc = ConverterHelpers.HasCustomConverter<LinkObjectCollection>(options, typeof(LinkObjectCollectionConverter))
+				? ja.Deserialize<LinkObjectCollection>(options)
+				: LinkObjectCollectionConverter.ReadFromNode(ja, options);
 			if (loc != null) link.LinkObjects = loc;
 			link.IsArray = true;
 			return link;

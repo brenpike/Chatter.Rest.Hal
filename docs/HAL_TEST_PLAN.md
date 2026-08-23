@@ -205,7 +205,8 @@ CURIEs are established via the `curies` reserved link relation — an array of n
 - ✅ `LinkCollectionExtensionsTests.ExpandCurieRelation_Should_Return_Full_Uri_When_Curie_Exists`
 
 ### 5.4 CURIE round-trip serialization
-- ✅ `HalCuriesAndTemplatedTests.Curie_Definition_Serializes_As_Array_Of_LinkObjects` — serializes and verifies CURIE structure in JSON output
+- ✅ `HalCuriesAndTemplatedTests.Curie_Definition_Serializes_As_Array_Of_LinkObjects` — serializes and verifies CURIE structure in JSON output (two definitions)
+- ✅ `BuilderTests.Builder_Constructs_Valid_CURIE_Structure` — a SINGLE curie definition also serializes as a one-element array (HAL §8.3 array form is the builder default since 2.0.0, #119)
 
 ### 5.5 Undefined CURIE prefix is handled gracefully
 - ✅ `HalCuriesAndTemplatedTests.Curie_Expansion_Returns_Original_When_No_Matching_Prefix` — verifies undefined CURIE prefix returns original relation

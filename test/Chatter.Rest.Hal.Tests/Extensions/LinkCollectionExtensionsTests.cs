@@ -37,14 +37,16 @@ public class LinkCollectionExtensionsTests
 	}
 
 	[Fact]
-	public void GetLink_ByRelation_Should_Throw_If_More_Than_One_Matching_Relation()
+	public void GetLink_ByRelation_Can_Never_See_More_Than_One_Matching_Relation()
 	{
+		// Duplicate relations are rejected by LinkCollection.Add, so GetLinkOrDefault can never
+		// observe more than one link for a relation.
 		var links = new LinkCollection
 		{
-			new Link("rel2"),
 			new Link("rel2")
 		};
-		Assert.Throws<InvalidOperationException>(() => links.GetLinkOrDefault("rel2"));
+		Assert.Throws<ArgumentException>(() => links.Add(new Link("rel2")));
+		Assert.NotNull(links.GetLinkOrDefault("rel2"));
 	}
 
 	[Fact]
@@ -127,11 +129,11 @@ public class LinkCollectionExtensionsTests
 
 		var links = new LinkCollection { curieLink };
 
-		// Act: Expand a CURIE with an empty suffix (trailing colon only)
-		// The template should be expanded with an empty string
+		// Act: Expand a CURIE with an empty reference (trailing colon only)
+		// There is nothing to substitute, so the relation is returned unchanged
 		var result = links.ExpandCurieRelation("acme:");
 
 		// Assert
-		result.Should().Be("https://docs.acme.com/relations/");
+		result.Should().Be("acme:");
 	}
 }

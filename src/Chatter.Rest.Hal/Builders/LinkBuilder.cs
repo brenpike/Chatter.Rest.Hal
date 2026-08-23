@@ -27,6 +27,9 @@ public sealed class LinkBuilder : HalBuilder<Link>, ILinkCreationStage, ICuriesL
 	{
 		_rel = rel;
 		_linkObjects = LinkObjectCollectionBuilder.New(this);
+		// The reserved "curies" relation is array-form by default per HAL section 8.3, whichever
+		// builder path creates it — AddCuries(), AddLink("curies"), or a merge into either.
+		_isArray = rel == CuriesLink;
 	}
 
 	/// <summary>
@@ -47,6 +50,11 @@ public sealed class LinkBuilder : HalBuilder<Link>, ILinkCreationStage, ICuriesL
 	/// <summary>
 	/// Creates a new link builder for a "curies" link.
 	/// </summary>
+	/// <remarks>
+	/// The link is array-form by default: HAL (draft-kelly-json-hal §8.3) establishes CURIEs via an
+	/// array of Link Objects, and common HAL clients index <c>_links.curies</c> as an array, so a
+	/// single definition must still serialize as <c>[{…}]</c>. <c>AsArray()</c> remains a no-op.
+	/// </remarks>
 	/// <param name="parent">The parent link collection builder.</param>
 	/// <returns>A new link builder.</returns>
 	public static LinkBuilder Curies(IBuildHalPart<LinkCollection> parent) => new(parent, CuriesLink);

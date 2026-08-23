@@ -38,6 +38,15 @@ public class ResourceBuilder : HalBuilder<Resource>, IResourceCreationStage
 	public static IResourceCreationStage WithState(object state) => new ResourceBuilder(null, state);
 
 	/// <summary>
+	/// Gets the builder backing this resource's "_links" collection.
+	/// </summary>
+	/// <remarks>
+	/// Exposed so descendant builders that are not themselves resource builders can add links to
+	/// the resource that owns them without reaching through a staged interface.
+	/// </remarks>
+	internal LinkCollectionBuilder Links => _linkCollectionBuilder;
+
+	/// <summary>
 	/// Adds a link with the specified relation to the resource.
 	/// </summary>
 	/// <param name="rel">The link relation.</param>

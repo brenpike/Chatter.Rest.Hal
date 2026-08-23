@@ -38,14 +38,13 @@ public class ResourceConvertersTests
 	}
 
 	[Fact]
-	public void Resource_As_Typed_For_Primitive_Should_Return_Value()
+	public void Resource_For_Primitive_Root_Should_Throw_JsonException()
 	{
+		// A HAL Resource Object is a JSON object. A primitive root used to deserialize "successfully"
+		// and then throw InvalidOperationException from the lazy creators at property-access time.
 		var json = "123";
-		var res = JsonSerializer.Deserialize<Resource>(json);
-		Assert.NotNull(res);
-		var asObj = res!.As<object>();
-		// Deserializing a primitive into object yields a JsonElement boxed as object - verify numeric value
-		Assert.Equal(123, ((System.Text.Json.JsonElement)asObj!).GetInt32());
+
+		Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<Resource>(json));
 	}
 
 	[Fact]

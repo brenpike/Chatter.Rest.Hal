@@ -40,4 +40,45 @@ public sealed record EmbeddedResource : IHalPart
 	/// Gets or sets the collection of resources contained within this embedded resource entry.
 	/// </summary>
 	public ResourceCollection Resources { get; set; } = new();
+
+	/// <summary>
+	/// Determines whether this entry represents the same HAL content as another entry.
+	/// </summary>
+	/// <remarks>
+	/// <see cref="ForceWriteAsCollection"/> only affects the serialized document when the entry
+	/// holds exactly one resource (zero or many always serialize as an array), so the flag
+	/// participates in equality only in that case.
+	/// </remarks>
+	public bool Equals(EmbeddedResource? other)
+	{
+		if (other is null)
+		{
+			return false;
+		}
+
+		if (ReferenceEquals(this, other))
+		{
+			return true;
+		}
+
+		return Name == other.Name
+			&& EffectiveForceWriteAsCollection == other.EffectiveForceWriteAsCollection
+			&& Resources.Equals(other.Resources);
+	}
+
+	/// <inheritdoc cref="Equals(EmbeddedResource?)"/>
+	public override int GetHashCode()
+	{
+		unchecked
+		{
+			var hash = 17;
+			hash = (hash * 31) + Name.GetHashCode();
+			hash = (hash * 31) + EffectiveForceWriteAsCollection.GetHashCode();
+			hash = (hash * 31) + Resources.GetHashCode();
+			return hash;
+		}
+	}
+
+	/// <summary>The collection flag as it affects serialization: fixed when the count already forces an array.</summary>
+	private bool EffectiveForceWriteAsCollection => Resources.Count == 1 ? ForceWriteAsCollection : true;
 }

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Chatter.Rest.Hal.Builders.Stages;
 using Chatter.Rest.Hal.Builders.Stages.Embedded;
 using Chatter.Rest.Hal.Builders.Stages.Resource;
@@ -18,6 +19,9 @@ public sealed class LinkObjectCollectionBuilder : HalBuilder<LinkObjectCollectio
 
 	internal ILinkObjectPropertiesSelectionStage AddLinkObject(string href)
 	{
+		// Validated here rather than in Build() so the exception points at the faulting call.
+		ThrowIfNullOrWhiteSpace(href, nameof(href));
+
 		var lob = LinkObjectBuilder.WithHref(this, href);
 		_linkObjectBuilders.Add(lob);
 		return lob;
@@ -25,9 +29,21 @@ public sealed class LinkObjectCollectionBuilder : HalBuilder<LinkObjectCollectio
 
 	internal ILinkObjectPropertiesSelectionStage AddLinkObject(string href, string name)
 	{
+		ThrowIfNullOrWhiteSpace(href, nameof(href));
+		// This overload builds a CURIE definition, whose name is the prefix it defines.
+		ThrowIfNullOrWhiteSpace(name, nameof(name));
+
 		var lob = LinkObjectBuilder.WithCuriesProperties(this, href, name);
 		_linkObjectBuilders.Add(lob);
 		return lob;
+	}
+
+	private static void ThrowIfNullOrWhiteSpace(string value, string paramName)
+	{
+		if (string.IsNullOrWhiteSpace(value))
+		{
+			throw new ArgumentException("Value cannot be null or whitespace.", paramName);
+		}
 	}
 
 	///<inheritdoc/>

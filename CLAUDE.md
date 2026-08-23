@@ -80,7 +80,7 @@ Observed conventions:
 
 | Package | Version |
 |---|---|
-| `Chatter.Rest.Hal` | `1.1.0` |
+| `Chatter.Rest.Hal` | `2.0.0` |
 | `Chatter.Rest.Hal.CodeGenerators` | `0.4.0` |
 
 External dependency: `Chatter.Rest.UriTemplates` v0.1.0.

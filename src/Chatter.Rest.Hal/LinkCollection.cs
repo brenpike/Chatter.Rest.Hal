@@ -36,11 +36,29 @@ public sealed record LinkCollection : ICollection<Link>, IHalPart
 	/// <summary>
 	/// Adds a link to the collection.
 	/// </summary>
+	/// <remarks>
+	/// Link relations are unique within a collection. The HAL specification models "_links" as a
+	/// JSON object keyed by relation, so two links sharing a relation can never serialize into
+	/// spec-valid output. Adding a duplicate relation therefore throws rather than silently
+	/// overwriting the relation index.
+	/// </remarks>
 	/// <param name="item">The link to add.</param>
+	/// <exception cref="ArgumentNullException">Thrown when <paramref name="item"/> is null.</exception>
+	/// <exception cref="ArgumentException">Thrown when a link with the same relation has already been added.</exception>
 	public void Add(Link item)
 	{
+		if (item is null)
+		{
+			throw new ArgumentNullException(nameof(item));
+		}
+
+		if (_index.ContainsKey(item.Rel))
+		{
+			throw new ArgumentException($"A link with relation '{item.Rel}' has already been added. Link relations must be unique within a link collection.", nameof(item));
+		}
+
 		_links.Add(item);
-		_index[item.Rel] = item;
+		_index.Add(item.Rel, item);
 	}
 
 	/// <summary>
@@ -79,10 +97,20 @@ public sealed record LinkCollection : ICollection<Link>, IHalPart
 	/// <returns>true if the item was successfully removed; otherwise, false.</returns>
 	public bool Remove(Link item)
 	{
-		var removed = _links.Remove(item);
-		if (removed)
-			_index.Remove(item.Rel);
-		return removed;
+		if (item is null)
+		{
+			return false;
+		}
+
+		if (!_links.Remove(item))
+		{
+			return false;
+		}
+
+		// Relations are unique, so the removed link was the only holder of its relation and the
+		// index entry keyed by that relation can no longer refer to a link still in the list.
+		_index.Remove(item.Rel);
+		return true;
 	}
 
 	/// <summary>
@@ -93,6 +121,62 @@ public sealed record LinkCollection : ICollection<Link>, IHalPart
 	/// <returns>true if a link with the specified relation was found; otherwise, false.</returns>
 	public bool TryGetByRel(string rel, out Link? link)
 		=> _index.TryGetValue(rel, out link);
+
+	/// <summary>
+	/// Determines whether this collection holds the same links as another collection.
+	/// </summary>
+	/// <remarks>
+	/// Links are compared by relation rather than by position: a HAL "_links" value is a JSON
+	/// object and JSON object members are unordered, so two collections holding the same links in a
+	/// different order represent the same HAL document. The relation index is derived from the
+	/// links and therefore takes no part in the comparison.
+	/// </remarks>
+	/// <param name="other">The collection to compare with.</param>
+	/// <returns>true if both collections hold equal links for the same relations; otherwise, false.</returns>
+	public bool Equals(LinkCollection? other)
+	{
+		if (other is null)
+		{
+			return false;
+		}
+
+		if (ReferenceEquals(this, other))
+		{
+			return true;
+		}
+
+		if (_links.Count != other._links.Count)
+		{
+			return false;
+		}
+
+		foreach (var link in _links)
+		{
+			if (!other._index.TryGetValue(link.Rel, out var candidate) || !Equals(link, candidate))
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	/// <summary>
+	/// Returns a hash code derived from the links in the collection, independent of their order.
+	/// </summary>
+	/// <returns>A hash code for the collection.</returns>
+	public override int GetHashCode()
+	{
+		unchecked
+		{
+			var hash = _links.Count;
+			foreach (var link in _links)
+			{
+				hash += link?.GetHashCode() ?? 0;
+			}
+			return hash;
+		}
+	}
 
 	/// <summary>
 	/// Returns an enumerator that iterates through the collection.
