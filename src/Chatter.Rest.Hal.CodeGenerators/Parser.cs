@@ -13,32 +13,88 @@ internal static class Parser
 {
 	internal const string HalResponseAttributeMetadataName = "Chatter.Rest.Hal.HalResponseAttribute";
 
-	/// <summary>Fast syntax-only filter for the attribute discovery pipeline.</summary>
-	internal static bool IsCandidate(SyntaxNode node) => node is ClassDeclarationSyntax;
+	/// <summary>The members the generator adds, and therefore the names it cannot share with user code.</summary>
+	internal static readonly string[] GeneratedMemberNames = { "Links", "Embedded" };
 
 	/// <summary>
-	/// Builds the model for one annotated declaration. Returns <see langword="null"/> when the
-	/// declaration cannot be described (for example, an attribute on a node that is not a type).
+	/// Fast syntax-only filter for the attribute discovery pipeline. Records are accepted here so the
+	/// unsupported-target diagnostic can be reported instead of the annotation failing silently.
 	/// </summary>
-	internal static HalClassInfo? Transform(INamedTypeSymbol symbol,
+	internal static bool IsCandidate(SyntaxNode node) =>
+		node is ClassDeclarationSyntax or RecordDeclarationSyntax;
+
+	/// <summary>
+	/// Inspects one annotated declaration, returning the model to emit when the declaration can
+	/// receive the HAL members and diagnostics explaining every reason it cannot.
+	/// </summary>
+	internal static HalTarget Transform(INamedTypeSymbol symbol,
 		TypeDeclarationSyntax declaration,
 		CancellationToken cancellationToken)
 	{
 		cancellationToken.ThrowIfCancellationRequested();
+
+		var typeName = symbol.ToDisplayString(SymbolDisplayFormat.CSharpErrorMessageFormat);
+		var diagnostics = ImmutableArray.CreateBuilder<DiagnosticInfo>();
+
+		if (declaration is RecordDeclarationSyntax)
+		{
+			diagnostics.Add(DiagnosticInfo.Create(
+				Diagnostics.RecordTargetNotSupported, declaration.Identifier.GetLocation(), typeName));
+			return new HalTarget(null, diagnostics.ToImmutable());
+		}
+
+		var canGenerate = true;
+
+		if (!declaration.Modifiers.Any(SyntaxKind.PartialKeyword))
+		{
+			diagnostics.Add(DiagnosticInfo.Create(
+				Diagnostics.TargetMustBePartial, declaration.Identifier.GetLocation(), typeName));
+			canGenerate = false;
+		}
 
 		var containingTypes = ImmutableArray.CreateBuilder<ContainingTypeInfo>();
 		for (var parent = declaration.Parent as TypeDeclarationSyntax;
 			parent is not null;
 			parent = parent.Parent as TypeDeclarationSyntax)
 		{
+			if (!parent.Modifiers.Any(SyntaxKind.PartialKeyword))
+			{
+				diagnostics.Add(DiagnosticInfo.Create(
+					Diagnostics.ContainingTypeMustBePartial,
+					parent.Identifier.GetLocation(),
+					typeName,
+					parent.Identifier.Text));
+				canGenerate = false;
+			}
+
 			containingTypes.Insert(0, new ContainingTypeInfo(KeywordFor(parent), NameWithTypeParameters(parent)));
 		}
 
-		return new HalClassInfo(
+		foreach (var memberName in GeneratedMemberNames)
+		{
+			if (!symbol.GetMembers(memberName).IsEmpty)
+			{
+				diagnostics.Add(DiagnosticInfo.Create(
+					Diagnostics.HalMemberAlreadyDeclared,
+					declaration.Identifier.GetLocation(),
+					typeName,
+					memberName));
+				canGenerate = false;
+			}
+		}
+
+		if (!canGenerate)
+		{
+			return new HalTarget(null, diagnostics.ToImmutable());
+		}
+
+		var info = new HalClassInfo(
 			NamespaceOf(symbol),
 			new EquatableArray<ContainingTypeInfo>(containingTypes.ToImmutable()),
 			NameWithTypeParameters(declaration),
 			MetadataNameOf(symbol));
+
+		return new HalTarget(info, diagnostics.ToImmutable());
 	}
 
 	/// <summary>The declaration keyword to repeat when re-declaring <paramref name="declaration"/> as a partial.</summary>

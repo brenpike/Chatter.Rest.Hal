@@ -20,17 +20,35 @@ public class HalResponseGenerator : IIncrementalGenerator
 		var processedTypes = halResponseTypes
 			.Collect()
 			.Select(static (types, cancellationToken) =>
-				types
+			{
+				var targets = types
 					.Where(static t => t.Symbol is not null && t.Declaration is not null)
 					.Select(t => Parser.Transform(t.Symbol!, t.Declaration!, cancellationToken))
-					.Where(static info => info.HasValue)
-					.Select(static info => info!.Value)
+					.ToImmutableArray();
+
+				var models = targets
+					.Where(static target => target.Info.HasValue)
+					.Select(static target => target.Info!.Value)
 					.GroupBy(static info => info.MetadataName, StringComparer.Ordinal)
 					.Select(static g => g.First())
 					.OrderBy(static info => info.MetadataName, StringComparer.Ordinal)
-					.ToImmutableArray());
+					.ToImmutableArray();
 
-		context.RegisterSourceOutput(processedTypes, static (ctx, classes) =>
-			Emitter.Emit(ctx, classes));
+				var diagnostics = targets
+					.SelectMany(static target => target.Diagnostics)
+					.ToImmutableArray();
+
+				return (Models: models, Diagnostics: diagnostics);
+			});
+
+		context.RegisterSourceOutput(processedTypes, static (ctx, processed) =>
+		{
+			foreach (var diagnostic in processed.Diagnostics)
+			{
+				ctx.ReportDiagnostic(diagnostic.ToDiagnostic());
+			}
+
+			Emitter.Emit(ctx, processed.Models);
+		});
 	}
 }

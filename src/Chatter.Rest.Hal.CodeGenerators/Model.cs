@@ -1,3 +1,5 @@
+using System.Collections.Immutable;
+
 namespace Chatter.Rest.Hal.CodeGenerators;
 
 /// <summary>
@@ -81,6 +83,38 @@ internal readonly struct HalClassInfo : IEquatable<HalClassInfo>
 			hash = (hash * 397) ^ NameWithTypeParameters.GetHashCode();
 			hash = (hash * 397) ^ ContainingTypes.GetHashCode();
 			return hash;
+		}
+	}
+}
+
+/// <summary>
+/// The outcome of inspecting one annotated declaration: the model to emit when the declaration is
+/// usable, plus any diagnostics explaining why it is not.
+/// </summary>
+internal readonly struct HalTarget : IEquatable<HalTarget>
+{
+	internal HalClassInfo? Info { get; }
+
+	internal EquatableArray<DiagnosticInfo> Diagnostics { get; }
+
+	internal HalTarget(HalClassInfo? info, ImmutableArray<DiagnosticInfo> diagnostics)
+	{
+		Info = info;
+		Diagnostics = new EquatableArray<DiagnosticInfo>(diagnostics);
+	}
+
+	internal static HalTarget None => new(null, ImmutableArray<DiagnosticInfo>.Empty);
+
+	public bool Equals(HalTarget other) =>
+		Nullable.Equals(Info, other.Info) && Diagnostics.Equals(other.Diagnostics);
+
+	public override bool Equals(object? obj) => obj is HalTarget other && Equals(other);
+
+	public override int GetHashCode()
+	{
+		unchecked
+		{
+			return ((Info?.GetHashCode() ?? 0) * 397) ^ Diagnostics.GetHashCode();
 		}
 	}
 }
