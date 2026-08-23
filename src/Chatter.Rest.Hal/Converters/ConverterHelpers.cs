@@ -288,15 +288,21 @@ internal static class ConverterHelpers
 			return null;
 		}
 
+		// Last case-insensitive match wins, matching the last-wins normalization duplicate keys get
+		// elsewhere (and the behavior the old case-insensitive JsonObject exhibited, where a later
+		// variant replaced the earlier value).
+		JsonNode? match = null;
+		var found = false;
 		foreach (var kvp in obj)
 		{
 			if (string.Equals(kvp.Key, name, StringComparison.OrdinalIgnoreCase))
 			{
-				return kvp.Value;
+				match = kvp.Value;
+				found = true;
 			}
 		}
 
-		return null;
+		return found ? match : null;
 	}
 
 	/// <summary>
