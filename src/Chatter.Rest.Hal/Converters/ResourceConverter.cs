@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
@@ -103,22 +104,11 @@ public sealed class ResourceConverter : JsonConverter<Resource>
 
 		if (value.CachedState != null)
 		{
-			var utf8Bytes = JsonSerializer.SerializeToUtf8Bytes(value.CachedState, options);
-			using var doc = JsonDocument.Parse(utf8Bytes);
-
-			// A HAL Resource Object is a JSON object, so its state members can only be merged into the
-			// envelope when the state itself serializes to an object. A state that serializes to a
-			// primitive or an array has no representable HAL form; report that as a JsonException rather
-			// than letting JsonElement.EnumerateObject leak an InvalidOperationException. State that
-			// serializes to JSON null simply contributes no members.
-			if (doc.RootElement.ValueKind is not JsonValueKind.Object and not JsonValueKind.Null)
+			using var doc = CreateStateDocument(value.CachedState, options);
+			if (doc != null)
 			{
-				throw new JsonException(
-					$"A HAL Resource's state must serialize to a JSON object, but it serialized to {doc.RootElement.ValueKind}. "
-					+ "Wrap the value in an object (or place it in an _embedded resource) to serialize it as HAL.");
+				WriteStateMembers(writer, doc.RootElement, options, writesLinks, writesEmbedded);
 			}
-
-			WriteStateMembers(writer, doc.RootElement, options, writesLinks, writesEmbedded);
 		}
 
 		if (writesLinks)
@@ -134,6 +124,81 @@ public sealed class ResourceConverter : JsonConverter<Resource>
 		}
 
 		writer.WriteEndObject();
+	}
+
+	/// <summary>
+	/// Serializes the state and validates its HAL shape.
+	/// </summary>
+	/// <returns>The parsed state document, or <c>null</c> when the state serializes to JSON null
+	/// and therefore contributes no members.</returns>
+	/// <exception cref="JsonException">Thrown when the state serializes to a primitive or an array,
+	/// which has no representable HAL form.</exception>
+	private static JsonDocument? CreateStateDocument(object cachedState, JsonSerializerOptions options)
+	{
+		var utf8Bytes = JsonSerializer.SerializeToUtf8Bytes(cachedState, options);
+		var doc = JsonDocument.Parse(utf8Bytes);
+
+		// A HAL Resource Object is a JSON object, so its state members can only be merged into the
+		// envelope when the state itself serializes to an object. A state that serializes to a
+		// primitive or an array has no representable HAL form; report that as a JsonException rather
+		// than letting JsonElement.EnumerateObject leak an InvalidOperationException. State that
+		// serializes to JSON null simply contributes no members.
+		var kind = doc.RootElement.ValueKind;
+		if (kind is not JsonValueKind.Object and not JsonValueKind.Null)
+		{
+			doc.Dispose();
+			throw new JsonException(
+				$"A HAL Resource's state must serialize to a JSON object, but it serialized to {kind}. "
+				+ "Wrap the value in an object (or place it in an _embedded resource) to serialize it as HAL.");
+		}
+
+		if (kind == JsonValueKind.Null)
+		{
+			doc.Dispose();
+			return null;
+		}
+
+		return doc;
+	}
+
+	/// <summary>
+	/// Serializes exactly the state members <see cref="Write"/> would emit for
+	/// <paramref name="value"/>, as a UTF-8 JSON object.
+	/// </summary>
+	/// <remarks>
+	/// This is the single source of truth Resource equality derives its state key from: the same
+	/// <see cref="CreateStateDocument"/> and <see cref="WriteStateMembers"/> code paths the writer
+	/// uses produce the bytes, so equality can never drift from serialization when the writer's
+	/// rules change.
+	/// </remarks>
+	/// <returns>The emitted members as a UTF-8 JSON object, or <c>null</c> when no members are
+	/// emitted (absent state, or state serializing to JSON null).</returns>
+	internal static byte[]? SerializeStateMembersToUtf8(Resource value, JsonSerializerOptions options)
+	{
+		var cachedState = value.CachedState;
+		if (cachedState == null)
+		{
+			return null;
+		}
+
+		var writesLinks = value.Links != null && value.Links.Count > 0;
+		var writesEmbedded = value.Embedded != null && value.Embedded.Count > 0;
+
+		using var doc = CreateStateDocument(cachedState, options);
+		if (doc == null)
+		{
+			return null;
+		}
+
+		using var buffer = new MemoryStream();
+		using (var writer = new Utf8JsonWriter(buffer))
+		{
+			writer.WriteStartObject();
+			WriteStateMembers(writer, doc.RootElement, options, writesLinks, writesEmbedded);
+			writer.WriteEndObject();
+		}
+
+		return buffer.ToArray();
 	}
 
 	/// <summary>

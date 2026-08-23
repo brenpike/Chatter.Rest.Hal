@@ -285,8 +285,11 @@ public sealed record Resource : IHalPart
     // Lazily initialized; never null after first access.
     public EmbeddedResourceCollection Embedded { get; set; }
 
-    // Deserialize the resource's state properties into T.
-    // Result is cached after the first successful call.
+    // Deserialize the resource's state properties into T. Each call
+    // materializes a detached projection from the original state, so
+    // mutating the result affects neither serialization nor equality —
+    // except when the state was supplied to the constructor directly as
+    // a T instance, which is returned by reference.
     // Returns null if the state is absent or deserialization fails.
     public T? State<T>() where T : class;
 

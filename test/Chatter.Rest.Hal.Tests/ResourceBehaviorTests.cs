@@ -14,7 +14,7 @@ public class ResourceBehaviorTests
 	}
 
 	[Fact]
-	public void State_Should_Cache_Deserialized_Object_When_Starting_From_JsonElement()
+	public void State_Should_Return_Detached_Projections_When_Starting_From_JsonElement()
 	{
 		var json = JsonSerializer.Serialize(new SimpleState { Value = 42, Name = "the-answer" });
 		var je = JsonSerializer.Deserialize<object>(json);
@@ -23,9 +23,13 @@ public class ResourceBehaviorTests
 		var first = res!.State<SimpleState>();
 		var second = res.State<SimpleState>();
 
+		// Projections are detached snapshots of the element: equal content, never the same
+		// instance, so mutating one cannot change what the resource serializes or how it compares.
 		Assert.NotNull(first);
 		Assert.NotNull(second);
-		Assert.Same(first, second); // should be cached after first deserialization
+		Assert.NotSame(first, second);
+		Assert.Equal(first!.Value, second!.Value);
+		Assert.Equal(first.Name, second.Name);
 	}
 
 	[Fact]

@@ -267,8 +267,9 @@ Lazily deserializes the resource's state portion into a strongly typed object:
 public T? State<T>() where T : class
 ```
 
-- If the internal state is a `JsonElement`, deserializes it to `T` and caches the result.
-- If the internal state is null, invokes the `_stateCreator` delegate (which returns the JSON minus `_links`/`_embedded`) and deserializes that.
+- If the internal state is a `JsonElement`, deserializes it to `T` on every call — the returned object is a detached projection, so mutating it does not change what the resource serializes or how it compares.
+- If the internal state is null, invokes the `_stateCreator` delegate (which returns the JSON minus `_links`/`_embedded`) and deserializes that, likewise detached on every call.
+- A state supplied to the constructor directly as `T` is returned by reference (the one non-detached case).
 - Returns `null` on any exception.
 - **Special guard:** When `T == typeof(Link)`, requires the JSON object to have exactly one property before deserializing. This prevents a multi-property state DTO from being misidentified as a HAL link.
 
@@ -280,10 +281,9 @@ Casts the entire `Resource` (including `_links` and `_embedded`) to a strongly t
 public T? As<T>() where T : class
 ```
 
-- Serializes the `Resource` to a `JsonNode` via `JsonSerializer.SerializeToNode(this)` if not already cached in `_resourceNode`.
-- Deserializes that node to `T`.
-- Returns `null` on any exception.
-- The `_resourceNode` is cached after the first call — subsequent calls to `As<T>()` skip re-serialization.
+- A parsed resource converts from the `JsonNode` it was parsed from, preserving the original document shape.
+- An in-memory resource is serialized to a `JsonNode` via `JsonSerializer.SerializeToNode(this)` on every call — there is no node cache, so mutations made after an earlier `As<T>()` call are reflected in the result (at the cost of re-serialization per call).
+- Deserializes that node to `T`; returns `null` on any exception.
 - Because the full resource (including `_links` and `_embedded`) is included in the serialized node, use this method for DTOs decorated with `[HalResponse]` (from the source generator) that declare `Links` and `Embedded` properties.
 
 ### 5.6 `EmbeddedResourceCollectionConverter.Read`

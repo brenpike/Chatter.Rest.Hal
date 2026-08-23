@@ -75,6 +75,60 @@ public sealed record ResourceCollection : ICollection<Resource>, IHalPart
 	public bool Remove(Resource item) => _resources.Remove(item);
 
 	/// <summary>
+	/// Determines whether this collection holds the same resources, in the same order, as another collection.
+	/// </summary>
+	/// <remarks>
+	/// An embedded relation holding multiple resources serializes as a JSON array, and JSON array
+	/// order is significant, so the comparison is positional.
+	/// </remarks>
+	/// <param name="other">The collection to compare with.</param>
+	/// <returns>true if both collections hold equal resources in the same order; otherwise, false.</returns>
+	public bool Equals(ResourceCollection? other)
+	{
+		if (other is null)
+		{
+			return false;
+		}
+
+		if (ReferenceEquals(this, other))
+		{
+			return true;
+		}
+
+		if (_resources.Count != other._resources.Count)
+		{
+			return false;
+		}
+
+		for (var i = 0; i < _resources.Count; i++)
+		{
+			if (!Equals(_resources[i], other._resources[i]))
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	/// <summary>
+	/// Returns a hash code derived from the resources in the collection and their order.
+	/// </summary>
+	/// <returns>A hash code for the collection.</returns>
+	public override int GetHashCode()
+	{
+		unchecked
+		{
+			var hash = 17;
+			foreach (var resource in _resources)
+			{
+				hash = (hash * 31) + (resource?.GetHashCode() ?? 0);
+			}
+			return hash;
+		}
+	}
+
+	/// <summary>
 	/// Returns an enumerator that iterates through the collection.
 	/// </summary>
 	/// <returns>An enumerator for the collection.</returns>

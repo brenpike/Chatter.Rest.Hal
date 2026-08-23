@@ -304,7 +304,7 @@ public class ResourceTests
 	}
 
 	[Fact]
-	public void State_Should_Return_Cached_Object_Regardless_Of_Options_After_First_Deserialization()
+	public void State_Should_Materialize_Detached_Projections_With_The_Supplied_Options()
 	{
 		// Arrange
 		var json = """{"FirstName":"Dave","LastName":"Brown"}""";
@@ -312,14 +312,17 @@ public class ResourceTests
 		JsonObject? stateCreator() => node?.AsObject();
 		var resource = new Resource(node, stateCreator, () => new LinkCollection(), () => new EmbeddedResourceCollection());
 
-		// Act: first call caches the result
+		// Act: each call materializes a detached projection from the original JSON, so the
+		// supplied options apply to every call rather than only the first.
 		var first = resource.State<StateDto>();
-		// Second call with different options should return the same cached object
-		var options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
-		var second = resource.State<StateDto>(options);
+		var second = resource.State<StateDto>();
 
-		// Assert: same reference (caching)
-		Assert.Same(first, second);
+		// Assert: equal content, never the same instance — a mutated projection cannot change
+		// what the resource serializes or how it compares.
+		Assert.NotNull(first);
+		Assert.NotSame(first, second);
+		Assert.Equal(first!.FirstName, second!.FirstName);
+		Assert.Equal(first.LastName, second.LastName);
 	}
 
 	[Fact]
