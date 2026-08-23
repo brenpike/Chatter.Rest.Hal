@@ -8,7 +8,7 @@ namespace Chatter.Rest.Hal.Builders;
 /// <summary>
 /// Builder for constructing resource collections within embedded resources.
 /// </summary>
-public sealed class ResourceCollectionBuilder : HalBuilder<ResourceCollection>, IAddResourceStage, IEmbeddedResourceCreationStage
+public sealed class ResourceCollectionBuilder : HalBuilder<ResourceCollection>, IAddResourceStage, IEmbeddedResourceCreationStage, IDeclareUnbuildableHalParts
 {
 	private readonly IList<IEmbeddedResourceCreationStage> _resourceBuilders = new List<IEmbeddedResourceCreationStage>();
 	private ResourceCollectionBuilder(IBuildHalPart<EmbeddedResource> parent) : base(parent) { }
@@ -73,14 +73,16 @@ public sealed class ResourceCollectionBuilder : HalBuilder<ResourceCollection>, 
 
 	IAddResourceStage IAddEmbeddedResourceToResourceStage.AddEmbedded(string name)
 	{
-		if (FindParent<EmbeddedResourceCollection>() is IAddEmbeddedResourceToResourceStage embedded)
-		{
-			return embedded.AddEmbedded(name);
-		}
-
+		// The resource that owns this collection's "_embedded" entry is the nearest Resource
+		// ancestor; resolve it first so the embed lands on the owning resource.
 		if (FindParent<Resource>() is IAddEmbeddedResourceToResourceStage resource)
 		{
 			return resource.AddEmbedded(name);
+		}
+
+		if (FindParent<EmbeddedResourceCollection>() is IAddEmbeddedResourceToResourceStage embedded)
+		{
+			return embedded.AddEmbedded(name);
 		}
 
 		throw new InvalidOperationException("No parent EmbeddedResourceCollection or Resource builder found to add an embedded resource.");
@@ -113,6 +115,11 @@ public sealed class ResourceCollectionBuilder : HalBuilder<ResourceCollection>, 
 	}
 
 	Resource IBuildHalPart<Resource>.BuildPart() => throw new NotSupportedException("ResourceCollectionBuilder builds ResourceCollection, not individual Resource instances.");
+
+	// IEmbeddedResourceCreationStage forces this builder to satisfy IBuildHalPart<Resource> even
+	// though it cannot build one. Declaring Resource unbuildable keeps FindParent<Resource> walks
+	// from stopping here and handing back a builder whose BuildPart() throws.
+	bool IDeclareUnbuildableHalParts.CannotBuild(Type halPartType) => halPartType == typeof(Resource);
 }
 
 /// <summary>

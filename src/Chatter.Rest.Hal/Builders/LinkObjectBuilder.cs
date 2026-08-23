@@ -192,14 +192,17 @@ public sealed class LinkObjectBuilder : HalBuilder<LinkObject>, ILinkObjectPrope
 	///<inheritdoc/>
 	IAddResourceStage IAddEmbeddedResourceToResourceStage.AddEmbedded(string name)
 	{
-		if (FindParent<EmbeddedResourceCollection>() is IAddEmbeddedResourceToResourceStage embedded)
-		{
-			return embedded.AddEmbedded(name);
-		}
-
+		// The resource that owns this link object is the nearest Resource ancestor, so it must be
+		// resolved first. Looking for an EmbeddedResourceCollection ancestor first would skip past
+		// that resource and attach the embed to whichever resource owns it instead.
 		if (FindParent<Resource>() is IAddEmbeddedResourceToResourceStage resource)
 		{
 			return resource.AddEmbedded(name);
+		}
+
+		if (FindParent<EmbeddedResourceCollection>() is IAddEmbeddedResourceToResourceStage embedded)
+		{
+			return embedded.AddEmbedded(name);
 		}
 
 		throw new InvalidOperationException("No parent EmbeddedResourceCollection or Resource builder found to add an embedded resource.");
