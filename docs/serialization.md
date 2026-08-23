@@ -281,10 +281,9 @@ Casts the entire `Resource` (including `_links` and `_embedded`) to a strongly t
 public T? As<T>() where T : class
 ```
 
-- Serializes the `Resource` to a `JsonNode` via `JsonSerializer.SerializeToNode(this)` if not already cached in `_resourceNode`.
-- Deserializes that node to `T`.
-- Returns `null` on any exception.
-- The `_resourceNode` is cached after the first call — subsequent calls to `As<T>()` skip re-serialization.
+- A parsed resource converts from the `JsonNode` it was parsed from, preserving the original document shape.
+- An in-memory resource is serialized to a `JsonNode` via `JsonSerializer.SerializeToNode(this)` on every call — there is no node cache, so mutations made after an earlier `As<T>()` call are reflected in the result (at the cost of re-serialization per call).
+- Deserializes that node to `T`; returns `null` on any exception.
 - Because the full resource (including `_links` and `_embedded`) is included in the serialized node, use this method for DTOs decorated with `[HalResponse]` (from the source generator) that declare `Links` and `Embedded` properties.
 
 ### 5.6 `EmbeddedResourceCollectionConverter.Read`

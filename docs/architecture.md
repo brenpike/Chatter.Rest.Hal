@@ -27,7 +27,7 @@ public sealed record Resource : IHalPart
 ```
 
 - `State<T>()` — returns the resource state as `T`, materialized as a detached projection from the state of record (the constructor-supplied `JsonElement`, or the lazy `_stateCreator` delegate on the deserialization path) on every call. Projections never become the serialization source, so mutating a returned object affects neither serialization nor equality; a state supplied directly as `T` is the one exception and is returned by reference. Returns `null` on failure rather than throwing.
-- `As<T>()` — serializes the entire `Resource` to a `JsonNode` (if not already cached in `_resourceNode`) then deserializes that node to `T`. Use this to round-trip a HAL response into a typed DTO that includes `_links`/`_embedded` properties.
+- `As<T>()` — converts the full `Resource` (including `_links`/`_embedded`) to `T`. A parsed resource converts from the retained source node; an in-memory resource is re-serialized on every call, so links, embedded resources and state added after an earlier `As<T>()` call are reflected in the result. Use this to round-trip a HAL response into a typed DTO that declares `Links`/`Embedded` properties.
 - **Lazy init via `Func<T>` delegates** — the internal deserialization constructor (`internal Resource(JsonNode?, Func<JsonObject?>, Func<LinkCollection?>, Func<EmbeddedResourceCollection?>)`) stores the three factory delegates. `Links` and `Embedded` property getters invoke these delegates on first access and cache the result, making deserialization allocation-lazy.
 - `StateObject` — internal property that drives `ResourceConverter.Write`. Its getter calls `State<object>()`.
 
