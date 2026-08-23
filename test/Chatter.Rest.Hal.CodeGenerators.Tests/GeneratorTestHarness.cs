@@ -34,6 +34,10 @@ internal sealed class GeneratorRunOutcome
 	internal ImmutableArray<Diagnostic> CompilationErrors =>
 		OutputCompilation.GetDiagnostics().Where(d => d.Severity == DiagnosticSeverity.Error).ToImmutableArray();
 
+	/// <summary>Every generated source, including the post-initialization attribute.</summary>
+	internal ImmutableArray<GeneratedSourceResult> AllGeneratedSources =>
+		RunResult.Results.SelectMany(r => r.GeneratedSources).ToImmutableArray();
+
 	/// <summary>Generated sources produced by the generator, excluding the post-initialization attribute.</summary>
 	internal ImmutableArray<GeneratedSourceResult> GeneratedSources =>
 		RunResult.Results

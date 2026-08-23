@@ -9,6 +9,11 @@ public class HalResponseGenerator : IIncrementalGenerator
 {
 	public void Initialize(IncrementalGeneratorInitializationContext context)
 	{
+		// Ship the marker attribute with the generator so installing this package alone is enough
+		// for [HalResponse] to resolve and the generator to fire.
+		context.RegisterPostInitializationOutput(static ctx =>
+			ctx.AddSource(AttributeSource.HintName, AttributeSource.Source));
+
 		// The projection onto the equatable model happens inside the attribute transform, before
 		// Collect. Keeping the syntax node in the pipeline would hand Collect a value with a new
 		// identity after every keystroke and re-emit every source on every unrelated edit.

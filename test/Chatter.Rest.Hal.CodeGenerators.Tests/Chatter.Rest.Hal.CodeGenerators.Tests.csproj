@@ -23,7 +23,6 @@
         </PackageReference>
     </ItemGroup>
     <ItemGroup>
-        <ProjectReference Include="..\..\src\Chatter.Rest.Hal.Core\Chatter.Rest.Hal.Core.csproj" />
         <!-- ReferenceOutputAssembly is on so the tests can drive the generator directly, in addition
              to it running over this project's own sources as an analyzer. -->
         <ProjectReference Include="..\..\src\Chatter.Rest.Hal.CodeGenerators\Chatter.Rest.Hal.CodeGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="true" />
