@@ -1,5 +1,6 @@
 using Chatter.Rest.Hal.Converters;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
@@ -341,6 +342,31 @@ public sealed record Resource : IHalPart
 				}
 
 				stateNode = JsonSerializer.SerializeToNode(_stateObject, _jsonOptions);
+			}
+
+			// Mirror ResourceConverter.Write exactly: with WhenWritingNull in this resource's own
+			// options, top-level null-valued state properties are omitted from the document, so
+			// they are omitted from the key. Nested nulls are written by both, and _jsonOptions is
+			// immutable per-instance state, so the key stays deterministic for this resource.
+			if (stateNode is JsonObject withNulls
+				&& _jsonOptions?.DefaultIgnoreCondition == JsonIgnoreCondition.WhenWritingNull)
+			{
+				List<string>? nullProperties = null;
+				foreach (var kvp in withNulls)
+				{
+					if (kvp.Value is null || ConverterHelpers.IsJsonNull(kvp.Value))
+					{
+						(nullProperties ??= new List<string>()).Add(kvp.Key);
+					}
+				}
+
+				if (nullProperties != null)
+				{
+					foreach (var name in nullProperties)
+					{
+						withNulls.Remove(name);
+					}
+				}
 			}
 
 			// An empty state object serializes to the same HAL document as no state at all

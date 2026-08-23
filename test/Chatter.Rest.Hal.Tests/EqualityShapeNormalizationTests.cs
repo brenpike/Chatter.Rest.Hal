@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Chatter.Rest.Hal;
 using Xunit;
 
@@ -41,6 +42,29 @@ public class EqualityShapeNormalizationTests
 		b.LinkObjects.Add(new LinkObject("/1"));
 
 		Assert.NotEqual(a, b);
+	}
+
+	[Fact]
+	public void WhenWritingNullMakesNullStatePropertiesAbsentInEquality()
+	{
+		var options = new JsonSerializerOptions { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
+
+		var withNull = Resource.Parse("{\"x\":null}", options);
+		var without = Resource.Parse("{}", options);
+
+		// Both serialize as {} under WhenWritingNull, so they are the same HAL content.
+		Assert.Equal(without, withNull);
+		Assert.Equal(without!.GetHashCode(), withNull!.GetHashCode());
+	}
+
+	[Fact]
+	public void NullStatePropertiesStillCountUnderDefaultOptions()
+	{
+		var withNull = Resource.Parse("{\"x\":null}");
+		var without = Resource.Parse("{}");
+
+		// Default options write the null, so the documents differ and so must equality.
+		Assert.NotEqual(without, withNull);
 	}
 
 	[Fact]
