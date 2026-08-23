@@ -51,28 +51,27 @@ public class LinkCollectionExtensionsCurieAndLookupTests
 	}
 
 	[Fact]
-	public void ExpandCurieRelation_Searches_Every_Curies_Link()
+	public void ExpandCurieRelation_Finds_Definitions_Among_Multiple_Curie_Objects()
 	{
-		// Two "curies" links are reachable in a hand-built collection; the lookup must not throw
-		// and must find definitions in either of them.
-		var links = CurieCollection(Curie("acme"));
-		var second = new Link("curies");
-		second.LinkObjects.Add(Curie("other", "https://docs.other.com/rel/{rel}"));
-		links.Add(second);
+		// Since the duplicate-rel policy (#86) a collection can hold only one "curies" link, so
+		// multiple curie definitions live as link objects within it; the lookup must find any.
+		var links = CurieCollection(Curie("acme"), Curie("other", "https://docs.other.com/rel/{rel}"));
 
 		links.ExpandCurieRelation("acme:widgets").Should().Be("https://docs.acme.com/relations/widgets");
 		links.ExpandCurieRelation("other:widgets").Should().Be("https://docs.other.com/rel/widgets");
 	}
 
 	[Fact]
-	public void ExpandCurieRelation_Does_Not_Throw_When_Two_Curies_Links_Exist()
+	public void A_Second_Curies_Link_Is_Rejected_At_Add()
 	{
+		// The two-curies-links hazard from #105 is now unrepresentable: LinkCollection.Add
+		// rejects the duplicate rel (#86 decision 1), so ExpandCurieRelation can never encounter
+		// two curies links.
 		var links = CurieCollection(Curie("acme"));
-		links.Add(new Link("curies"));
 
-		Action act = () => links.ExpandCurieRelation("unknown:widgets");
+		Action act = () => links.Add(new Link("curies"));
 
-		act.Should().NotThrow();
+		act.Should().Throw<ArgumentException>();
 		links.ExpandCurieRelation("unknown:widgets").Should().Be("unknown:widgets");
 	}
 
