@@ -129,11 +129,11 @@ public class LinkCollectionExtensionsTests
 
 		var links = new LinkCollection { curieLink };
 
-		// Act: Expand a CURIE with an empty suffix (trailing colon only)
-		// The template should be expanded with an empty string
+		// Act: Expand a CURIE with an empty reference (trailing colon only)
+		// There is nothing to substitute, so the relation is returned unchanged
 		var result = links.ExpandCurieRelation("acme:");
 
 		// Assert
-		result.Should().Be("https://docs.acme.com/relations/");
+		result.Should().Be("acme:");
 	}
 }

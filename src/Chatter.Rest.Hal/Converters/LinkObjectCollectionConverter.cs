@@ -30,9 +30,17 @@ public sealed class LinkObjectCollectionConverter : JsonConverter<LinkObjectColl
 	/// <param name="options">Serializer options.</param>
 	/// <returns>The deserialized LinkObjectCollection.</returns>
 	public override LinkObjectCollection? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-	{
-		var node = JsonNode.Parse(ref reader, new JsonNodeOptions() { PropertyNameCaseInsensitive = true });
+		=> ReadFromNode(ConverterHelpers.ParseNode(ref reader), options);
 
+	/// <summary>
+	/// Materializes a LinkObjectCollection directly from an already-parsed node, so enclosing converters
+	/// can reuse the existing tree instead of re-serializing the subtree to UTF-8 and re-parsing it.
+	/// </summary>
+	/// <param name="node">The already-parsed node.</param>
+	/// <param name="options">Serializer options.</param>
+	/// <returns>The deserialized LinkObjectCollection.</returns>
+	internal static LinkObjectCollection ReadFromNode(JsonNode? node, JsonSerializerOptions options)
+	{
 		var linkObjects = new LinkObjectCollection();
 
 		if (node is JsonObject jo)
@@ -63,23 +71,23 @@ public sealed class LinkObjectCollectionConverter : JsonConverter<LinkObjectColl
 
 		if (node is JsonValue jv)
 		{
-			try
+			// Only the string shorthand is a valid primitive here; anything else is malformed.
+			if (!jv.TryGetValue<string>(out var href))
 			{
-				var href = jv.GetValue<string>();
-				if (!string.IsNullOrWhiteSpace(href))
-				{
-					linkObjects.Add(new LinkObject(href));
-				}
+				throw new JsonException("A HAL Link Object must be a JSON object or a string href.");
 			}
-			catch (Exception)
+
+			if (!string.IsNullOrWhiteSpace(href))
 			{
-				// ignore non-string values
+				linkObjects.Add(new LinkObject(href!));
 			}
 
 			return;
 		}
 
-		var linkObject = node.Deserialize<LinkObject>(options);
+		var linkObject = ConverterHelpers.HasCustomConverter<LinkObject>(options, typeof(LinkObjectConverter))
+			? node.Deserialize<LinkObject>(options)
+			: LinkObjectConverter.ReadFromNode(node, options);
 		if (linkObject != null)
 		{
 			linkObjects.Add(linkObject);
