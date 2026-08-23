@@ -29,6 +29,10 @@ public sealed record Resource : IHalPart
 
 	private JsonNode? _resourceNode = null;
 	private object? _stateObject = null;
+
+	// A constructor-supplied JsonElement state, preserved so later State<T>() calls can re-project
+	// it onto other types after the first projection replaces _stateObject.
+	private JsonElement? _sourceStateElement = null;
 	private LinkCollection? _linksImpl = null;
 	private EmbeddedResourceCollection? _embeddedImpl = null;
 	private readonly Func<LinkCollection?> _linksCreator = () => new LinkCollection();
@@ -157,6 +161,7 @@ public sealed record Resource : IHalPart
 					}
 				}
 
+				_sourceStateElement = je;
 				_stateObject = je.Deserialize<T>(options);
 			}
 
@@ -168,8 +173,12 @@ public sealed record Resource : IHalPart
 			// The cache either is empty or holds a different type from a prior call, so the state is
 			// materialized from the underlying JSON. Only an empty cache is populated, so a projection
 			// onto a second state type cannot replace the state the resource serializes from.
+			// For a public-constructor resource the creator is always null, so a constructor-supplied
+			// JsonElement preserved above is the rematerialization source.
 			var stateObject = _stateCreator();
-			var materialized = stateObject?.Deserialize<T>(options);
+			var materialized = stateObject != null
+				? stateObject.Deserialize<T>(options)
+				: _sourceStateElement?.Deserialize<T>(options);
 			if (_stateObject == null)
 			{
 				_stateObject = materialized;
