@@ -22,23 +22,32 @@ public abstract class HalBuilder<THalPart> : IBuildResource, IBuildHalPart<THalP
 	public IBuildHalPart<IHalPart>? Parent { get; }
 
 	/// <summary>
-	/// Finds the nearest parent builder that produces the specified HAL type.
+	/// Finds the nearest ancestor builder that produces the specified HAL type.
 	/// </summary>
 	/// <typeparam name="TParent">The type of HAL domain object to find.</typeparam>
-	/// <returns>The parent builder, or null if not found.</returns>
+	/// <returns>The ancestor builder, or null if not found.</returns>
+	/// <remarks>
+	/// The search starts at <see cref="Parent"/>: this builder is never its own parent, so a
+	/// builder that happens to satisfy <see cref="IBuildHalPart{THalPart}"/> for
+	/// <typeparamref name="TParent"/> can no longer resolve to itself. Builders that declare
+	/// <typeparamref name="TParent"/> unbuildable via <see cref="IDeclareUnbuildableHalParts"/>
+	/// are skipped so a lookup never resolves to a builder whose BuildPart() throws.
+	/// </remarks>
 	public IBuildHalPart<TParent>? FindParent<TParent>() where TParent : class, IHalPart
 	{
-		if (this is IBuildHalPart<TParent> rootBuilder)
-			return rootBuilder;
+		for (var candidate = Parent; candidate is not null; candidate = candidate.Parent)
+		{
+			if (candidate is IBuildHalPart<TParent> match && !DeclaresUnbuildable<TParent>(candidate))
+			{
+				return match;
+			}
+		}
 
-		if (IsRoot())
-			return null;
-
-		if (Parent is IBuildHalPart<TParent> parentBuilder)
-			return parentBuilder;
-
-		return Parent!.FindParent<TParent>();
+		return null;
 	}
+
+	private static bool DeclaresUnbuildable<TParent>(IBuildHalPart<IHalPart> candidate) where TParent : class, IHalPart
+		=> candidate is IDeclareUnbuildableHalParts declaring && declaring.CannotBuild(typeof(TParent));
 
 	/// <summary>
 	/// Finds the root builder in the builder hierarchy.
