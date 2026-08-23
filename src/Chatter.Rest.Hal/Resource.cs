@@ -30,6 +30,10 @@ public sealed record Resource : IHalPart
 
 	private JsonNode? _resourceNode = null;
 	private object? _stateObject = null;
+
+	// JsonSerializerOptions.Default does not exist on the netstandard2.0 target; a shared
+	// default-configured instance serves the same purpose for equality-key serialization.
+	private static readonly JsonSerializerOptions DefaultKeyOptions = new();
 	private LinkCollection? _linksImpl = null;
 	private EmbeddedResourceCollection? _embeddedImpl = null;
 	private readonly Func<LinkCollection?> _linksCreator = () => new LinkCollection();
@@ -336,7 +340,7 @@ public sealed record Resource : IHalPart
 		try
 		{
 			var utf8 = ResourceConverter.SerializeStateMembersToUtf8(
-				this, _jsonOptions ?? JsonSerializerOptions.Default);
+				this, _jsonOptions ?? DefaultKeyOptions);
 			if (utf8 == null)
 			{
 				key = null;
