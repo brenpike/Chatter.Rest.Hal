@@ -100,7 +100,11 @@ public sealed class EmbeddedResourceCollectionConverter : JsonConverter<Embedded
 					: ResourceCollectionConverter.ReadFromNode(ja, options);
 				embedded = new EmbeddedResource(kvp.Key)
 				{
-					Resources = rc
+					Resources = rc,
+					// HAL clients read array-vs-object shape as the signal that a relation is a collection
+					// (draft-kelly-json-hal section 4.1.2), so an incoming array must serialize back as an
+					// array even when it holds a single resource. This mirrors Link.IsArray on the link side.
+					ForceWriteAsCollection = true
 				};
 			}
 
