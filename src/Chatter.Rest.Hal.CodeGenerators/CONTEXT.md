@@ -31,7 +31,7 @@ _Avoid_: generated file, code-gen output, scaffolded class
 ## Relationships
 
 - **HalResponseGenerator** emits the **Generated Marker Attribute** and then discovers classes annotated with it
-- The **Parser** projects each discovered class onto a **HalClassInfo**, or reports a diagnostic (HAL0001-HAL0004) when the class cannot receive the HAL members
+- The **Parser** projects each discovered class onto a **HalClassInfo**, or reports a diagnostic (HAL0001-HAL0005) when the class cannot receive the HAL members
 - **HalResponseGenerator** deduplicates the models by fully qualified metadata name and passes the set to the **Emitter**
 - The **Emitter** produces one **Generated Partial Class** per **HalClassInfo**, re-declaring the containing-type chain and the target's type parameters
 - Each **Generated Partial Class** references **Link Collection** and **Embedded Resource Collection** (defined in HAL Domain & Serialization) via `using Chatter.Rest.Hal`

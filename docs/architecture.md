@@ -373,6 +373,7 @@ It also reports why a declaration cannot receive the HAL members:
 | `HAL0002` | Error | A type containing the target is not declared `partial`. |
 | `HAL0003` | Warning | The target is a record; only class declarations are supported. |
 | `HAL0004` | Error | The target already declares a member named `Links` or `Embedded`. |
+| `HAL0005` | Error | The target or a containing type is file-local (`file` modifier); a re-declaration from a generated tree would be an unrelated type. |
 
 Generation is skipped for a target that reports any of these, so the diagnostic is what the user sees rather than an unrelated `CS0260` or `CS0102`.
 
