@@ -94,15 +94,22 @@ public sealed class ResourceConverter : JsonConverter<Resource>
 	{
 		writer.WriteStartObject();
 
+		var writesLinks = value.Links != null && value.Links.Count > 0;
+		var writesEmbedded = value.Embedded != null && value.Embedded.Count > 0;
+
 		if (value.CachedState != null)
 		{
-			var linksName = options.PropertyNamingPolicy?.ConvertName(nameof(Resource.Links)) ?? nameof(Resource.Links);
-			var embeddedName = options.PropertyNamingPolicy?.ConvertName(nameof(Resource.Embedded)) ?? nameof(Resource.Embedded);
 			var utf8Bytes = JsonSerializer.SerializeToUtf8Bytes(value.CachedState, options);
 			using var doc = JsonDocument.Parse(utf8Bytes);
 			foreach (var prop in doc.RootElement.EnumerateObject())
 			{
-				if (prop.Name == linksName || prop.Name == embeddedName)
+				// HAL's reserved names are the literal strings "_links"/"_embedded"; a state property the
+				// naming policy maps to "Links"/"Embedded" is ordinary user data and is always written.
+				// A state property already carrying a reserved name is skipped only when the resource's
+				// own collection is about to be written under that same name, because emitting both would
+				// produce a duplicate JSON member, which RFC 8259 leaves undefined.
+				if ((writesLinks && string.Equals(prop.Name, ConverterHelpers.LinksProperty, StringComparison.Ordinal))
+					|| (writesEmbedded && string.Equals(prop.Name, ConverterHelpers.EmbeddedProperty, StringComparison.Ordinal)))
 					continue;
 
 				if (prop.Value.ValueKind != JsonValueKind.Null || options.DefaultIgnoreCondition != JsonIgnoreCondition.WhenWritingNull)
@@ -112,15 +119,15 @@ public sealed class ResourceConverter : JsonConverter<Resource>
 			}
 		}
 
-		if (value.Links != null && value.Links.Count > 0)
+		if (writesLinks)
 		{
-			writer.WritePropertyName("_links");
+			writer.WritePropertyName(ConverterHelpers.LinksProperty);
 			JsonSerializer.Serialize(writer, value.Links, options);
 		}
 
-		if (value.Embedded != null && value.Embedded.Count > 0)
+		if (writesEmbedded)
 		{
-			writer.WritePropertyName("_embedded");
+			writer.WritePropertyName(ConverterHelpers.EmbeddedProperty);
 			JsonSerializer.Serialize(writer, value.Embedded, options);
 		}
 
