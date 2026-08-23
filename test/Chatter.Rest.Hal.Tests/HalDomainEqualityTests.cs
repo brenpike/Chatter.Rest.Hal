@@ -281,6 +281,123 @@ public class HalDomainEqualityTests
 		first.Should().NotBe(different);
 	}
 
+	[Fact]
+	public void Resource_State_Equality_Ignores_Property_Order()
+	{
+		var first = Resource.Parse(@"{ ""name"": ""widget"", ""size"": 3 }")!;
+		var second = Resource.Parse(@"{ ""size"": 3, ""name"": ""widget"" }")!;
+
+		first.Should().Be(second);
+		first.GetHashCode().Should().Be(second.GetHashCode());
+	}
+
+	[Fact]
+	public void Resource_State_Equality_Ignores_Property_Order_In_Nested_Objects()
+	{
+		var first = Resource.Parse(@"{ ""outer"": { ""a"": 1, ""b"": { ""c"": 2, ""d"": 3 } } }")!;
+		var second = Resource.Parse(@"{ ""outer"": { ""b"": { ""d"": 3, ""c"": 2 }, ""a"": 1 } }")!;
+
+		first.Should().Be(second);
+		first.GetHashCode().Should().Be(second.GetHashCode());
+	}
+
+	[Fact]
+	public void Resource_State_Equality_Respects_Array_Order()
+	{
+		var first = Resource.Parse(@"{ ""tags"": [ ""a"", ""b"" ] }")!;
+		var second = Resource.Parse(@"{ ""tags"": [ ""b"", ""a"" ] }")!;
+
+		first.Should().NotBe(second);
+	}
+
+	[Fact]
+	public void Resource_State_Equality_Ignores_Property_Order_Across_Construction_Paths()
+	{
+		var parsed = Resource.Parse(@"{ ""size"": 3, ""name"": ""widget"" }")!;
+		var constructed = new Resource(new WidgetState { Name = "widget", Size = 3 });
+
+		parsed.Should().Be(constructed);
+		parsed.GetHashCode().Should().Be(constructed.GetHashCode());
+	}
+
+	[Fact]
+	public void Resource_State_Equality_Still_Distinguishes_Property_Values()
+	{
+		var first = Resource.Parse(@"{ ""name"": ""widget"", ""size"": 3 }")!;
+		var second = Resource.Parse(@"{ ""size"": 4, ""name"": ""widget"" }")!;
+		var third = Resource.Parse(@"{ ""name"": ""widget"" }")!;
+
+		first.Should().NotBe(second);
+		first.Should().NotBe(third);
+	}
+
+	[Fact]
+	public void Resource_With_Unrepresentable_State_Is_Not_Equal_To_A_Stateless_Resource()
+	{
+		var resource = new Resource(CreateCyclicState());
+
+		resource.Should().NotBe(new Resource());
+		new Resource().Should().NotBe(resource);
+	}
+
+	[Fact]
+	public void Resources_With_Distinct_Unrepresentable_States_Are_Not_Equal()
+	{
+		var first = new Resource(CreateCyclicState());
+		var second = new Resource(CreateCyclicState());
+
+		first.Should().NotBe(second);
+	}
+
+	[Fact]
+	public void Resources_Sharing_One_Unrepresentable_State_Are_Equal()
+	{
+		var state = CreateCyclicState();
+		var first = new Resource(state);
+		var second = new Resource(state);
+
+		first.Should().Be(second);
+		first.GetHashCode().Should().Be(second.GetHashCode());
+	}
+
+	[Fact]
+	public void Resource_With_Unrepresentable_State_Has_A_Stable_HashCode()
+	{
+		var resource = new Resource(CreateCyclicState());
+		var set = new HashSet<Resource> { resource };
+		var before = resource.GetHashCode();
+
+		_ = resource.Links;
+		_ = resource.Embedded;
+		_ = resource.As<Dictionary<string, object>>();
+
+		resource.GetHashCode().Should().Be(before);
+		set.Contains(resource).Should().BeTrue();
+	}
+
+	[Fact]
+	public void Resource_With_Unrepresentable_State_Is_Not_Equal_To_A_Resource_With_Different_Links()
+	{
+		var state = CreateCyclicState();
+		var first = new Resource(state);
+		var second = new Resource(state);
+		second.Links.Add(TestHelpers.CreateLink("self", "/items/1"));
+
+		first.Should().NotBe(second);
+	}
+
+	private sealed class CyclicState
+	{
+		public CyclicState? Self { get; set; }
+	}
+
+	private static CyclicState CreateCyclicState()
+	{
+		var state = new CyclicState();
+		state.Self = state;
+		return state;
+	}
+
 	private static EmbeddedResource CreateEmbedded(string name, string href)
 	{
 		var embedded = new EmbeddedResource(name);

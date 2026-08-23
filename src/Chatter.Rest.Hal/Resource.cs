@@ -1,6 +1,7 @@
 using Chatter.Rest.Hal.Converters;
 using System;
 using System.Linq;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
@@ -19,6 +20,12 @@ public sealed record Resource : IHalPart
 	/// The normative HAL media type as defined in Section 4 of the HAL specification.
 	/// </summary>
 	public const string MediaType = "application/hal+json";
+
+	/// <summary>
+	/// Hash code contribution used for a state that cannot be represented as JSON. Equality of such
+	/// states falls back to reference identity, so every one of them must share a hash code.
+	/// </summary>
+	private const int UnrepresentableStateHashCode = -1;
 
 	private JsonNode? _resourceNode = null;
 	private object? _stateObject = null;
@@ -261,9 +268,24 @@ public sealed record Resource : IHalPart
 			return true;
 		}
 
-		return Links.Equals(other.Links)
-			&& Embedded.Equals(other.Embedded)
-			&& string.Equals(StateEqualityKey(), other.StateEqualityKey(), StringComparison.Ordinal);
+		if (!Links.Equals(other.Links) || !Embedded.Equals(other.Embedded))
+		{
+			return false;
+		}
+
+		var hasKey = TryGetStateEqualityKey(out var stateKey);
+		var otherHasKey = other.TryGetStateEqualityKey(out var otherStateKey);
+
+		if (!hasKey || !otherHasKey)
+		{
+			// At least one state cannot be represented as JSON, so its content cannot be compared.
+			// Falling back to the identity of the state object keeps two resources sharing one state
+			// object equal without reporting two distinct unrepresentable states, or an
+			// unrepresentable state and an absent one, as equal.
+			return ReferenceEquals(_stateObject, other._stateObject);
+		}
+
+		return string.Equals(stateKey, otherStateKey, StringComparison.Ordinal);
 	}
 
 	/// <summary>
@@ -281,35 +303,103 @@ public sealed record Resource : IHalPart
 			var hash = 17;
 			hash = (hash * 31) + Links.GetHashCode();
 			hash = (hash * 31) + Embedded.GetHashCode();
-			hash = (hash * 31) + (StateEqualityKey()?.GetHashCode() ?? 0);
+			hash = (hash * 31) + (TryGetStateEqualityKey(out var stateKey)
+				? (stateKey?.GetHashCode() ?? 0)
+				: UnrepresentableStateHashCode);
 			return hash;
 		}
 	}
 
 	/// <summary>
-	/// Produces a stable JSON representation of the resource state for equality purposes.
+	/// Produces a canonical JSON representation of the resource state for equality purposes.
 	/// </summary>
 	/// <remarks>
 	/// For a parsed resource the key is derived from the original JSON state rather than from
 	/// <c>_stateObject</c>, because <see cref="State{T}(JsonSerializerOptions?)"/> replaces the
 	/// cached state with whichever type was last requested. For a resource constructed with a state
 	/// object the key is derived from that object, which no read path mutates.
+	/// <para>
+	/// The key is canonical: object properties are ordered by name, because JSON object members are
+	/// unordered, while array element order is preserved, because JSON array order is significant.
+	/// This matches how <see cref="LinkCollection"/> and <see cref="EmbeddedResourceCollection"/>
+	/// compare against <see cref="LinkObjectCollection"/> and <see cref="ResourceCollection"/>.
+	/// </para>
 	/// </remarks>
-	private string? StateEqualityKey()
+	/// <param name="key">When this method returns true, contains the canonical state key, which is
+	/// null when the resource has no state.</param>
+	/// <returns>true if the state could be represented as JSON; false if it could not, in which case
+	/// the state has no comparable content.</returns>
+	private bool TryGetStateEqualityKey(out string? key)
 	{
 		try
 		{
-			var rawState = _stateCreator();
-			if (rawState != null)
+			JsonNode? stateNode = _stateCreator();
+			if (stateNode == null)
 			{
-				return rawState.ToJsonString();
+				if (_stateObject == null)
+				{
+					key = null;
+					return true;
+				}
+
+				stateNode = JsonSerializer.SerializeToNode(_stateObject, _jsonOptions);
 			}
 
-			return _stateObject == null ? null : JsonSerializer.Serialize(_stateObject, _jsonOptions);
+			var builder = new StringBuilder();
+			WriteCanonicalJson(stateNode, builder);
+			key = builder.ToString();
+			return true;
 		}
 		catch (Exception)
 		{
-			return null;
+			key = null;
+			return false;
 		}
+	}
+
+	/// <summary>
+	/// Writes a JSON node into <paramref name="builder"/> with object properties ordered by name and
+	/// array element order preserved, so that two nodes holding the same JSON content always produce
+	/// the same text.
+	/// </summary>
+	/// <param name="node">The node to write. May be null.</param>
+	/// <param name="builder">The builder to write into.</param>
+	private static void WriteCanonicalJson(JsonNode? node, StringBuilder builder)
+	{
+		if (node is JsonObject jsonObject)
+		{
+			builder.Append('{');
+			var first = true;
+			foreach (var property in jsonObject.OrderBy(p => p.Key, StringComparer.Ordinal))
+			{
+				if (!first)
+				{
+					builder.Append(',');
+				}
+				first = false;
+				builder.Append(JsonSerializer.Serialize(property.Key));
+				builder.Append(':');
+				WriteCanonicalJson(property.Value, builder);
+			}
+			builder.Append('}');
+			return;
+		}
+
+		if (node is JsonArray jsonArray)
+		{
+			builder.Append('[');
+			for (var i = 0; i < jsonArray.Count; i++)
+			{
+				if (i > 0)
+				{
+					builder.Append(',');
+				}
+				WriteCanonicalJson(jsonArray[i], builder);
+			}
+			builder.Append(']');
+			return;
+		}
+
+		builder.Append(node == null ? "null" : node.ToJsonString());
 	}
 }
