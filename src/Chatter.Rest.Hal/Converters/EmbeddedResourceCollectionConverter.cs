@@ -139,21 +139,7 @@ public sealed class EmbeddedResourceCollectionConverter : JsonConverter<Embedded
 		foreach (var embeddedvalue in embeddedResources)
 		{
 			writer.WritePropertyName(embeddedvalue.Name);
-			// If there is only one resource in collection, write as Object (unless collection has been explicitly
-			// flagged as a collection, in which case it should be written as an array even if only one element)
-			if (embeddedvalue.Resources.Count == 1 && !embeddedvalue.ForceWriteAsCollection)
-			{
-				JsonSerializer.Serialize(writer, embeddedvalue.Resources[0], options);
-			}
-			else
-			{
-				writer.WriteStartArray();
-				foreach (var resource in embeddedvalue.Resources)
-				{
-					JsonSerializer.Serialize(writer, resource, options);
-				}
-				writer.WriteEndArray();
-			}
+			ConverterHelpers.WriteEmbeddedResources(writer, embeddedvalue, options);
 		}
 		writer.WriteEndObject();
 	}

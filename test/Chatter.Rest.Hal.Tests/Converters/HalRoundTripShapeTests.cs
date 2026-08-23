@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using FluentAssertions;
 using Xunit;
 
@@ -152,6 +153,46 @@ namespace Chatter.Rest.Hal.Tests.Converters
 			var twice = JsonSerializer.Serialize(Resource.Parse(once));
 
 			twice.Should().Be(once);
+		}
+
+		[Fact]
+		public void A_Custom_ResourceCollection_Converter_Wins_Over_The_Built_In_Shape_Rule_Standalone()
+		{
+			// An options-registered converter takes precedence over the built-in one, so it decides the
+			// shape of the relation's value even when ForceWriteAsCollection is set.
+			var options = new JsonSerializerOptions();
+			options.Converters.Add(new StubResourceCollectionConverter());
+			var embedded = new EmbeddedResource("orders") { ForceWriteAsCollection = true };
+			embedded.Resources.Add(new Resource(new { id = 1 }));
+
+			JsonSerializer.Serialize(embedded, options).Should().Be("{\"orders\":\"stub\"}");
+		}
+
+		[Fact]
+		public void A_Custom_ResourceCollection_Converter_Wins_Over_The_Built_In_Shape_Rule_In_A_Collection()
+		{
+			var options = new JsonSerializerOptions();
+			options.Converters.Add(new StubResourceCollectionConverter());
+			var embedded = new EmbeddedResource("orders") { ForceWriteAsCollection = true };
+			embedded.Resources.Add(new Resource(new { id = 1 }));
+			var resource = new Resource(new { });
+			resource.Embedded.Add(embedded);
+
+			var node = JsonNode.Parse(JsonSerializer.Serialize(resource, options))!.AsObject();
+
+			node["_embedded"]!["orders"]!.GetValue<string>().Should().Be("stub");
+		}
+
+		private sealed class StubResourceCollectionConverter : JsonConverter<ResourceCollection>
+		{
+			public override ResourceCollection? Read(ref Utf8JsonReader reader, System.Type typeToConvert, JsonSerializerOptions options)
+			{
+				reader.Skip();
+				return new ResourceCollection();
+			}
+
+			public override void Write(Utf8JsonWriter writer, ResourceCollection value, JsonSerializerOptions options)
+				=> writer.WriteStringValue("stub");
 		}
 	}
 }

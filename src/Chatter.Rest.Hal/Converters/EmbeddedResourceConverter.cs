@@ -79,10 +79,11 @@ public sealed class EmbeddedResourceConverter : JsonConverter<EmbeddedResource>
 	/// Writes an EmbeddedResource to JSON with the name as the property key.
 	/// </summary>
 	/// <remarks>
-	/// The single-resource/array decision matches
-	/// <see cref="EmbeddedResourceCollectionConverter.Write"/> — including
-	/// <see cref="EmbeddedResource.ForceWriteAsCollection"/> — so the same instance produces the same
-	/// shape whether it is written standalone or as a member of an <c>_embedded</c> collection.
+	/// The resources are written by <see cref="ConverterHelpers.WriteEmbeddedResources"/>, the same routine
+	/// <see cref="EmbeddedResourceCollectionConverter.Write"/> uses — including
+	/// <see cref="EmbeddedResource.ForceWriteAsCollection"/> and the precedence of a caller-registered
+	/// <see cref="ResourceCollection"/> converter — so the same instance produces the same shape whether it
+	/// is written standalone or as a member of an <c>_embedded</c> collection.
 	/// </remarks>
 	/// <param name="writer">The JSON writer.</param>
 	/// <param name="value">The EmbeddedResource to serialize.</param>
@@ -91,19 +92,7 @@ public sealed class EmbeddedResourceConverter : JsonConverter<EmbeddedResource>
 	{
 		writer.WriteStartObject();
 		writer.WritePropertyName(value.Name);
-		if (value.Resources.Count == 1 && !value.ForceWriteAsCollection)
-		{
-			JsonSerializer.Serialize(writer, value.Resources[0], options);
-		}
-		else
-		{
-			writer.WriteStartArray();
-			foreach (var resource in value.Resources)
-			{
-				JsonSerializer.Serialize(writer, resource, options);
-			}
-			writer.WriteEndArray();
-		}
+		ConverterHelpers.WriteEmbeddedResources(writer, value, options);
 		writer.WriteEndObject();
 	}
 }

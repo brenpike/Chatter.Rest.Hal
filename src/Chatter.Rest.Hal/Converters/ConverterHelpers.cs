@@ -32,6 +32,46 @@ internal static class ConverterHelpers
 	internal static bool HasCustomConverter<T>(JsonSerializerOptions options, Type builtInConverterType)
 		=> options.GetConverter(typeof(T))?.GetType() != builtInConverterType;
 
+	/// <summary>
+	/// Writes the resources of an embedded relation as either a single Resource Object or an array of
+	/// Resource Objects (see
+	/// <see href="https://datatracker.ietf.org/doc/html/draft-kelly-json-hal#section-4.1.2"/>).
+	/// </summary>
+	/// <remarks>
+	/// Both <see cref="EmbeddedResourceConverter.Write"/> and
+	/// <see cref="EmbeddedResourceCollectionConverter.Write"/> route through here, so an
+	/// <see cref="EmbeddedResource"/> produces the same shape standalone as it does inside an
+	/// <c>_embedded</c> collection. A caller-registered <see cref="ResourceCollection"/> converter takes
+	/// precedence over the built-in shape rule and is handed the whole collection, exactly as it would be
+	/// for any other <see cref="ResourceCollection"/> value.
+	/// </remarks>
+	/// <param name="writer">The JSON writer, positioned after the relation's property name.</param>
+	/// <param name="embedded">The embedded relation whose resources are written.</param>
+	/// <param name="options">The caller's serializer options.</param>
+	internal static void WriteEmbeddedResources(Utf8JsonWriter writer, EmbeddedResource embedded, JsonSerializerOptions options)
+	{
+		if (HasCustomConverter<ResourceCollection>(options, typeof(ResourceCollectionConverter)))
+		{
+			JsonSerializer.Serialize(writer, embedded.Resources, options);
+			return;
+		}
+
+		// A single resource writes as an object unless the relation is explicitly flagged as a collection —
+		// which is how an incoming JSON array is preserved as an array.
+		if (embedded.Resources.Count == 1 && !embedded.ForceWriteAsCollection)
+		{
+			JsonSerializer.Serialize(writer, embedded.Resources[0], options);
+			return;
+		}
+
+		writer.WriteStartArray();
+		foreach (var resource in embedded.Resources)
+		{
+			JsonSerializer.Serialize(writer, resource, options);
+		}
+		writer.WriteEndArray();
+	}
+
 	internal static bool IsJsonNull(JsonNode? node)
 	{
 		if (node is not JsonValue jv) return false;
