@@ -183,6 +183,48 @@ namespace Chatter.Rest.Hal.Tests.Converters
 			node["_embedded"]!["orders"]!.GetValue<string>().Should().Be("stub");
 		}
 
+		[Fact]
+		public void Empty_Href_On_A_Link_Object_Round_Trips_As_An_Empty_String()
+		{
+			// Covers issue #120: the empty string is a valid RFC 3986 section 4.4 same-document reference and
+			// HAL section 5.1 defines href by reference to RFC 3986, so href must survive both directions
+			// instead of being dropped by the writer.
+			var json = "{\"_links\":{\"self\":{\"href\":\"\"}}}";
+
+			var resource = Resource.Parse(json);
+			var node = JsonNode.Parse(JsonSerializer.Serialize(resource))!.AsObject();
+
+			node["_links"]!["self"]!["href"]!.GetValue<string>().Should().BeEmpty();
+		}
+
+		[Fact]
+		public void Empty_Href_Inside_A_Link_Array_Round_Trips_As_An_Empty_String()
+		{
+			// The array shape reaches the same read path through LinkObjectCollectionConverter, so it is pinned
+			// separately from the single Link Object case.
+			var json = "{\"_links\":{\"self\":[{\"href\":\"\"}]}}";
+
+			var resource = Resource.Parse(json);
+			var node = JsonNode.Parse(JsonSerializer.Serialize(resource))!.AsObject();
+
+			node["_links"]!["self"]!.AsArray().Should().HaveCount(1);
+			node["_links"]!["self"]![0]!["href"]!.GetValue<string>().Should().BeEmpty();
+		}
+
+		[Fact]
+		public void Empty_Href_Round_Trips_Alongside_Its_Optional_Attributes()
+		{
+			// The same-document-reference branch and the normal branch share one optional-attribute helper, so
+			// an optional sibling must survive the empty-href branch too.
+			var json = "{\"_links\":{\"self\":{\"href\":\"\",\"title\":\"here\"}}}";
+
+			var resource = Resource.Parse(json);
+			var node = JsonNode.Parse(JsonSerializer.Serialize(resource))!.AsObject();
+
+			node["_links"]!["self"]!["href"]!.GetValue<string>().Should().BeEmpty();
+			node["_links"]!["self"]!["title"]!.GetValue<string>().Should().Be("here");
+		}
+
 		private sealed class StubResourceCollectionConverter : JsonConverter<ResourceCollection>
 		{
 			public override ResourceCollection? Read(ref Utf8JsonReader reader, System.Type typeToConvert, JsonSerializerOptions options)
