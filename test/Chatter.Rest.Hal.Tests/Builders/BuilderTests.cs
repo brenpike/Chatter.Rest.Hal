@@ -352,6 +352,21 @@ public class BuilderTests
 	}
 
 	[Fact]
+	public void Builder_AddLink_Curies_Path_Also_Defaults_To_Array()
+	{
+		// The array-form default applies to every builder path that creates the reserved
+		// relation, including the generic AddLink("curies") path (#119 review round).
+		var resource = ResourceBuilder.New()
+			.AddSelf().AddLinkObject("/orders")
+			.AddLink("curies").AddLinkObject("https://docs.acme.com/relations/{rel}")
+			.Build();
+
+		var doc = JsonDocument.Parse(JsonSerializer.Serialize(resource));
+		doc.RootElement.GetProperty("_links").GetProperty("curies").ValueKind
+			.Should().Be(JsonValueKind.Array);
+	}
+
+	[Fact]
 	public void Builder_AddCuries_AsArray_Works()
 	{
 		// AsArray() must work on the curies link relation via AddCuries().

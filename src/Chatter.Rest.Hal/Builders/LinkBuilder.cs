@@ -27,6 +27,9 @@ public sealed class LinkBuilder : HalBuilder<Link>, ILinkCreationStage, ICuriesL
 	{
 		_rel = rel;
 		_linkObjects = LinkObjectCollectionBuilder.New(this);
+		// The reserved "curies" relation is array-form by default per HAL section 8.3, whichever
+		// builder path creates it — AddCuries(), AddLink("curies"), or a merge into either.
+		_isArray = rel == CuriesLink;
 	}
 
 	/// <summary>
@@ -54,7 +57,7 @@ public sealed class LinkBuilder : HalBuilder<Link>, ILinkCreationStage, ICuriesL
 	/// </remarks>
 	/// <param name="parent">The parent link collection builder.</param>
 	/// <returns>A new link builder.</returns>
-	public static LinkBuilder Curies(IBuildHalPart<LinkCollection> parent) => new(parent, CuriesLink) { _isArray = true };
+	public static LinkBuilder Curies(IBuildHalPart<LinkCollection> parent) => new(parent, CuriesLink);
 
 	internal void SetIsArray() => _isArray = true;
 
