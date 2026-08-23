@@ -33,15 +33,26 @@ public sealed class ResourceConverter : JsonConverter<Resource>
 			throw new JsonException("A HAL Resource must be a JSON object.");
 		}
 
+		return ReadFromNode(resourceObject, options);
+	}
+
+	/// <summary>
+	/// Materializes a Resource directly from an already-parsed node. Nested converters call this
+	/// instead of <see cref="JsonNode.Deserialize"/>, which would re-serialize the subtree to UTF-8
+	/// and re-parse it — repeating that once per ancestor turns a deeply nested <c>_embedded</c>
+	/// chain into O(depth × size) work; walking the existing tree keeps the whole document at O(size).
+	/// </summary>
+	internal static Resource ReadFromNode(JsonObject resourceObject, JsonSerializerOptions options)
+	{
 		// The HAL reserved names are literal and case-sensitive, so they are matched ordinally
 		// regardless of the caller's PropertyNameCaseInsensitive setting. This keeps the reserved
 		// lookups consistent with the state stripping in jsonObjectCreator.
-		// Both collections are materialized eagerly for the same reason as the check above: a
-		// malformed _links/_embedded member must fail here, not on a later property read.
-		var links = ConverterHelpers.GetReservedProperty(resourceObject, ConverterHelpers.LinksProperty)
-			?.Deserialize<LinkCollection>(options);
-		var embedded = ConverterHelpers.GetReservedProperty(resourceObject, ConverterHelpers.EmbeddedProperty)
-			?.Deserialize<EmbeddedResourceCollection>(options);
+		// Both collections are materialized eagerly so a malformed _links/_embedded member fails
+		// at the deserialization call, not on a later property read.
+		var linksNode = ConverterHelpers.GetReservedProperty(resourceObject, ConverterHelpers.LinksProperty);
+		var links = linksNode is null ? null : LinkCollectionConverter.ReadFromNode(linksNode, options);
+		var embeddedNode = ConverterHelpers.GetReservedProperty(resourceObject, ConverterHelpers.EmbeddedProperty);
+		var embedded = embeddedNode is null ? null : EmbeddedResourceCollectionConverter.ReadFromNode(embeddedNode, options);
 
 		LinkCollection? linkCollectionCreator() => links;
 

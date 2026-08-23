@@ -22,7 +22,16 @@ public sealed class EmbeddedResourceCollectionConverter : JsonConverter<Embedded
 	public override EmbeddedResourceCollection? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
 	{
 		var node = ConverterHelpers.ParseNode(ref reader);
+		return ReadFromNode(node, options);
+	}
 
+	/// <summary>
+	/// Materializes an EmbeddedResourceCollection directly from an already-parsed node. Nested
+	/// resources are built by walking the existing tree rather than re-serializing each subtree,
+	/// which kept the old path at O(depth × size) for deeply nested <c>_embedded</c> chains.
+	/// </summary>
+	internal static EmbeddedResourceCollection ReadFromNode(JsonNode? node, JsonSerializerOptions options)
+	{
 		// Duplicate names are normalized last-wins before anything reaches the collection: HAL models
 		// _embedded as a JSON object keyed by relation name, so a name can only appear once, and a
 		// duplicate must not surface as an ArgumentException from the collection's name index.
@@ -78,16 +87,14 @@ public sealed class EmbeddedResourceCollectionConverter : JsonConverter<Embedded
 			var embedded = new EmbeddedResource(kvp.Key);
 			if (kvp.Value is JsonObject val)
 			{
-				var res = val.Deserialize<Resource>(options);
-				if (res != null) embedded.Resources.Add(res);
+				embedded.Resources.Add(ResourceConverter.ReadFromNode(val, options));
 			}
 
 			else if (kvp.Value is JsonArray ja)
 			{
-				var rc = ja.Deserialize<ResourceCollection>(options) ?? new ResourceCollection();
 				embedded = new EmbeddedResource(kvp.Key)
 				{
-					Resources = rc
+					Resources = ResourceCollectionConverter.ReadFromNode(ja, options)
 				};
 			}
 

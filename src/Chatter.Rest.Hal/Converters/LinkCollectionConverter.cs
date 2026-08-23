@@ -34,7 +34,15 @@ public sealed class LinkCollectionConverter : JsonConverter<LinkCollection>
 	public override LinkCollection? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
 	{
 		var node = ConverterHelpers.ParseNode(ref reader);
+		return ReadFromNode(node, options);
+	}
 
+	/// <summary>
+	/// Materializes a LinkCollection directly from an already-parsed node, so nested converters can
+	/// reuse the existing tree instead of round-tripping the subtree through UTF-8 bytes.
+	/// </summary>
+	internal static LinkCollection ReadFromNode(JsonNode? node, JsonSerializerOptions options)
+	{
 		// Duplicate rels are normalized last-wins before anything reaches the collection: HAL models
 		// _links as a JSON object keyed by rel, so a rel can only appear once, and a duplicate must
 		// not surface as an ArgumentException from the collection's rel index.

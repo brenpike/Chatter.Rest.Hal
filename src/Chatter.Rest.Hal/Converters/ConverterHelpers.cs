@@ -22,11 +22,6 @@ internal static class ConverterHelpers
 	/// <inheritdoc cref="LinksProperty"/>
 	internal const string EmbeddedProperty = "_embedded";
 
-	/// <summary>
-	/// Number of property-name hashes held on the stack before spilling to the heap.
-	/// </summary>
-	private const int InlinePropertyNameCapacity = 16;
-
 	internal static bool IsJsonNull(JsonNode? node)
 	{
 		if (node is not JsonValue jv) return false;
@@ -54,8 +49,9 @@ internal static class ConverterHelpers
 	/// exhibit for a construct RFC 8259 leaves undefined. <see cref="JsonNode"/> otherwise defers a
 	/// duplicate-key <see cref="ArgumentException"/> to whenever the object is first materialized —
 	/// often at property-access time, long after deserialization returned. Because duplicates are rare,
-	/// they are detected with an allocation-free pre-scan over a copy of the reader, so well-formed
-	/// payloads take the ordinary lazy <see cref="JsonNode.Parse(ref Utf8JsonReader, JsonNodeOptions?)"/>
+	/// they are detected with an iterative pre-scan over a copy of the reader (allocations bounded by
+	/// nesting depth, native stack usage constant), so well-formed payloads take the ordinary lazy
+	/// <see cref="JsonNode.Parse(ref Utf8JsonReader, JsonNodeOptions?)"/>
 	/// path and only a payload that actually contains duplicates pays for a rebuild.
 	/// </para>
 	/// </remarks>
@@ -86,36 +82,72 @@ internal static class ConverterHelpers
 
 	private static JsonNode? ToNode(JsonElement element)
 	{
-		switch (element.ValueKind)
+		// Iterative rebuild: recursing once per nesting level would tie the accepted depth to the
+		// native stack instead of the reader's MaxDepth, and a caller who raises MaxDepth could
+		// then hit an uncatchable StackOverflowException on otherwise permitted input.
+		if (element.ValueKind is not JsonValueKind.Object and not JsonValueKind.Array)
 		{
-			case JsonValueKind.Object:
+			return LeafToNode(element);
+		}
+
+		var root = CreateShell(element.ValueKind);
+		var work = new Stack<(JsonElement Source, JsonNode Target)>();
+		work.Push((element, root));
+
+		while (work.Count > 0)
+		{
+			var (source, target) = work.Pop();
+			if (source.ValueKind == JsonValueKind.Object)
 			{
-				var obj = new JsonObject();
-				foreach (var property in element.EnumerateObject())
+				var obj = (JsonObject)target;
+				foreach (var property in source.EnumerateObject())
 				{
 					// The indexer overwrites rather than throwing, which is what makes duplicate
 					// property names resolve last-wins instead of deferring an ArgumentException.
-					obj[property.Name] = ToNode(property.Value);
+					// A shell replaced by a later duplicate is filled and discarded, which wastes
+					// a little work on hostile input but never changes the resulting tree.
+					if (property.Value.ValueKind is JsonValueKind.Object or JsonValueKind.Array)
+					{
+						var shell = CreateShell(property.Value.ValueKind);
+						obj[property.Name] = shell;
+						work.Push((property.Value, shell));
+					}
+					else
+					{
+						obj[property.Name] = LeafToNode(property.Value);
+					}
 				}
-				return obj;
 			}
-			case JsonValueKind.Array:
+			else
 			{
-				var array = new JsonArray();
-				foreach (var item in element.EnumerateArray())
+				var array = (JsonArray)target;
+				foreach (var item in source.EnumerateArray())
 				{
-					array.Add(ToNode(item));
+					if (item.ValueKind is JsonValueKind.Object or JsonValueKind.Array)
+					{
+						var shell = CreateShell(item.ValueKind);
+						array.Add(shell);
+						work.Push((item, shell));
+					}
+					else
+					{
+						array.Add(LeafToNode(item));
+					}
 				}
-				return array;
 			}
-			case JsonValueKind.Null:
-			case JsonValueKind.Undefined:
-				return null;
-			default:
-				// element already belongs to the detached document, so it needs no further cloning.
-				return JsonValue.Create(element);
 		}
+
+		return root;
 	}
+
+	private static JsonNode CreateShell(JsonValueKind kind)
+		=> kind == JsonValueKind.Object ? new JsonObject() : new JsonArray();
+
+	private static JsonNode? LeafToNode(JsonElement element)
+		=> element.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined
+			? null
+			// element already belongs to the detached document, so it needs no further cloning.
+			: JsonValue.Create(element);
 
 	/// <summary>
 	/// Scans a value for duplicate property names without allocating a node tree.
@@ -128,68 +160,73 @@ internal static class ConverterHelpers
 	/// </remarks>
 	private static bool ContainsDuplicatePropertyNames(ref Utf8JsonReader reader)
 	{
-		switch (reader.TokenType)
+		if (reader.TokenType is not JsonTokenType.StartObject and not JsonTokenType.StartArray)
 		{
-			case JsonTokenType.StartObject:
-				return ObjectContainsDuplicatePropertyNames(ref reader);
-			case JsonTokenType.StartArray:
-				while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
-				{
-					if (ContainsDuplicatePropertyNames(ref reader)) return true;
-				}
-				return false;
-			default:
-				return false;
+			return false;
 		}
-	}
 
-	private static bool ObjectContainsDuplicatePropertyNames(ref Utf8JsonReader reader)
-	{
-		Span<long> inlineHashes = stackalloc long[InlinePropertyNameCapacity];
-		var count = 0;
-		// Hash-based after the inline threshold so wide objects stay ~linear instead of O(n²).
-		HashSet<long>? overflowHashes = null;
+		// Iterative scan: recursing once per nesting level (with a stackalloc per object frame)
+		// would let a caller who raises JsonSerializerOptions.MaxDepth push otherwise permitted
+		// duplicate-free input into an uncatchable StackOverflowException. Depth is instead
+		// tracked on the heap; the reader itself keeps enforcing MaxDepth.
+		// One HashSet per open-object depth, reused across siblings at that depth, keeps the scan
+		// ~linear in document size with allocations bounded by nesting depth. The token type of
+		// each End token already says which container closed, so plain counters suffice.
+		var nameSets = new List<HashSet<long>>();
+		var openContainers = 0;
+		var openObjects = 0;
 
-		while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
+		void OpenObject()
 		{
-			if (reader.HasValueSequence)
-			{
-				// The name is split across buffer segments, so ValueSpan is unusable here.
-				return true;
-			}
+			if (nameSets.Count == openObjects) nameSets.Add(new HashSet<long>());
+			else nameSets[openObjects].Clear();
+			openObjects++;
+		}
 
-			var name = reader.ValueSpan;
-			if (name.IndexOf(JsonEscape) >= 0)
-			{
-				// Escaped names would have to be unescaped before they could be compared.
-				return true;
-			}
+		openContainers = 1;
+		if (reader.TokenType == JsonTokenType.StartObject) OpenObject();
 
-			var hash = Fnv1a64(name);
-			var limit = count < InlinePropertyNameCapacity ? count : InlinePropertyNameCapacity;
-			for (var i = 0; i < limit; i++)
+		while (openContainers > 0 && reader.Read())
+		{
+			switch (reader.TokenType)
 			{
-				if (inlineHashes[i] == hash) return true;
-			}
+				case JsonTokenType.StartObject:
+					openContainers++;
+					OpenObject();
+					break;
+				case JsonTokenType.StartArray:
+					openContainers++;
+					break;
+				case JsonTokenType.EndObject:
+					openContainers--;
+					openObjects--;
+					break;
+				case JsonTokenType.EndArray:
+					openContainers--;
+					break;
+				case JsonTokenType.PropertyName:
+				{
+					if (reader.HasValueSequence)
+					{
+						// The name is split across buffer segments, so ValueSpan is unusable here.
+						return true;
+					}
 
-			if (overflowHashes != null && overflowHashes.Contains(hash))
-			{
-				return true;
-			}
+					var name = reader.ValueSpan;
+					if (name.IndexOf(JsonEscape) >= 0)
+					{
+						// Escaped names would have to be unescaped before they could be compared.
+						return true;
+					}
 
-			if (count < InlinePropertyNameCapacity)
-			{
-				inlineHashes[count] = hash;
-			}
-			else
-			{
-				(overflowHashes ??= new HashSet<long>()).Add(hash);
-			}
+					if (!nameSets[openObjects - 1].Add(Fnv1a64(name)))
+					{
+						return true;
+					}
 
-			count++;
-
-			reader.Read();
-			if (ContainsDuplicatePropertyNames(ref reader)) return true;
+					break;
+				}
+			}
 		}
 
 		return false;
