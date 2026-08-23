@@ -19,21 +19,28 @@ public sealed class ResourceConverter : JsonConverter<Resource>
 	/// <returns>The deserialized Resource.</returns>
 	public override Resource? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
 	{
-		var node = JsonNode.Parse(ref reader, new JsonNodeOptions() { PropertyNameCaseInsensitive = true })!;
+		var node = JsonNode.Parse(ref reader, ConverterHelpers.NodeOptions(options))!;
 
+		// The HAL reserved names are literal and case-sensitive, so they are matched ordinally
+		// regardless of the caller's PropertyNameCaseInsensitive setting. This keeps the reserved
+		// lookups below consistent with the state stripping in jsonObjectCreator.
 		LinkCollection? linkCollectionCreator()
-			=> node?["_links"]?.Deserialize<LinkCollection>(options);
+			=> node is JsonObject linksObj
+				? ConverterHelpers.GetReservedProperty(linksObj, ConverterHelpers.LinksProperty)?.Deserialize<LinkCollection>(options)
+				: node?[ConverterHelpers.LinksProperty]?.Deserialize<LinkCollection>(options);
 
 		EmbeddedResourceCollection? embeddedCollectionCreator()
-			=> node?["_embedded"]?.Deserialize<EmbeddedResourceCollection>(options);
+			=> node is JsonObject embeddedObj
+				? ConverterHelpers.GetReservedProperty(embeddedObj, ConverterHelpers.EmbeddedProperty)?.Deserialize<EmbeddedResourceCollection>(options)
+				: node?[ConverterHelpers.EmbeddedProperty]?.Deserialize<EmbeddedResourceCollection>(options);
 
 		JsonObject? jsonObjectCreator()
 		{
 			if (node is not JsonObject sourceObj) return null;
-			var result = new JsonObject();
+			var result = new JsonObject(ConverterHelpers.NodeOptions(options));
 			foreach (var kvp in sourceObj)
 			{
-				if (kvp.Key == "_links" || kvp.Key == "_embedded") continue;
+				if (ConverterHelpers.IsReservedProperty(kvp.Key)) continue;
 #if NET8_0_OR_GREATER
 				result.Add(kvp.Key, kvp.Value?.DeepClone());
 #else

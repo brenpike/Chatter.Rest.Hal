@@ -19,7 +19,7 @@ public sealed class EmbeddedResourceCollectionConverter : JsonConverter<Embedded
 	/// <returns>The deserialized EmbeddedResourceCollection.</returns>
 	public override EmbeddedResourceCollection? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
 	{
-		var node = JsonNode.Parse(ref reader, new JsonNodeOptions() { PropertyNameCaseInsensitive = true });
+		var node = JsonNode.Parse(ref reader, ConverterHelpers.NodeOptions(options));
 
 		var embeddedResources = new EmbeddedResourceCollection();
 

@@ -22,7 +22,7 @@ public sealed class EmbeddedResourceConverter : JsonConverter<EmbeddedResource>
 	/// <exception cref="JsonException">Thrown when a single embedded resource object is expected but not found.</exception>
 	public override EmbeddedResource? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
 	{
-		var node = JsonNode.Parse(ref reader, new JsonNodeOptions() { PropertyNameCaseInsensitive = true });
+		var node = JsonNode.Parse(ref reader, ConverterHelpers.NodeOptions(options));
 
 		if (node is not JsonObject jo)
 		{
