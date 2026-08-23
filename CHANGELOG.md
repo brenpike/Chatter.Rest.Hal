@@ -24,9 +24,9 @@ rejected.
   case-variant wins, matching duplicate-key normalization). Case-variant state properties such as
   `{"Name":..,"name":..}` no longer collide. ([#93](https://github.com/brenpike/Chatter.Rest.Hal/issues/93))
 - **Malformed input throws `JsonException`.** Structurally invalid HAL (non-object resources,
-  non-string hrefs, invalid `_links`/`_embedded` shapes, duplicate JSON keys) fails at the
-  deserialization call with `JsonException` — never `InvalidOperationException`/`ArgumentException`,
-  and never deferred to property access. ([#94](https://github.com/brenpike/Chatter.Rest.Hal/issues/94),
+  non-string hrefs, invalid `_links`/`_embedded` shapes) fails at the deserialization call with
+  `JsonException` — never `InvalidOperationException`/`ArgumentException`, and never deferred to
+  property access. (Duplicate JSON keys are not an error: they normalize last-wins, see below.) ([#94](https://github.com/brenpike/Chatter.Rest.Hal/issues/94),
   [#95](https://github.com/brenpike/Chatter.Rest.Hal/issues/95))
 - **Duplicate link relations are rejected.** `LinkCollection.Add` (and
   `EmbeddedResourceCollection.Add` for duplicate names) throws `ArgumentException` on a duplicate
