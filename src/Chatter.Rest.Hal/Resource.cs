@@ -311,10 +311,11 @@ public sealed record Resource : IHalPart
 	/// Produces a canonical JSON representation of the resource state for equality purposes.
 	/// </summary>
 	/// <remarks>
-	/// For a parsed resource the key is derived from the original JSON state rather than from
-	/// <c>_stateObject</c>, because <see cref="State{T}(JsonSerializerOptions?)"/> replaces the
-	/// cached state with whichever type was last requested. For a resource constructed with a state
-	/// object the key is derived from that object, which no read path mutates.
+	/// For a parsed resource the key is derived from the original JSON state — the same source
+	/// <see cref="State{T}(JsonSerializerOptions?)"/> materializes its detached projections from,
+	/// so a projection can never desynchronize equality from serialization. For a resource
+	/// constructed with a state object the key is derived from that object, which no read path
+	/// mutates.
 	/// <para>
 	/// The key is canonical: object properties are ordered by name, because JSON object members are
 	/// unordered, while array element order is preserved, because JSON array order is significant.

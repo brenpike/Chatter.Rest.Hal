@@ -267,8 +267,9 @@ Lazily deserializes the resource's state portion into a strongly typed object:
 public T? State<T>() where T : class
 ```
 
-- If the internal state is a `JsonElement`, deserializes it to `T` and caches the result.
-- If the internal state is null, invokes the `_stateCreator` delegate (which returns the JSON minus `_links`/`_embedded`) and deserializes that.
+- If the internal state is a `JsonElement`, deserializes it to `T` on every call — the returned object is a detached projection, so mutating it does not change what the resource serializes or how it compares.
+- If the internal state is null, invokes the `_stateCreator` delegate (which returns the JSON minus `_links`/`_embedded`) and deserializes that, likewise detached on every call.
+- A state supplied to the constructor directly as `T` is returned by reference (the one non-detached case).
 - Returns `null` on any exception.
 - **Special guard:** When `T == typeof(Link)`, requires the JSON object to have exactly one property before deserializing. This prevents a multi-property state DTO from being misidentified as a HAL link.
 
