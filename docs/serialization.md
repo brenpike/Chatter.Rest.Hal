@@ -226,6 +226,25 @@ There is no public builder API to set `ForceWriteAsCollection` independently. It
 
 ## 5. Deserialization Behavior
 
+Every read path that materializes a Link Object from its **object form** — `{ "href": ... }`, whether standalone, nested under a `_links` relation, or inside a Link Object array — applies the same tolerance ladder to the incoming `href` value:
+
+| Input | Behavior |
+|---|---|
+| `"href": "/orders/1"` | Accepted. `LinkObject.Href` is the string exactly as written. |
+| `"href": ""` | **Accepted.** Round-trips losslessly. |
+| `"href": "   "` (whitespace-only) | The Link Object is **silently dropped**. No exception is thrown. |
+| `"href": null` | The Link Object is **silently dropped**. No exception is thrown. |
+| `href` absent from the Link Object | The Link Object is **silently dropped**. No exception is thrown. |
+| `"href": 123` (any non-string JSON value) | Throws `JsonException`. |
+
+**Why the empty string is accepted.** HAL Section 5.1 defines `href` as a URI or URI Template, deferring to RFC 3986 for the former. RFC 3986 Section 4.4 defines the empty string as a *same-document reference* — a legal URI reference that resolves to the current document. An empty `href` is therefore spec-legal input, not malformed input, so it is preserved rather than dropped: it deserializes to `Href == string.Empty` and re-serializes as `"href": ""`, with no value lost on either leg of the round trip.
+
+**Why whitespace-only and `null` are not.** A whitespace-only string is not a URI reference under RFC 3986, and an absent or `null` `href` violates HAL Section 5.1's requirement that a Link Object have an `href`. Both are malformed and are dropped tolerantly, consistent with the rest of the read pipeline (see Section 5.3).
+
+**The bare-string shorthand is not on this ladder.** The shorthand form (`"rel": "/orders/1"`) is a library convenience that the HAL specification does not define, and it deliberately diverges from the ladder on the empty string: an empty shorthand yields no `LinkObject` at all. See Section 5.2 for the rationale.
+
+**Why a non-string throws.** A non-string `href` is a JSON type violation rather than a malformed URI. Tolerance applies to values that are the right JSON type but the wrong content; a structurally wrong document is surfaced as a `JsonException` rather than silently discarded.
+
 ### 5.1 `ResourceConverter.Read`
 
 Parses the entire JSON input into a `JsonNode` tree. Rather than immediately deserializing `_links` and `_embedded`, it captures three lazy `Func<T>` delegates:
@@ -244,8 +263,10 @@ Handles three input shapes for each link relation value:
 |---|---|
 | JSON object (`{ "href": "..." }`) | Deserializes as a single `LinkObject`; `Link.IsArray` remains `false` |
 | JSON array (`[{ "href": "..." }, ...]`) | Deserializes as `LinkObjectCollection`; sets `Link.IsArray = true` |
-| JSON string (`"rel": "/path"`) | Creates a `LinkObject` with that string as `href` |
+| JSON string (`"rel": "/path"`) | Creates a `LinkObject` with that string as `href`. An empty or whitespace-only string is **not** accepted and yields no `LinkObject` |
 | `null` | Creates a `Link` with no `LinkObjects` |
+
+The object form and the string shorthand deliberately diverge on the empty string. The object form is a HAL Section 5 Link Object, so its `href` is governed by the spec and must accept every legal URI reference — including the empty same-document reference (see the tolerance ladder above). The bare-string shorthand is not defined by the HAL specification at all; it is a library convenience for the common single-`href` case. Rejecting an empty shorthand therefore narrows only this library's own extension, not the input space HAL requires an implementation to accept, and so is not a spec-acceptance deviation.
 
 ### 5.3 `LinkConverter.Read`
 
@@ -254,8 +275,10 @@ Expects a single-property JSON object where the property name is the link relati
 - Not a JSON object
 - A JSON object with more than one property
 - A blank relation key
-- A link object value missing `href`
-- An array entry missing `href`
+- A link object value whose `href` is absent or JSON `null`
+- An array entry that is not a JSON object, or whose `href` is absent or JSON `null`
+
+A whitespace-only `href` is **not** on that list. It passes the presence precheck, `LinkObjectConverter` then rejects it, and `LinkConverter` returns the `Link` carrying an **empty** `LinkObjects` collection rather than `null`. An empty-string `href` is accepted and materializes a same-document `LinkObject` (see the tolerance ladder above).
 
 When the value is a JSON array, sets `Link.IsArray = true` on the resulting `Link`.
 

@@ -7,7 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [2.0.0] - 2026-08-24
+## [2.1.0] - 2026-08-23
+
+### Fixed
+
+- A Link Object whose `href` is the empty string is no longer silently dropped on
+  deserialization. The empty string is a valid RFC 3986 section 4.4 same-document reference,
+  which HAL section 5.1 permits by reference; it now materializes (preserving sibling
+  properties such as `title`) and re-serializes as `"href": ""`, making the round-trip
+  lossless. Whitespace-only, JSON-null, and absent `href` still drop the Link Object; a
+  non-string `href` still throws `JsonException`; the public `LinkObject(string href)`
+  constructor and the fluent builder path still reject null and whitespace hrefs.
+  ([#120](https://github.com/brenpike/Chatter.Rest.Hal/issues/120))
+
+## [2.0.0] - 2026-08-23
 
 A hardening and correctness release: a full-repository review produced 22 verified fixes across
 converters, domain types, builders, and extensions, followed by a clause-by-clause conformance
@@ -78,5 +91,6 @@ rejected.
   ([#120](https://github.com/brenpike/Chatter.Rest.Hal/issues/120), open: empty-string href
   tolerance).
 
-[Unreleased]: https://github.com/brenpike/Chatter.Rest.Hal/compare/hal/v2.0.0...HEAD
+[Unreleased]: https://github.com/brenpike/Chatter.Rest.Hal/compare/hal/v2.1.0...HEAD
+[2.1.0]: https://github.com/brenpike/Chatter.Rest.Hal/compare/hal/v2.0.0...hal/v2.1.0
 [2.0.0]: https://github.com/brenpike/Chatter.Rest.Hal/compare/hal/v1.1.0...hal/v2.0.0

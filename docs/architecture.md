@@ -36,7 +36,7 @@ public sealed record Resource : IHalPart
 ```csharp
 public sealed record Link : IHalPart
 {
-    public Link(string rel);      // throws ArgumentNullException if null/whitespace
+    public Link(string rel);      // throws ArgumentException if null/whitespace
 
     public string Rel { get; }
     public LinkObjectCollection LinkObjects { get; set; }
@@ -51,7 +51,10 @@ public sealed record Link : IHalPart
 ```csharp
 public sealed record LinkObject : IHalPart
 {
-    public LinkObject(string href);   // throws ArgumentNullException if null/whitespace
+    public LinkObject(string href);   // throws ArgumentException if null/whitespace
+    private LinkObject();             // same-document reference; Href == string.Empty
+
+    internal static LinkObject SameDocumentReference();
 
     public string Href { get; }           // REQUIRED
     public bool? Templated { get; set; }  // OPTIONAL
@@ -65,6 +68,8 @@ public sealed record LinkObject : IHalPart
 ```
 
 All properties except `Href` are optional per the HAL specification.
+
+- `SameDocumentReference()` — internal seam backed by the private parameterless constructor, producing a `LinkObject` whose `Href` is `string.Empty` (an RFC 3986 same-document reference). It is reachable only from the deserialization path, and it takes no parameter precisely so it cannot produce a null or whitespace-only href.
 
 ### `EmbeddedResource`
 
@@ -328,7 +333,9 @@ Expects a single-property JSON object where the key is the relation name. Return
 - Input is not a `JsonObject`.
 - The object does not have exactly one property.
 - The relation key is null or whitespace.
-- The value is an object without a valid `href`.
+- The value is an object whose `href` is absent or JSON null.
+
+A whitespace-only `href` does **not** yield `null` here — the precheck passes and the `Link` is returned with an empty `LinkObjectCollection`. An empty-string `href` is valid (RFC 3986 same-document reference) and materializes a `LinkObject`.
 
 **`EmbeddedResourceCollectionConverter.Read`**
 

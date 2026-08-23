@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -24,8 +25,13 @@ namespace Chatter.Rest.Hal.Tests
 			lo.Templated.Should().NotBeTrue();
 		}
 
+		// HAL section 5.1 defines href by reference to RFC 3986, and RFC 3986 section 4.4 makes the empty
+		// string a valid same-document reference. The read path therefore accepts an empty href while every
+		// other blank or non-string form stays rejected. The tests below pin each rung of that ladder.
+		// https://datatracker.ietf.org/doc/html/rfc3986#section-4.4
+
 		[Fact]
-		public void Href_Empty_String_Is_Invalid_On_Deserialization()
+		public void Href_Empty_String_Deserializes_As_Same_Document_Reference()
 		{
 			var json = "{ \"_links\": { \"self\": { \"href\": \"\" } } }";
 			var node = JsonNode.Parse(json, new JsonNodeOptions { PropertyNameCaseInsensitive = true });
@@ -34,8 +40,122 @@ namespace Chatter.Rest.Hal.Tests
 			resource.Should().NotBeNull();
 			var link = resource!.Links.Single(l => l.Rel == "self");
 
-			// LinkObjectConverter treats an empty href as invalid and returns null, so the Link will have no LinkObjects
+			link.LinkObjects.Should().HaveCount(1);
+			link.LinkObjects.Single().Href.Should().BeEmpty();
+		}
+
+		[Fact]
+		public void Href_Empty_String_Preserves_Sibling_Attributes()
+		{
+			// Dropping the whole Link Object also discarded its other attributes, which is the defect
+			// reported in issue #120. Cover a boolean-valued and a string-valued optional so both
+			// branches of the shared optional-attribute population are exercised on this path.
+			var json = "{ \"_links\": { \"self\": { \"href\": \"\", \"title\": \"t\", \"name\": \"n\", \"templated\": true } } }";
+			var node = JsonNode.Parse(json, new JsonNodeOptions { PropertyNameCaseInsensitive = true });
+			var resource = node.Deserialize<Chatter.Rest.Hal.Resource>(new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+			resource.Should().NotBeNull();
+			var link = resource!.Links.Single(l => l.Rel == "self");
+			link.LinkObjects.Should().HaveCount(1);
+			var lo = link.LinkObjects.Single();
+
+			lo.Href.Should().BeEmpty();
+			lo.Title.Should().Be("t");
+			lo.Name.Should().Be("n");
+			lo.Templated.Should().BeTrue();
+		}
+
+		[Fact]
+		public void Href_Whitespace_Only_Is_Invalid_On_Deserialization()
+		{
+			// Only the empty string is a same-document reference; a whitespace-only href stays invalid,
+			// so the converter returns null and the relation survives with no link objects.
+			var json = "{ \"_links\": { \"self\": { \"href\": \"   \" } } }";
+			var node = JsonNode.Parse(json, new JsonNodeOptions { PropertyNameCaseInsensitive = true });
+			var resource = node.Deserialize<Chatter.Rest.Hal.Resource>(new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+			resource.Should().NotBeNull();
+			var link = resource!.Links.Single(l => l.Rel == "self");
+
 			link.LinkObjects.Should().BeEmpty();
+		}
+
+		[Fact]
+		public void Href_Null_Is_Invalid_On_Deserialization()
+		{
+			var json = "{ \"_links\": { \"self\": { \"href\": null } } }";
+			var node = JsonNode.Parse(json, new JsonNodeOptions { PropertyNameCaseInsensitive = true });
+			var resource = node.Deserialize<Chatter.Rest.Hal.Resource>(new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+			resource.Should().NotBeNull();
+			var link = resource!.Links.Single(l => l.Rel == "self");
+
+			link.LinkObjects.Should().BeEmpty();
+		}
+
+		[Fact]
+		public void Href_NonString_Throws_JsonException_On_Deserialization()
+		{
+			// A non-string href is malformed rather than blank, so it keeps failing loudly instead of
+			// being tolerated. The failure is EAGER: the Deserialize call itself throws, before any lazy
+			// Links access. Only the Deserialize call is inside the asserted action, which is what pins
+			// that timing - folding a resource.Links access into the same action would pass whether the
+			// throw were eager or lazy and would leave the accept/reject timing unpinned.
+			var json = "{ \"_links\": { \"self\": { \"href\": 123 } } }";
+			var node = JsonNode.Parse(json, new JsonNodeOptions { PropertyNameCaseInsensitive = true });
+
+			Action deserializing = () => node.Deserialize<Chatter.Rest.Hal.Resource>(new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+			deserializing.Should().Throw<JsonException>();
+		}
+
+		// The bare-string shorthand ("rel": "/orders/1") is a library convenience the HAL specification does
+		// not define, so an empty shorthand is not a spec-valid Link Object and deliberately stays OFF the
+		// object-form tolerance ladder above (see docs/serialization.md section 5.2). The three tests below
+		// pin that divergence at every shorthand read path so it cannot drift silently now that the object
+		// form accepts an empty href.
+
+		[Fact]
+		public void Empty_Href_Shorthand_Under_A_Links_Relation_Yields_No_LinkObject()
+		{
+			// LinkCollectionConverter shorthand path.
+			var json = "{ \"_links\": { \"self\": \"\" } }";
+			var node = JsonNode.Parse(json, new JsonNodeOptions { PropertyNameCaseInsensitive = true });
+			var resource = node.Deserialize<Chatter.Rest.Hal.Resource>(new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+			resource.Should().NotBeNull();
+			var link = resource!.Links.Single(l => l.Rel == "self");
+
+			link.LinkObjects.Should().BeEmpty();
+		}
+
+		[Fact]
+		public void Empty_Href_Shorthand_Inside_A_Link_Object_Array_Yields_No_LinkObject()
+		{
+			// LinkObjectCollectionConverter shorthand path.
+			var json = "{ \"_links\": { \"self\": [ \"\" ] } }";
+			var node = JsonNode.Parse(json, new JsonNodeOptions { PropertyNameCaseInsensitive = true });
+			var resource = node.Deserialize<Chatter.Rest.Hal.Resource>(new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+			resource.Should().NotBeNull();
+			var link = resource!.Links.Single(l => l.Rel == "self");
+
+			link.LinkObjects.Should().BeEmpty();
+		}
+
+		[Fact]
+		public void Empty_Href_Shorthand_On_A_Standalone_Link_Yields_Null()
+		{
+			// LinkConverter shorthand path. The non-empty case is asserted alongside it so the null result is
+			// pinned to the empty href specifically, not to the standalone-Link shape.
+			var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+
+			var empty = JsonSerializer.Deserialize<Chatter.Rest.Hal.Link>("{ \"self\": \"\" }", options);
+			var populated = JsonSerializer.Deserialize<Chatter.Rest.Hal.Link>("{ \"self\": \"/orders/1\" }", options);
+
+			empty.Should().BeNull();
+			populated.Should().NotBeNull();
+			populated!.LinkObjects.Single().Href.Should().Be("/orders/1");
 		}
 
 		[Fact]

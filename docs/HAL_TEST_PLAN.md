@@ -100,9 +100,18 @@ The root of every HAL document MUST be a Resource Object — a JSON object that 
 A Link Object represents a hyperlink. It MUST have an `href`; all other properties are optional.
 
 ### 3.1 `href` is required
+> HAL section 5.1 defines `href` by reference to [RFC 3986](https://datatracker.ietf.org/doc/html/rfc3986#section-4.4), and RFC 3986 section 4.4 permits the empty string as a same-document reference. An empty `href` is therefore spec-conformant and is accepted on the object form; absent, JSON-null, and whitespace-only `href` values still drop the Link Object, and a non-string `href` still throws `JsonException`. The bare JSON string shorthand form continues to reject an empty string — see `docs/serialization.md`.
+
 - ✅ `HalLinkObjectTests.LinkObject_Serializes_Required_Href`
 - ✅ `HalLinkObjectTests.LinkObject_Missing_Href_Produces_Null_On_Deserialization`
-- ✅ `HalLinkAttributesValidationTests.Href_Empty_String_Is_Invalid_On_Deserialization`
+- ✅ `HalLinkAttributesValidationTests.Href_Empty_String_Deserializes_As_Same_Document_Reference` — empty `href` materializes with `Href == string.Empty`
+- ✅ `HalLinkAttributesValidationTests.Href_Empty_String_Preserves_Sibling_Attributes` — optional attributes survive the empty-`href` branch
+- ✅ `HalLinkAttributesValidationTests.Href_Whitespace_Only_Is_Invalid_On_Deserialization` — whitespace-only `href` drops the Link Object
+- ✅ `HalLinkAttributesValidationTests.Href_Null_Is_Invalid_On_Deserialization` — JSON-null `href` drops the Link Object
+- ✅ `HalLinkAttributesValidationTests.Href_NonString_Throws_JsonException_On_Deserialization` — non-string `href` fails loudly
+- ✅ `HalRoundTripShapeTests.Empty_Href_On_A_Link_Object_Round_Trips_As_An_Empty_String` — lossless round-trip of `"href": ""`
+- ✅ `HalRoundTripShapeTests.Empty_Href_Inside_A_Link_Array_Round_Trips_As_An_Empty_String` — same guarantee through the array shape
+- ✅ `HalRoundTripShapeTests.Empty_Href_Round_Trips_Alongside_Its_Optional_Attributes` — optional siblings survive the round-trip
 - ✅ `LinkConvertersTests.Deserialize_Single_Link_Object_Should_Parse`
 
 ### 3.2 `href` may be a URI Template (RFC 6570)
@@ -111,7 +120,7 @@ A Link Object represents a hyperlink. It MUST have an `href`; all other properti
 - ✅ `HalCuriesAndTemplatedTests.Templated_Link_Has_Templated_True_If_Provided`
 - ✅ `HalCuriesAndTemplatedTests.Templated_Href_Does_Not_Automatically_Expand`
 - ✅ `HalLinkObjectTests.LinkObject_Reads_Templated_True_For_Template`
-- ✅ `HalLinkAttributesValidationTests.Templated_Href_Without_Templated_Flag_Is_Handled_Gracefully` — verifies URI template href without `templated: true` is handled gracefully
+- ✅ `HalCuriesAndTemplatedTests.Templated_Href_Without_Templated_Flag_Is_Handled_Gracefully` — verifies URI template href without `templated: true` is handled gracefully
 
 ### 3.3 `templated` is a boolean; non-boolean values default to false
 - ✅ `HalLinkAttributesValidationTests.NonBoolean_Templated_Value_Treated_As_False`
@@ -327,7 +336,7 @@ All 20 gaps have been addressed. As of CodeGenerators 0.4.0 the two former out-o
 1. ✅ **COMPLETED** — **[CURIE expansion]** Now tested via `HalCuriesAndTemplatedTests.Curie_Short_Form_Expands_To_Full_Uri` and `LinkCollectionExtensionsTests.ExpandCurieRelation_Should_Return_Full_Uri_When_Curie_Exists`. The `ExpandCurieRelation` extension method was also implemented.
 2. ✅ **COMPLETED** — **[Root object validation]** Now tested via 5 new tests in `HalDeserializationRobustnessTests` covering array, string, number, boolean, and null roots.
 3. ✅ **COMPLETED** — **[`self` link]** Now tested via 3 new tests in `HalSerializationRoundTripTests` validating serialization, extension access, and null-case handling.
-4. ✅ **COMPLETED** — **[`href` + `templated` consistency]** Now tested via `HalLinkAttributesValidationTests.Templated_Href_Without_Templated_Flag_Is_Handled_Gracefully`.
+4. ✅ **COMPLETED** — **[`href` + `templated` consistency]** Now tested via `HalCuriesAndTemplatedTests.Templated_Href_Without_Templated_Flag_Is_Handled_Gracefully`.
 5. ✅ **COMPLETED** — **[CURIE round-trip]** Now tested via `HalCuriesAndTemplatedTests.Curie_Definition_Serializes_As_Array_Of_LinkObjects`.
 6. ✅ **COMPLETED** — **[Undefined CURIE prefix]** Now tested via `HalCuriesAndTemplatedTests.Curie_Expansion_Returns_Original_When_No_Matching_Prefix`.
 7. ✅ **COMPLETED** — **[Link Object tolerant reader]** Now tested via `HalLinkAttributesValidationTests.LinkObject_With_Unknown_Properties_Are_Ignored`.
