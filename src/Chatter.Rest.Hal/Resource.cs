@@ -345,6 +345,14 @@ public sealed record Resource : IHalPart
 				stateNode = JsonSerializer.SerializeToNode(_stateObject, _jsonOptions);
 			}
 
+			// An empty state object serializes to the same HAL document as no state at all
+			// (Resource.Parse("{}") vs new Resource()), so it normalizes to the absent-state key.
+			if (stateNode is JsonObject { Count: 0 })
+			{
+				key = null;
+				return true;
+			}
+
 			var builder = new StringBuilder();
 			WriteCanonicalJson(stateNode, builder);
 			key = builder.ToString();
