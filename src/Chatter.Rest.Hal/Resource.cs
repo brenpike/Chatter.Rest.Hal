@@ -342,6 +342,31 @@ public sealed record Resource : IHalPart
 				}
 
 				stateNode = JsonSerializer.SerializeToNode(_stateObject, _jsonOptions);
+
+				// A state that serializes to JSON null writes no members at all, so it is the
+				// same HAL content as an absent state.
+				if (stateNode is null || ConverterHelpers.IsJsonNull(stateNode))
+				{
+					key = null;
+					return true;
+				}
+			}
+
+			// Mirror WriteStateMembers' narrow reserved-name suppression: a state property carrying
+			// the exact literal "_links"/"_embedded" is skipped only when the resource's own
+			// nonempty collection is written under that same name (emitting both would produce a
+			// duplicate JSON member), so the key skips it under the same condition.
+			if (stateNode is JsonObject reserved)
+			{
+				if (Links is { Count: > 0 })
+				{
+					reserved.Remove(Converters.ConverterHelpers.LinksProperty);
+				}
+
+				if (Embedded is { Count: > 0 })
+				{
+					reserved.Remove(Converters.ConverterHelpers.EmbeddedProperty);
+				}
 			}
 
 			// Mirror ResourceConverter.Write exactly: with WhenWritingNull in this resource's own

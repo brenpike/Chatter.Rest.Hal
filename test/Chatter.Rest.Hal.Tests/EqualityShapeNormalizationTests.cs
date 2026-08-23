@@ -45,6 +45,42 @@ public class EqualityShapeNormalizationTests
 	}
 
 	[Fact]
+	public void SuppressedReservedStatePropertyIsExcludedFromEquality()
+	{
+		// WriteStateMembers skips a state property literally named "_links" when the resource's
+		// nonempty Links collection is written under that name, so both resources serialize
+		// identically and must compare equal.
+		using var withReserved = JsonDocument.Parse("{\"_links\":{\"stale\":true},\"a\":1}");
+		using var plain = JsonDocument.Parse("{\"a\":1}");
+
+		var a = new Resource(withReserved.RootElement.Clone());
+		a.Links!.Add(BuildSelf());
+		var b = new Resource(plain.RootElement.Clone());
+		b.Links!.Add(BuildSelf());
+
+		Assert.Equal(b, a);
+		Assert.Equal(b.GetHashCode(), a.GetHashCode());
+	}
+
+	private static Link BuildSelf()
+	{
+		var link = new Link("self");
+		link.LinkObjects.Add(new LinkObject("/x"));
+		return link;
+	}
+
+	[Fact]
+	public void NullSerializingStateEqualsAbsentState()
+	{
+		using var doc = JsonDocument.Parse("null");
+		var nullState = new Resource(doc.RootElement.Clone());
+		var absent = new Resource();
+
+		Assert.Equal(absent, nullState);
+		Assert.Equal(absent.GetHashCode(), nullState.GetHashCode());
+	}
+
+	[Fact]
 	public void WhenWritingNullMakesNullStatePropertiesAbsentInEquality()
 	{
 		var options = new JsonSerializerOptions { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
