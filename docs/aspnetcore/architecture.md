@@ -1,6 +1,8 @@
 # Chatter.Rest.Hal.AspNetCore -- Architecture
 
-This document describes how `Chatter.Rest.Hal.AspNetCore` is built. For what it does, see [requirements.md](requirements.md).
+> **Status: PLANNED — design specification only.** The `Chatter.Rest.Hal.AspNetCore` package described in this document has NOT been implemented or published. No `src/Chatter.Rest.Hal.AspNetCore/` project exists in this repository yet.
+
+This document describes how the planned `Chatter.Rest.Hal.AspNetCore` package will be built. For what it will do, see [requirements.md](requirements.md).
 
 ---
 

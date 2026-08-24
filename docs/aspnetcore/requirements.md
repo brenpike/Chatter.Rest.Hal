@@ -1,16 +1,18 @@
 # Chatter.Rest.Hal.AspNetCore -- Requirements
 
-This document is the source of truth for what the `Chatter.Rest.Hal.AspNetCore` package does. Test scenarios are derived directly from the numbered requirements below. For how the system is built, see [architecture.md](architecture.md).
+> **Status: PLANNED — design specification only.** The `Chatter.Rest.Hal.AspNetCore` package described in this document has NOT been implemented or published. No `src/Chatter.Rest.Hal.AspNetCore/` project exists in this repository yet.
+
+This document is the source of truth for what the planned `Chatter.Rest.Hal.AspNetCore` package will do. Test scenarios will be derived directly from the numbered requirements below. For how the system will be built, see [architecture.md](architecture.md).
 
 ---
 
 ## Overview
 
-`Chatter.Rest.Hal.AspNetCore` is a new NuGet package that provides server-side ASP.NET Core integration for building HAL (Hypertext Application Language) APIs. It eliminates the manual wiring required to produce HAL responses from both MVC controllers and Minimal API endpoints, providing DI-friendly registration, a typed result type (`HalResult`) that works in both pipelines, a DI-injectable link builder (`IHalLinkBuilder`) backed by ASP.NET Core's `LinkGenerator`, opt-in auto-self link injection, and RFC 9457 Problem Details support via `IExceptionHandler`.
+`Chatter.Rest.Hal.AspNetCore` is a planned NuGet package that will provide server-side ASP.NET Core integration for building HAL (Hypertext Application Language) APIs. It will eliminate the manual wiring required to produce HAL responses from both MVC controllers and Minimal API endpoints, providing DI-friendly registration, a typed result type (`HalResult`) that works in both pipelines, a DI-injectable link builder (`IHalLinkBuilder`) backed by ASP.NET Core's `LinkGenerator`, opt-in auto-self link injection, and RFC 9457 Problem Details support via `IExceptionHandler`.
 
 ### Package dependencies
 
-- `Chatter.Rest.Hal` -- core HAL types (`Resource`, `Resource<T>`, `LinkObject`, `LinkCollection`, `Link`)
+- `Chatter.Rest.Hal` -- core HAL types (`Resource`, `Resource<T>` (planned core addition — does not exist today), `LinkObject`, `LinkCollection`, `Link`)
 - `Microsoft.AspNetCore.App` -- ASP.NET Core framework reference (not a NuGet package; framework reference only)
 
 ---
@@ -141,7 +143,7 @@ Already uses `Chatter.Rest.Hal` server-side for building HAL documents. Wants to
 
 ## Integration Story
 
-The following shows two ways to integrate `Chatter.Rest.Hal.AspNetCore` in a .NET 8 application.
+The following shows the two intended ways the planned `Chatter.Rest.Hal.AspNetCore` package would be integrated in a .NET 8 application.
 
 ### Option A -- Minimal API
 

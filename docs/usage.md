@@ -43,10 +43,12 @@ var resource = ResourceBuilder.WithState(new { })
 
     // add multiple link objects to the same relation
     .AddLink("ea:admin")
-        .AddLinkObject("/admins/2").WithTitle("Fred")
-        .AddLinkObject("/admins/5").WithTitle("Kate")
+        .AddLinkObject("/admins/2").WithName("fred").WithTitle("Fred")
+        .AddLinkObject("/admins/5").WithName("kate").WithTitle("Kate")
     .Build();
 ```
+
+Note: since 2.0.0, `curies` always serializes as a JSON array — even when only a single CURIE definition is present — per HAL section 8.3.
 
 3) Embedding resources
 
@@ -176,7 +178,7 @@ builder.Services.AddControllers()
     .AddJsonOptions(o => o.JsonSerializerOptions.AddHalConverters());
 ```
 
-`AddHalConverters()` is idempotent — calling it more than once on the same `JsonSerializerOptions` instance is safe and has no effect after the first call.
+`AddHalConverters()` is safe to call repeatedly on the same `JsonSerializerOptions` instance. The duplicate guard is applied per converter type: each call registers only the HAL converters not already present, so a consumer who registered some HAL converters by hand still gets the remaining ones. A converter that is already registered is left exactly as-is, including its `HalJsonOptions` — the `halOptions` argument applies only to converters the call actually adds.
 
 Note: when you supply explicit `JsonSerializerOptions` to `JsonSerializer`, the options-registered converters from `AddHalConverters()` take precedence over the attribute-wired converters. Both code paths produce identical HAL output under the same `HalJsonOptions`.
 
@@ -205,8 +207,12 @@ var selfLink = resource.GetLinkOrDefault("self");
 var selfLinkObject = resource.GetLinkObjectOrDefault("self");
 var selfHref = selfLinkObject?.Href;
 
-// Get a named link object within a relation (e.g., one of several ea:admin entries)
-var adminLink = resource.GetLinkObjectOrDefault("ea:admin", "Fred");
+// Get a named link object within a relation (e.g., one of several ea:admin entries).
+// Matching is on the link object's `name` property — set at build time via
+// .WithName(...) (see section 2) — not on its title. The lookup is a
+// SingleOrDefault over `name`: it returns null when no link object matches and
+// throws when several link objects in the relation share the same name.
+var adminLink = resource.GetLinkObjectOrDefault("ea:admin", "fred");
 
 // Get the full collection of link objects for a relation
 var orderLinks = resource.GetLinkObjects("ea:order");
