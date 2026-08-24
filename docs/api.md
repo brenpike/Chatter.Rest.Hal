@@ -164,13 +164,15 @@ public interface IAddResourceStage
 }
 ```
 
+> **Return-target semantics.** `AddResource()` / `AddResource(state)` return the newly added embedded resource — chained link/curies/embed calls configure that resource. `AddResources<T>()` returns the collection builder instead: link/curies/embed calls chained on its return value target the resource that **owns** the `_embedded` entry, not each added item. Per-item links, curies, and nested embeds must be configured inside the `builder` callback.
+
 ---
 
 ## 7. `IEmbeddedResourceCreationStage`
 
 Namespace: `Chatter.Rest.Hal.Builders.Stages.Embedded`
 
-The embedded-context mirror of `IResourceCreationStage`. Returned by `AddResource()` / `AddResources()`. Supports the same link, curies, and embedded operations as the root resource stage, plus `Build()` which terminates the entire chain back to the root `Resource`.
+The embedded-context mirror of `IResourceCreationStage`, returned by the `IAddResourceStage` methods. It exposes the same link, curies, and embedded operations as the root resource stage, plus `Build()` which terminates the entire chain back to the root `Resource` — but what those operations target depends on which method returned the stage. After `AddResource()` / `AddResource(state)` they configure the newly added embedded resource; after `AddResources<T>()` the stage is the collection builder, so link/curies/embed calls target the resource that owns the `_embedded` entry and per-item configuration happens only inside the `AddResources` callback (see the return-target semantics note in Section 6).
 
 ```csharp
 public interface IEmbeddedResourceCreationStage :
