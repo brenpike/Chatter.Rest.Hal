@@ -28,8 +28,8 @@ public sealed record Resource : IHalPart
 
 - `State<T>()` — returns the resource state as `T`, materialized as a detached projection from the state of record (the constructor-supplied `JsonElement`, or the lazy `_stateCreator` delegate on the deserialization path) on every call. Projections never become the serialization source, so mutating a returned object affects neither serialization nor equality; a state supplied directly as `T` is the one exception and is returned by reference. Returns `null` on failure rather than throwing.
 - `As<T>()` — converts the full `Resource` (including `_links`/`_embedded`) to `T`. A parsed resource converts from the retained source node; an in-memory resource is re-serialized on every call, so links, embedded resources and state added after an earlier `As<T>()` call are reflected in the result. Use this to round-trip a HAL response into a typed DTO that declares `Links`/`Embedded` properties.
-- **Lazy init via `Func<T>` delegates** — the internal deserialization constructor (`internal Resource(JsonNode?, Func<JsonObject?>, Func<LinkCollection?>, Func<EmbeddedResourceCollection?>)`) stores the three factory delegates. `Links` and `Embedded` property getters invoke these delegates on first access and cache the result, making deserialization allocation-lazy.
-- `StateObject` — internal property that drives `ResourceConverter.Write`. Its getter calls `State<object>()`.
+- **Init via `Func<T>` delegates** — the internal deserialization constructor (`internal Resource(JsonNode?, Func<JsonObject?>, Func<LinkCollection?>, Func<EmbeddedResourceCollection?>)`) stores the three factory delegates. `Links` and `Embedded` property getters invoke these delegates on first access and cache the result. On the deserialization path `ResourceConverter.Read` materializes `_links`/`_embedded` eagerly and the delegates return those captured collections; only the state clone (`_stateCreator`) is deferred until first use.
+- `CachedState` — internal property that drives `ResourceConverter.Write`. It returns the cached state object, materializing it from `_stateCreator` on first use, bypassing the defensive Link-guard checks in `State<T>()` (safe on the write path only). `StateObject` is the sibling internal property whose getter calls `State<object>()`.
 
 ### `Link`
 
@@ -306,11 +306,10 @@ if (embeddedvalue.Resources.Count == 1 && !embeddedvalue.ForceWriteAsCollection)
 
 **`ResourceConverter.Write`**
 
-1. Serializes `StateObject` to a `JsonNode`.
-2. Iterates the node's properties, skipping any named `Links` or `Embedded`.
-3. Writes each remaining state property directly to the JSON writer.
-4. If `Links` is non-null and non-empty, writes `"_links"` followed by the serialized `LinkCollection`.
-5. If `Embedded` is non-null and non-empty, writes `"_embedded"` followed by the serialized `EmbeddedResourceCollection`.
+1. Serializes `CachedState` to UTF-8 and parses it as a `JsonDocument`. A state that serializes to a JSON primitive or array throws `JsonException`; a state that serializes to JSON null contributes no members.
+2. Writes each state property directly to the JSON writer, skipping only a literal `_links` (or `_embedded`) state property, and only when the resource is about to write its own non-empty `Links` (or `Embedded`) collection. State properties named `Links` or `Embedded` are ordinary user data and are always written.
+3. If `Links` is non-null and non-empty, writes `"_links"` followed by the serialized `LinkCollection`.
+4. If `Embedded` is non-null and non-empty, writes `"_embedded"` followed by the serialized `EmbeddedResourceCollection`.
 
 State properties are always emitted before `_links` and `_embedded`.
 
@@ -318,13 +317,13 @@ State properties are always emitted before `_links` and `_embedded`.
 
 **`ResourceConverter.Read`**
 
-Parses the entire JSON token into a `JsonNode`. Constructs three lazy `Func<T>` delegates:
+Parses the entire JSON token into a `JsonNode` and requires a JSON object. `_links` and `_embedded` are materialized eagerly — via each collection converter's node-walking `ReadFromNode` path, or `Deserialize` when a custom converter is registered for that collection type — so a malformed member fails at the deserialization call rather than on a later property read. Three `Func<T>` delegates are then passed to the internal `Resource` constructor:
 
-- `stateCreator` — clones the node, removes `_links` and `_embedded`, returns the remaining `JsonObject`.
-- `linksCreator` — deserializes `node["_links"]` as `LinkCollection`.
-- `embeddedCreator` — deserializes `node["_embedded"]` as `EmbeddedResourceCollection`.
+- `jsonObjectCreator` — clones the node, removes `_links` and `_embedded`, returns the remaining `JsonObject`; this clone is deferred until first use.
+- `linkCollectionCreator` — returns the eagerly materialized `LinkCollection`.
+- `embeddedCollectionCreator` — returns the eagerly materialized `EmbeddedResourceCollection`.
 
-These delegates are passed to the internal `Resource` constructor and invoked only when the corresponding property is first accessed.
+The property getters invoke these delegates on first access and cache the result; only the state clone is deferred work.
 
 **`LinkCollectionConverter.Read`**
 

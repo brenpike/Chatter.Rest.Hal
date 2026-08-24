@@ -267,13 +267,13 @@ Every read path that materializes a Link Object from its **object form** — `{ 
 
 ### 5.1 `ResourceConverter.Read`
 
-Parses the entire JSON input into a `JsonNode` tree. Rather than immediately deserializing `_links` and `_embedded`, it captures three lazy `Func<T>` delegates:
+Parses the entire JSON input into a `JsonNode` tree and requires a JSON object. `_links` and `_embedded` are deserialized eagerly — via each collection converter's node-walking `ReadFromNode` path, or `Deserialize` when a custom converter is registered for that collection type — so a malformed member fails at the deserialization call rather than on a later property read. Three `Func<T>` delegates are passed to the internal `Resource` constructor:
 
-- `linkCollectionCreator` — deserializes `node["_links"]` on first access of `Resource.Links`
-- `embeddedCollectionCreator` — deserializes `node["_embedded"]` on first access of `Resource.Embedded`
-- `jsonObjectCreator` — clones the node, removes `_links` and `_embedded`, returns the remainder as the state `JsonObject`
+- `linkCollectionCreator` — returns the eagerly deserialized `LinkCollection`
+- `embeddedCollectionCreator` — returns the eagerly deserialized `EmbeddedResourceCollection`
+- `jsonObjectCreator` — clones the node, removes `_links` and `_embedded`, returns the remainder as the state `JsonObject`; this clone is deferred until first use
 
-These delegates are allocated once and evaluated only when the corresponding property is first accessed. This means deserialization of linked and embedded sub-graphs is deferred until needed.
+The property getters invoke these delegates on first access and cache the result; only the state clone is deferred work.
 
 ### 5.2 `LinkCollectionConverter.Read`
 
