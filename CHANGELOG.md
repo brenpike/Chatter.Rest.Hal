@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.1] - 2026-08-23
+
+### Documentation
+
+- Added XML documentation comments to the 20 public fluent builder stage interfaces under
+  `Builders/Stages/`, which were previously undocumented. Documentation only: no API or
+  behavior change.
+
 ## [2.1.0] - 2026-08-23
 
 ### Fixed
@@ -91,6 +99,7 @@ rejected.
   ([#120](https://github.com/brenpike/Chatter.Rest.Hal/issues/120), open: empty-string href
   tolerance).
 
-[Unreleased]: https://github.com/brenpike/Chatter.Rest.Hal/compare/hal/v2.1.0...HEAD
+[Unreleased]: https://github.com/brenpike/Chatter.Rest.Hal/compare/hal/v2.1.1...HEAD
+[2.1.1]: https://github.com/brenpike/Chatter.Rest.Hal/compare/hal/v2.1.0...hal/v2.1.1
 [2.1.0]: https://github.com/brenpike/Chatter.Rest.Hal/compare/hal/v2.0.0...hal/v2.1.0
 [2.0.0]: https://github.com/brenpike/Chatter.Rest.Hal/compare/hal/v1.1.0...hal/v2.0.0
