@@ -36,20 +36,21 @@ Chatter.Rest.Hal is a .NET/C# implementation of the HAL (Hypertext Application L
 
 ## Multi-Agent Governance
 
-This repository uses the [agent-framework](https://github.com/brenpike/agent-framework) Claude Code plugin.
+This repository uses the [hivemind](https://github.com/brenpike/hivemind) Claude Code plugin.
 
 Enable the plugin in `.claude/settings.json`:
 ```json
 {
   "enabledPlugins": {
-    "agent-framework@brenpike": true
-  }
+    "hivemind@brenpike": true
+  },
+  "agent": "hivemind:overlord"
 }
 ```
 
 The plugin provides:
-- Agents: `agent-framework:orchestrator` (default), `agent-framework:planner`, `agent-framework:coder`, `agent-framework:designer`
-- Skills: `agent-framework:create-working-branch`, `agent-framework:checkpoint-commit`, `agent-framework:open-plan-pr`, and others
+- Agents: `hivemind:overlord` (default), `hivemind:cerebrate`, `hivemind:drone`, `hivemind:changeling`, `hivemind:local-reviewer`, `hivemind:github-reviewer`
+- Skills: `hivemind:create-working-branch`, `hivemind:molt`, `hivemind:open-plan-pr`, `hivemind:route-workflow`, `hivemind:seed-hive`, and others
 - Governance reference docs in the plugin's `governance/` directory
 
 Project-specific adapter details live in `CLAUDE.md` (this file). External reviewer guidance lives in `AGENTS.md`.
