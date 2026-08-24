@@ -73,6 +73,7 @@ Minimal, copy-paste example (build, serialize):
 using System;
 using System.Text.Json;
 using Chatter.Rest.Hal;
+using Chatter.Rest.Hal.Builders;
 
 // Build a simple resource with state and a self link
 var resource = ResourceBuilder
@@ -95,6 +96,8 @@ Console.WriteLine(json);
 }
 */
 ```
+
+> **Note:** `ResourceBuilder` lives in the `Chatter.Rest.Hal.Builders` namespace. Later snippets in this README omit the `using` directives for brevity; each builder example assumes `using Chatter.Rest.Hal;` and `using Chatter.Rest.Hal.Builders;`.
 
 If you want compile-time helpers generated for your response types, also install the code generators package:
 

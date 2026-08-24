@@ -32,7 +32,10 @@ public interface IAddResourceStage
 	/// <param name="builder">An OPTIONAL callback invoked with each item and its
 	/// <see cref="IEmbeddedResourceCreationStage"/> to configure per-resource links, curies, and
 	/// embedded resources</param>
-	/// <returns>An <see cref="IEmbeddedResourceCreationStage"/> to continue building; per-resource
-	/// configuration happens inside the <paramref name="builder"/> callback</returns>
+	/// <returns>An <see cref="IEmbeddedResourceCreationStage"/> to continue building. Unlike
+	/// <see cref="AddResource()"/>, the returned stage is the collection builder, NOT one of the
+	/// added resources: link/curies/embed calls chained on it target the resource that owns the
+	/// "_embedded" entry. Per-resource configuration happens only inside the
+	/// <paramref name="builder"/> callback</returns>
 	IEmbeddedResourceCreationStage AddResources<T>(IEnumerable<T> resources, Action<T, IEmbeddedResourceCreationStage>? builder = null);
 }

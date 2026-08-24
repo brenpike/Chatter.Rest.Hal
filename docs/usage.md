@@ -14,6 +14,7 @@ dotnet add package Chatter.Rest.Hal
 using System;
 using System.Text.Json;
 using Chatter.Rest.Hal;
+using Chatter.Rest.Hal.Builders;
 
 var resource = ResourceBuilder
     .WithState(new { message = "Hello, HAL!" })
@@ -25,6 +26,8 @@ Console.WriteLine(json);
 ```
 
 This will print a HAL+JSON document with the state under the root and a `_links.self` link.
+
+> **Note:** `ResourceBuilder` lives in the `Chatter.Rest.Hal.Builders` namespace. Later snippets omit the `using` directives for brevity; each builder example assumes `using Chatter.Rest.Hal;` and `using Chatter.Rest.Hal.Builders;`.
 
 2) Adding links and link objects
 
