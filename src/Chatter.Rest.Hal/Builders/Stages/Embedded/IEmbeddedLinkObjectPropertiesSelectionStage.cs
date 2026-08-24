@@ -1,5 +1,10 @@
 ﻿namespace Chatter.Rest.Hal.Builders.Stages.Embedded;
 
+/// <summary>
+/// A stage of the fluent builder from which the OPTIONAL properties of the <see cref="LinkObject"/>
+/// being built on an embedded resource can be set, or building can continue with further links,
+/// link objects, resources or embedded resources
+/// </summary>
 public interface IEmbeddedLinkObjectPropertiesSelectionStage : IEmbeddedLinkCreationStage, IEmbeddedCuriesLinkCreationStage, IAddLinkToEmbeddedStage, IAddSelfLinkToEmbeddedStage, IAddCuriesLinkToEmbeddedStage, IAddResourceStage, IAddEmbeddedResourceToResourceStage, IBuildResource
 {
 	/// <summary>
@@ -16,6 +21,7 @@ public interface IEmbeddedLinkObjectPropertiesSelectionStage : IEmbeddedLinkCrea
 	/// 
 	/// Its value SHOULD be considered false if it is undefined or any other
 	/// value than true.
+	/// </remarks>
 	IEmbeddedLinkObjectPropertiesSelectionStage Templated();
 
 	/// <summary>
@@ -30,6 +36,7 @@ public interface IEmbeddedLinkObjectPropertiesSelectionStage : IEmbeddedLinkCrea
 	/// 
 	/// Its value is a string used as a hint to indicate the media type
 	/// expected when dereferencing the target resource.
+	/// </remarks>
 	IEmbeddedLinkObjectPropertiesSelectionStage WithType(string type);
 
 	/// <summary>
@@ -51,6 +58,7 @@ public interface IEmbeddedLinkObjectPropertiesSelectionStage : IEmbeddedLinkCrea
 	/// property.The notification SHOULD include the deprecation property's
 	/// value so that a client manitainer can easily find information about
 	/// the deprecation.
+	/// </remarks>
 	IEmbeddedLinkObjectPropertiesSelectionStage WithDeprecationUrl(string deprecation);
 
 	/// <summary>
@@ -79,6 +87,7 @@ public interface IEmbeddedLinkObjectPropertiesSelectionStage : IEmbeddedLinkCrea
 	/// 
 	/// Its value is a string which is a URI that hints about the profile(as
 	/// defined by [I-D.wilde-profile-link]) of the target resource.
+	/// </remarks>
 	IEmbeddedLinkObjectPropertiesSelectionStage WithProfileUri(string profile);
 
 	/// <summary>
@@ -93,6 +102,7 @@ public interface IEmbeddedLinkObjectPropertiesSelectionStage : IEmbeddedLinkCrea
 	/// 
 	/// Its value is a string and is intended for labelling the link with a
 	/// human-readable identifier(as defined by [RFC5988]).
+	/// </remarks>
 	IEmbeddedLinkObjectPropertiesSelectionStage WithTitle(string title);
 
 	/// <summary>
@@ -107,6 +117,19 @@ public interface IEmbeddedLinkObjectPropertiesSelectionStage : IEmbeddedLinkCrea
 	/// 
 	/// Its value is a string and is intended for indicating the language of
 	/// the target resource(as defined by [RFC5988]).
+	/// </remarks>
 	IEmbeddedLinkObjectPropertiesSelectionStage WithHreflang(string hreflang);
+	/// <summary>
+	/// Forces the link relation being built to serialize as a JSON array even when it contains a
+	/// single <see cref="LinkObject"/>. No-op for the "curies" relation, which is array-form by
+	/// default since 2.0.0 per HAL section 8.3
+	/// </summary>
+	/// <returns>A <see cref="IEmbeddedLinkObjectPropertiesSelectionStage"/> to continue building the <see cref="LinkObject"/></returns>
+	/// <remarks>
+	/// https://datatracker.ietf.org/doc/html/draft-kelly-json-hal#section-4.1.1
+	///
+	/// 4.1.1. The reserved "_links" property values are either a Link Object or an
+	/// array of Link Objects.
+	/// </remarks>
 	new IEmbeddedLinkObjectPropertiesSelectionStage AsArray();
 }

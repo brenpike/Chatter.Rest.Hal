@@ -1,5 +1,9 @@
 ﻿namespace Chatter.Rest.Hal.Builders.Stages.Resource;
 
+/// <summary>
+/// A stage of the fluent builder from which the OPTIONAL properties of the <see cref="LinkObject"/>
+/// being built can be set, further links or embedded resources added, or the <see cref="Resource"/> built
+/// </summary>
 public interface IResourceLinkObjectPropertiesSelectionStage : IResourceLinkCreationStage, IResourceCuriesLinkCreationStage, IAddLinkToResourceStage, IAddSelfLinkToResourceStage, IAddCuriesLinkToResourceStage, IAddEmbeddedResourceToResourceStage, IBuildResource
 {
 	/// <summary>
@@ -16,6 +20,7 @@ public interface IResourceLinkObjectPropertiesSelectionStage : IResourceLinkCrea
 	/// 
 	/// Its value SHOULD be considered false if it is undefined or any other
 	/// value than true.
+	/// </remarks>
 	IResourceLinkObjectPropertiesSelectionStage Templated();
 
 	/// <summary>
@@ -30,6 +35,7 @@ public interface IResourceLinkObjectPropertiesSelectionStage : IResourceLinkCrea
 	/// 
 	/// Its value is a string used as a hint to indicate the media type
 	/// expected when dereferencing the target resource.
+	/// </remarks>
 	IResourceLinkObjectPropertiesSelectionStage WithType(string type);
 
 	/// <summary>
@@ -51,6 +57,7 @@ public interface IResourceLinkObjectPropertiesSelectionStage : IResourceLinkCrea
 	/// property.The notification SHOULD include the deprecation property's
 	/// value so that a client manitainer can easily find information about
 	/// the deprecation.
+	/// </remarks>
 	IResourceLinkObjectPropertiesSelectionStage WithDeprecationUrl(string deprecation);
 
 	/// <summary>
@@ -79,6 +86,7 @@ public interface IResourceLinkObjectPropertiesSelectionStage : IResourceLinkCrea
 	/// 
 	/// Its value is a string which is a URI that hints about the profile(as
 	/// defined by [I-D.wilde-profile-link]) of the target resource.
+	/// </remarks>
 	IResourceLinkObjectPropertiesSelectionStage WithProfileUri(string profile);
 
 	/// <summary>
@@ -93,6 +101,7 @@ public interface IResourceLinkObjectPropertiesSelectionStage : IResourceLinkCrea
 	/// 
 	/// Its value is a string and is intended for labelling the link with a
 	/// human-readable identifier(as defined by [RFC5988]).
+	/// </remarks>
 	IResourceLinkObjectPropertiesSelectionStage WithTitle(string title);
 
 	/// <summary>
@@ -107,6 +116,13 @@ public interface IResourceLinkObjectPropertiesSelectionStage : IResourceLinkCrea
 	/// 
 	/// Its value is a string and is intended for indicating the language of
 	/// the target resource(as defined by [RFC5988]).
+	/// </remarks>
 	IResourceLinkObjectPropertiesSelectionStage WithHreflang(string hreflang);
+	/// <summary>
+	/// Forces the link relation being built to serialize as a JSON array even when it contains a
+	/// single <see cref="LinkObject"/>. No-op when the relation is "curies", which is array-form
+	/// by default since 2.0.0 per HAL section 8.3
+	/// </summary>
+	/// <returns>A <see cref="IResourceLinkObjectPropertiesSelectionStage"/> to continue building the <see cref="LinkObject"/></returns>
 	new IResourceLinkObjectPropertiesSelectionStage AsArray();
 }
