@@ -12,7 +12,7 @@
          dependency group has no matching lib folder by design. -->
     <NoWarn>$(NoWarn);NU5128</NoWarn>
 
-    <Version>0.4.0</Version>
+    <Version>0.4.1</Version>
     <Authors>Brennan Pike</Authors>
     <Owners>Brennan Pike</Owners>
     <Description>Generates the appropriate additional attributes of a response object to match the HAL specification</Description>

@@ -26,8 +26,9 @@ internal static class ConverterHelpers
 	/// True when the caller registered a custom converter for <typeparamref name="T"/> in
 	/// <see cref="JsonSerializerOptions.Converters"/>. Options-registered converters take precedence
 	/// over attribute-wired ones, so the node-walking fast path is only valid when the selected
-	/// converter is the built-in one; otherwise the nested part must dispatch through
-	/// <see cref="JsonNode.Deserialize"/> so the custom converter runs.
+	/// converter is the built-in one; otherwise the nested part must dispatch through the
+	/// <see cref="JsonSerializer.Deserialize{TValue}(JsonNode, JsonSerializerOptions)"/> extension
+	/// so the custom converter runs.
 	/// </summary>
 	internal static bool HasCustomConverter<T>(JsonSerializerOptions options, Type builtInConverterType)
 		=> options.GetConverter(typeof(T))?.GetType() != builtInConverterType;

@@ -71,7 +71,7 @@ When `false` (the default), a link relation with a single `LinkObject` serialize
 ## 3. `AddHalConverters()`
 
 ```csharp
-// Chatter.Rest.Hal.Extensions namespace
+// Chatter.Rest.Hal namespace
 public static JsonSerializerOptions AddHalConverters(
     this JsonSerializerOptions options,
     HalJsonOptions? halOptions = null)
@@ -94,7 +94,13 @@ Where `resolved` is `halOptions ?? HalJsonOptions.Default`.
 
 ### Idempotency
 
-The method checks `options.Converters.OfType<LinkCollectionConverter>().Any()` before adding converters. Calling `AddHalConverters()` more than once on the same options instance is safe and a no-op after the first call.
+The duplicate guard is applied **per converter type**: each of the eight converters is added only if no instance of that exact converter type is already registered on `options.Converters` (since 2.0.0, [#98](https://github.com/brenpike/Chatter.Rest.Hal/issues/98)). Calling `AddHalConverters()` more than once on the same options instance is safe. Consequences:
+
+- A consumer who pre-registered a **subset** of the HAL converters by hand gets only the missing ones added.
+- A pre-registered converter is left exactly as registered, including its own `HalJsonOptions` — the `halOptions` argument does **not** retroactively apply to it.
+- `halOptions` applies only to converters the call actually adds.
+
+Guarding on the exact HAL converter type — rather than on any converter handling the same domain type — keeps a consumer's own converter first in the list, where `JsonSerializer` continues to select it.
 
 ### Options resolution
 
@@ -142,6 +148,20 @@ var resource = ResourceBuilder.WithState(new { })
 ```
 
 Both paths converge at `LinkBuilder.SetIsArray()`, which sets `_isArray = true`. When `BuildPart()` is called, `Link.IsArray` is set to `true` on the resulting domain object.
+
+#### `curies` is array-form by default
+
+A builder-created `curies` relation carries `IsArray = true` by default (since 2.0.0): `LinkBuilder` initializes `_isArray = rel == CuriesLink`, whichever builder path creates the relation — `AddCuries()`, `AddLink("curies")`, or a merge into either. HAL spec §8.3 establishes CURIEs via an array of Link Objects, so even a single CURIE definition serializes as an array. Calling `.AsArray()` on a `curies` relation is therefore a no-op.
+
+```json
+{
+  "_links": {
+    "curies": [
+      { "href": "/docs/rels/{rel}", "name": "ea", "templated": true }
+    ]
+  }
+}
+```
 
 ### 4.2 Global — options
 
@@ -247,13 +267,13 @@ Every read path that materializes a Link Object from its **object form** — `{ 
 
 ### 5.1 `ResourceConverter.Read`
 
-Parses the entire JSON input into a `JsonNode` tree. Rather than immediately deserializing `_links` and `_embedded`, it captures three lazy `Func<T>` delegates:
+Parses the entire JSON input into a `JsonNode` tree and requires a JSON object. `_links` and `_embedded` are deserialized eagerly — via each collection converter's node-walking `ReadFromNode` path, or `Deserialize` when a custom converter is registered for that collection type — so a malformed member fails at the deserialization call rather than on a later property read. Three `Func<T>` delegates are passed to the internal `Resource` constructor:
 
-- `linkCollectionCreator` — deserializes `node["_links"]` on first access of `Resource.Links`
-- `embeddedCollectionCreator` — deserializes `node["_embedded"]` on first access of `Resource.Embedded`
-- `jsonObjectCreator` — clones the node, removes `_links` and `_embedded`, returns the remainder as the state `JsonObject`
+- `linkCollectionCreator` — returns the eagerly deserialized `LinkCollection`
+- `embeddedCollectionCreator` — returns the eagerly deserialized `EmbeddedResourceCollection`
+- `jsonObjectCreator` — clones the node, removes `_links` and `_embedded`, returns the remainder as the state `JsonObject`; this clone is deferred until first use
 
-These delegates are allocated once and evaluated only when the corresponding property is first accessed. This means deserialization of linked and embedded sub-graphs is deferred until needed.
+The property getters invoke these delegates on first access and cache the result; only the state clone is deferred work.
 
 ### 5.2 `LinkCollectionConverter.Read`
 

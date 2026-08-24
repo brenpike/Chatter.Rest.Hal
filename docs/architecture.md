@@ -28,8 +28,8 @@ public sealed record Resource : IHalPart
 
 - `State<T>()` — returns the resource state as `T`, materialized as a detached projection from the state of record (the constructor-supplied `JsonElement`, or the lazy `_stateCreator` delegate on the deserialization path) on every call. Projections never become the serialization source, so mutating a returned object affects neither serialization nor equality; a state supplied directly as `T` is the one exception and is returned by reference. Returns `null` on failure rather than throwing.
 - `As<T>()` — converts the full `Resource` (including `_links`/`_embedded`) to `T`. A parsed resource converts from the retained source node; an in-memory resource is re-serialized on every call, so links, embedded resources and state added after an earlier `As<T>()` call are reflected in the result. Use this to round-trip a HAL response into a typed DTO that declares `Links`/`Embedded` properties.
-- **Lazy init via `Func<T>` delegates** — the internal deserialization constructor (`internal Resource(JsonNode?, Func<JsonObject?>, Func<LinkCollection?>, Func<EmbeddedResourceCollection?>)`) stores the three factory delegates. `Links` and `Embedded` property getters invoke these delegates on first access and cache the result, making deserialization allocation-lazy.
-- `StateObject` — internal property that drives `ResourceConverter.Write`. Its getter calls `State<object>()`.
+- **Init via `Func<T>` delegates** — the internal deserialization constructor (`internal Resource(JsonNode?, Func<JsonObject?>, Func<LinkCollection?>, Func<EmbeddedResourceCollection?>)`) stores the three factory delegates. `Links` and `Embedded` property getters invoke these delegates on first access and cache the result. On the deserialization path `ResourceConverter.Read` materializes `_links`/`_embedded` eagerly and the delegates return those captured collections; only the state clone (`_stateCreator`) is deferred until first use.
+- `CachedState` — internal property that drives `ResourceConverter.Write`. It returns the cached state object, materializing it from `_stateCreator` on first use, bypassing the defensive Link-guard checks in `State<T>()` (safe on the write path only). `StateObject` is the sibling internal property whose getter calls `State<object>()`.
 
 ### `Link`
 
@@ -97,6 +97,8 @@ public sealed record EmbeddedResource : IHalPart
 
 Each collection wraps an internal `Collection<T>` and delegates all `ICollection<T>` operations to it. Each carries a `[JsonConverter]` attribute wiring to its own converter.
 
+**Duplicate-key contract (2.0.0, #99/#104).** The two keyed collections enforce uniqueness on `Add`: `LinkCollection.Add` throws `ArgumentException` when a `Link` with the same `Rel` is already present, and `EmbeddedResourceCollection.Add` throws `ArgumentException` when an `EmbeddedResource` with the same `Name` is already present. Deserialization is deliberately asymmetric: `LinkCollectionConverter.Read` and `EmbeddedResourceCollectionConverter.Read` normalize duplicate keys last-wins before anything reaches the collection, so a duplicate rel/name in incoming JSON never surfaces as an `ArgumentException` — the last occurrence replaces the earlier one while keeping its position.
+
 ### Containment Diagram
 
 ```
@@ -159,13 +161,19 @@ public abstract class HalBuilder<THalPart> : IBuildResource, IBuildHalPart<THalP
 | Builder Class | Produces | Key notes |
 |---|---|---|
 | `ResourceBuilder` | `Resource` | Root builder; holds `LinkCollectionBuilder` and `EmbeddedResourceCollectionBuilder` |
-| `LinkCollectionBuilder` | `LinkCollection` | Creates `LinkBuilder` instances for each relation |
+| `LinkCollectionBuilder` | `LinkCollection` | Creates `LinkBuilder` instances for each relation; repeated relations merge (see below) |
 | `LinkBuilder` | `Link` | Holds `_isArray`; exposes `SetIsArray()` (called by `LinkObjectBuilder.AsArray()`) |
 | `LinkObjectCollectionBuilder` | `LinkObjectCollection` | Creates `LinkObjectBuilder` instances |
 | `LinkObjectBuilder` | `LinkObject` | `AsArray()` navigates to enclosing `LinkBuilder` via `FindParent<Link>()` |
 | `EmbeddedResourceCollectionBuilder` | `EmbeddedResourceCollection` | Creates `EmbeddedResourceBuilder` instances |
 | `EmbeddedResourceBuilder` | `EmbeddedResource` | Delegates to `ResourceCollectionBuilder` |
 | `ResourceCollectionBuilder` | `ResourceCollection` | Creates nested `ResourceBuilder` instances |
+
+### Relation Merging (2.0.0)
+
+`LinkCollectionBuilder` keeps one `LinkBuilder` per relation via `GetOrAddLink`. Repeating `AddLink(rel)` with a relation already added — including `AddSelf()` and `AddCuries()`, which are `GetOrAddLink("self", ...)` and `GetOrAddLink("curies", ...)` — returns the builder already registered for that relation, so subsequent link objects merge into the single existing link rather than producing a duplicate. HAL's `_links` is a JSON object keyed by relation, so two links sharing a relation could never serialize into spec-valid output.
+
+The reserved `curies` relation is array-form by default: `LinkBuilder` initializes `_isArray = true` whenever the relation is `"curies"` (per HAL section 8.3), whichever builder path creates it — `AddCuries()`, `AddLink("curies")`, or a merge into either.
 
 ### Stage Interface Hierarchy
 
@@ -234,7 +242,7 @@ public static JsonSerializerOptions AddHalConverters(
     HalJsonOptions? halOptions = null)
 ```
 
-This registers all 8 converters on the `JsonSerializerOptions` instance. A duplicate-guard checks for an existing `LinkCollectionConverter` before registering; calling `AddHalConverters` multiple times on the same instance is safe. Options-registered converters take precedence over attribute-wired converters when those options are supplied to the serializer.
+This registers all 8 converters on the `JsonSerializerOptions` instance. A per-converter duplicate guard (`AddIfMissing`) checks each converter type individually before adding it, so calling `AddHalConverters` multiple times on the same instance is safe, and a consumer who registered some HAL converters by hand still gets the remaining ones — an already-present converter is left exactly as registered, including its `HalJsonOptions`. Options-registered converters take precedence over attribute-wired converters when those options are supplied to the serializer.
 
 ### `HalJsonOptions`
 
@@ -250,13 +258,13 @@ public sealed class HalJsonOptions
 
 ### `HalJsonOptions`-Aware Converters
 
-Three converters accept an optional `HalJsonOptions` constructor parameter and fall back to `HalJsonOptions.Default` when none is provided:
+Three converters declare two constructors — a parameterless one (used by attribute wiring) and one taking `HalJsonOptions options`. The parameterless path leaves the stored options `null`, and the converter falls back to `HalJsonOptions.Default` at write time:
 
-| Converter | Options-aware |
+| Converter | Constructors |
 |---|---|
-| `LinkCollectionConverter` | Yes — `(HalJsonOptions? halJsonOptions)` ctor |
-| `LinkConverter` | Yes — `(HalJsonOptions? halJsonOptions)` ctor |
-| `LinkObjectCollectionConverter` | Yes — `(HalJsonOptions? halJsonOptions)` ctor |
+| `LinkCollectionConverter` | `()` and `(HalJsonOptions options)` |
+| `LinkConverter` | `()` and `(HalJsonOptions options)` |
+| `LinkObjectCollectionConverter` | `()` and `(HalJsonOptions options)` |
 
 ### Non-Options Converters
 
@@ -298,11 +306,10 @@ if (embeddedvalue.Resources.Count == 1 && !embeddedvalue.ForceWriteAsCollection)
 
 **`ResourceConverter.Write`**
 
-1. Serializes `StateObject` to a `JsonNode`.
-2. Iterates the node's properties, skipping any named `Links` or `Embedded`.
-3. Writes each remaining state property directly to the JSON writer.
-4. If `Links` is non-null and non-empty, writes `"_links"` followed by the serialized `LinkCollection`.
-5. If `Embedded` is non-null and non-empty, writes `"_embedded"` followed by the serialized `EmbeddedResourceCollection`.
+1. Serializes `CachedState` to UTF-8 and parses it as a `JsonDocument`. A state that serializes to a JSON primitive or array throws `JsonException`; a state that serializes to JSON null contributes no members.
+2. Writes each state property directly to the JSON writer, skipping only a literal `_links` (or `_embedded`) state property, and only when the resource is about to write its own non-empty `Links` (or `Embedded`) collection. State properties named `Links` or `Embedded` are ordinary user data and are always written.
+3. If `Links` is non-null and non-empty, writes `"_links"` followed by the serialized `LinkCollection`.
+4. If `Embedded` is non-null and non-empty, writes `"_embedded"` followed by the serialized `EmbeddedResourceCollection`.
 
 State properties are always emitted before `_links` and `_embedded`.
 
@@ -310,13 +317,13 @@ State properties are always emitted before `_links` and `_embedded`.
 
 **`ResourceConverter.Read`**
 
-Parses the entire JSON token into a `JsonNode`. Constructs three lazy `Func<T>` delegates:
+Parses the entire JSON token into a `JsonNode` and requires a JSON object. `_links` and `_embedded` are materialized eagerly — via each collection converter's node-walking `ReadFromNode` path, or `Deserialize` when a custom converter is registered for that collection type — so a malformed member fails at the deserialization call rather than on a later property read. Three `Func<T>` delegates are then passed to the internal `Resource` constructor:
 
-- `stateCreator` — clones the node, removes `_links` and `_embedded`, returns the remaining `JsonObject`.
-- `linksCreator` — deserializes `node["_links"]` as `LinkCollection`.
-- `embeddedCreator` — deserializes `node["_embedded"]` as `EmbeddedResourceCollection`.
+- `jsonObjectCreator` — clones the node, removes `_links` and `_embedded`, returns the remaining `JsonObject`; this clone is deferred until first use.
+- `linkCollectionCreator` — returns the eagerly materialized `LinkCollection`.
+- `embeddedCollectionCreator` — returns the eagerly materialized `EmbeddedResourceCollection`.
 
-These delegates are passed to the internal `Resource` constructor and invoked only when the corresponding property is first accessed.
+The property getters invoke these delegates on first access and cache the result; only the state clone is deferred work.
 
 **`LinkCollectionConverter.Read`**
 
@@ -417,8 +424,8 @@ The package declares a dependency on `Chatter.Rest.Hal`, which supplies the `Lin
 > **Packable libraries need a direct runtime reference.** `PrivateAssets="all"` keeps the generator reference (and everything transitive under it, including `Chatter.Rest.Hal`) out of the nuspec produced by `dotnet pack`. An application project needs nothing more, but a class library that packs and exposes the generated `Links`/`Embedded` members must also add a direct, non-private `<PackageReference Include="Chatter.Rest.Hal" ... />` so its own consumers restore the assembly those members are typed against:
 >
 > ```xml
-> <PackageReference Include="Chatter.Rest.Hal.CodeGenerators" Version="0.4.0" PrivateAssets="all" />
-> <PackageReference Include="Chatter.Rest.Hal" Version="1.1.0" />
+> <PackageReference Include="Chatter.Rest.Hal.CodeGenerators" Version="0.4.1" PrivateAssets="all" />
+> <PackageReference Include="Chatter.Rest.Hal" Version="2.1.1" />
 > ```
 
 ### Known Limitations
@@ -436,7 +443,7 @@ Chatter.Rest.Hal.sln
 │   ├── Chatter.Rest.Hal/            # Core library
 │   │   ├── depends on: System.Text.Json (inbox on net8.0, NuGet on netstandard2.0)
 │   │   ├── depends on: Chatter.Rest.UriTemplates (external NuGet package)
-│   │   └── NuGet: Chatter.Rest.Hal v1.1.0
+│   │   └── NuGet: Chatter.Rest.Hal v2.1.1
 │   │
 │   ├── Chatter.Rest.Hal.Core/       # Shared attribute (unpublished)
 │   │   ├── contains: HalResponseAttribute only
@@ -446,7 +453,7 @@ Chatter.Rest.Hal.sln
 │   └── Chatter.Rest.Hal.CodeGenerators/   # Roslyn source generator
 │       ├── depends on: Chatter.Rest.Hal (types used by generated source)
 │       ├── consumers add: <PackageReference ... PrivateAssets="all" />
-│       └── NuGet: Chatter.Rest.Hal.CodeGenerators v0.4.0
+│       └── NuGet: Chatter.Rest.Hal.CodeGenerators v0.4.1
 │
 └── test/
     ├── Chatter.Rest.Hal.Tests/                   # Tests for core library
@@ -471,4 +478,4 @@ The core library references `Chatter.Rest.UriTemplates` as a NuGet package depen
 
 Level 4 modifiers (prefix `:N` and explode `*`) are explicitly deferred and throw `NotSupportedException` at parse time.
 
-For the complete type design, operator reference, encoding rules, and integration details, see [docs/uri-templates/architecture.md](uri-templates/architecture.md).
+For the complete type design, operator reference, encoding rules, and integration details, see the external [`Chatter.Rest.UriTemplates`](https://www.nuget.org/packages/Chatter.Rest.UriTemplates/) package and its repository documentation.

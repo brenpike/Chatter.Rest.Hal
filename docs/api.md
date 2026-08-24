@@ -164,13 +164,15 @@ public interface IAddResourceStage
 }
 ```
 
+> **Return-target semantics.** `AddResource()` / `AddResource(state)` return the newly added embedded resource — chained link/curies/embed calls configure that resource. `AddResources<T>()` returns the collection builder instead: link/curies/embed calls chained on its return value target the resource that **owns** the `_embedded` entry, not each added item. Per-item links, curies, and nested embeds must be configured inside the `builder` callback.
+
 ---
 
 ## 7. `IEmbeddedResourceCreationStage`
 
 Namespace: `Chatter.Rest.Hal.Builders.Stages.Embedded`
 
-The embedded-context mirror of `IResourceCreationStage`. Returned by `AddResource()` / `AddResources()`. Supports the same link, curies, and embedded operations as the root resource stage, plus `Build()` which terminates the entire chain back to the root `Resource`.
+The embedded-context mirror of `IResourceCreationStage`, returned by the `IAddResourceStage` methods. It exposes the same link, curies, and embedded operations as the root resource stage, plus `Build()` which terminates the entire chain back to the root `Resource` — but what those operations target depends on which method returned the stage. After `AddResource()` / `AddResource(state)` they configure the newly added embedded resource; after `AddResources<T>()` the stage is the collection builder, so link/curies/embed calls target the resource that owns the `_embedded` entry and per-item configuration happens only inside the `AddResources` callback (see the return-target semantics note in Section 6).
 
 ```csharp
 public interface IEmbeddedResourceCreationStage :
@@ -313,7 +315,9 @@ Extension methods on `Resource` for navigating links and embedded resources.
 ```csharp
 public static class ResourceExtensions
 {
-    // Find a link by relation. Returns null if not found.
+    // Find a link by relation. Returns null if not found. Implemented with
+    // SingleOrDefault: throws InvalidOperationException when multiple links
+    // share the same relation.
     public static Link? GetLinkOrDefault(this Resource resource, string relation);
 
     // Get all link objects for a relation. Returns null if the relation is not found.
@@ -345,13 +349,17 @@ Extension methods on `LinkCollection`.
 ```csharp
 public static class LinkCollectionExtensions
 {
-    // Find a link by relation. Returns null if not found.
+    // Find a link by relation. Returns null if not found. Implemented with
+    // SingleOrDefault: throws InvalidOperationException when multiple links
+    // share the same relation.
     public static Link? GetLinkOrDefault(this LinkCollection links, string relation);
 
     // Get all link objects for a relation. Returns null if the relation is not found.
     public static LinkObjectCollection? GetLinkObjects(this LinkCollection links, string relation);
 
     // Get the first link object for a relation. Returns null if not found.
+    // Implemented with FirstOrDefault: a relation may legitimately carry
+    // several link objects, so this returns the first rather than throwing.
     public static LinkObject? GetLinkObjectOrDefault(this LinkCollection links, string linkRelation);
 
     // Get a named link object within a relation. Returns null if not found.
@@ -359,8 +367,13 @@ public static class LinkCollectionExtensions
 
     // Expand a CURIE relation (e.g. "acme:widgets") to its full URI using the
     // "curies" link relation defined in this collection. Returns the original
-    // relation unchanged if no matching CURIE definition is found, the relation
-    // contains no colon, or the CURIE template lacks the {rel} token.
+    // relation unchanged when any of the following holds:
+    //   - the relation contains no colon, or the colon is the first character;
+    //   - the reference after the colon is empty (e.g. "acme:");
+    //   - no "curies" link relation exists, or no CURIE definition matches the
+    //     prefix;
+    //   - the matching CURIE definition is not marked "templated": true;
+    //   - the CURIE template lacks the {rel} token.
     // Returns an empty string when relation is null or empty.
     public static string ExpandCurieRelation(this LinkCollection links, string relation);
 }
@@ -376,6 +389,12 @@ Namespace: `Chatter.Rest.Hal`
 public static class LinkObjectCollectionExtensions
 {
     // Get a link object by its name property. Returns null if not found.
+    // Implemented with SingleOrDefault: throws InvalidOperationException when
+    // multiple link objects in the collection share the same name. Note the
+    // asymmetry with the by-relation overload
+    // GetLinkObjectOrDefault(LinkCollection, string linkRelation) in §11, which
+    // uses FirstOrDefault and never throws when a relation carries several
+    // link objects.
     public static LinkObject? GetLinkObjectOrDefault(this LinkObjectCollection linkObjects, string name);
 }
 
@@ -435,7 +454,7 @@ public sealed class HalJsonOptions
 
 ### `JsonSerializerOptionsExtensions`
 
-Namespace: `Chatter.Rest.Hal.Extensions`
+Namespace: `Chatter.Rest.Hal`
 
 ```csharp
 public static class JsonSerializerOptionsExtensions
@@ -498,7 +517,7 @@ var uri  = link!.Expand(("q", "dotnet"), ("lang", "en"));
 
 ### Standalone `UriTemplate` Class
 
-The `UriTemplate` class in `Chatter.Rest.UriTemplates` can be used independently of the HAL library for RFC 6570 Levels 1-3 template expansion. See [docs/uri-templates/usage.md](uri-templates/usage.md) for the full API reference and operator examples.
+The `UriTemplate` class in `Chatter.Rest.UriTemplates` can be used independently of the HAL library for RFC 6570 Levels 1-3 template expansion. `Chatter.Rest.UriTemplates` is an external NuGet package dependency; see the [Chatter.Rest.UriTemplates package on NuGet](https://www.nuget.org/packages/Chatter.Rest.UriTemplates) for its API reference and operator examples.
 
 ---
 

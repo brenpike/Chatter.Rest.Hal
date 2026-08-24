@@ -39,7 +39,7 @@ public sealed class ResourceConverter : JsonConverter<Resource>
 
 	/// <summary>
 	/// Materializes a Resource directly from an already-parsed node. Nested converters call this
-	/// instead of <see cref="JsonNode.Deserialize"/>, which would re-serialize the subtree to UTF-8
+	/// instead of <see cref="JsonSerializer.Deserialize{TValue}(JsonNode, JsonSerializerOptions)"/>, which would re-serialize the subtree to UTF-8
 	/// and re-parse it — repeating that once per ancestor turns a deeply nested <c>_embedded</c>
 	/// chain into O(depth × size) work; walking the existing tree keeps the whole document at O(size).
 	/// </summary>

@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-08-23
+
+### Documentation
+
+- Added XML documentation comments to `HalResponseGenerator`, previously undocumented. The
+  companion `HalResponseAttribute` in the unpublished `Chatter.Rest.Hal.Core` project was
+  documented too. Documentation only: no API or behavior change.
+
 ## [0.4.0] - 2026-08-22
 
 ### Added
@@ -74,5 +82,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A `record` annotated with `[HalResponse]` previously generated nothing silently and now reports
   `HAL0003`. Declare the type as a `partial class` to receive the HAL members.
 
-[Unreleased]: https://github.com/brenpike/Chatter.Rest.Hal/compare/codegen/v0.4.0...HEAD
+[Unreleased]: https://github.com/brenpike/Chatter.Rest.Hal/compare/codegen/v0.4.1...HEAD
+[0.4.1]: https://github.com/brenpike/Chatter.Rest.Hal/compare/codegen/v0.4.0...codegen/v0.4.1
 [0.4.0]: https://github.com/brenpike/Chatter.Rest.Hal/compare/codegen/v0.3.0...codegen/v0.4.0

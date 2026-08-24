@@ -19,8 +19,8 @@ Chatter.Rest.Hal is a .NET/C# implementation of the HAL (Hypertext Application L
 | `docs/usage.md` | Copy-paste examples for building, serializing, deserializing |
 | `docs/development.md` | Build/test/pack commands, code style, test conventions, CI/CD |
 | `docs/HAL_TEST_PLAN.md` | HAL spec-to-test mapping; consult for spec compliance and tests |
-| `docs/aspnetcore/requirements.md` | Package requirements for `Chatter.Rest.Hal.AspNetCore` |
-| `docs/aspnetcore/architecture.md` | Architecture, pseudocode, and test strategy for `Chatter.Rest.Hal.AspNetCore` |
+| `docs/aspnetcore/requirements.md` | Package requirements for `Chatter.Rest.Hal.AspNetCore` (planned package — design docs) |
+| `docs/aspnetcore/architecture.md` | Architecture, pseudocode, and test strategy for `Chatter.Rest.Hal.AspNetCore` (planned package — design docs) |
 
 ## Solution Structure
 
@@ -81,8 +81,8 @@ Observed conventions:
 
 | Package | Version |
 |---|---|
-| `Chatter.Rest.Hal` | `2.1.0` |
-| `Chatter.Rest.Hal.CodeGenerators` | `0.4.0` |
+| `Chatter.Rest.Hal` | `2.1.1` |
+| `Chatter.Rest.Hal.CodeGenerators` | `0.4.1` |
 
 External dependency: `Chatter.Rest.UriTemplates` v0.1.0.
 

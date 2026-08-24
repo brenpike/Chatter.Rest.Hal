@@ -4,9 +4,24 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Chatter.Rest.Hal.CodeGenerators;
 
+/// <summary>
+/// Incremental source generator that adds the reserved HAL members (<c>Links</c>, serialized as
+/// <c>_links</c>, and <c>Embedded</c>, serialized as <c>_embedded</c>) to partial classes marked
+/// with <c>[HalResponse]</c>. The pipeline has three stages: post-initialization emission of the
+/// marker attribute itself (<see cref="AttributeSource"/>), discovery via
+/// <c>SyntaxProvider.ForAttributeWithMetadataName</c> projecting each match onto the equatable
+/// <see cref="HalTarget"/> model, and a collected stage that deduplicates targets by metadata name
+/// before <see cref="Emitter.Emit"/> renders the generated partials.
+/// </summary>
 [Generator]
 public class HalResponseGenerator : IIncrementalGenerator
 {
+	/// <summary>
+	/// Registers the pipeline: emits the marker attribute as a post-initialization output, wires
+	/// attribute-driven discovery of annotated type declarations (reporting per-target diagnostics
+	/// as they surface), then collects, deduplicates by metadata name, orders deterministically,
+	/// and hands the resulting models to <see cref="Emitter.Emit"/>.
+	/// </summary>
 	public void Initialize(IncrementalGeneratorInitializationContext context)
 	{
 		// Ship the marker attribute with the generator so installing this package alone is enough

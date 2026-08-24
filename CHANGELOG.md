@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.1] - 2026-08-23
+
+### Documentation
+
+- Added XML documentation comments to the 20 public fluent builder stage interfaces under
+  `Builders/Stages/`, which were previously undocumented. Documentation only: no API or
+  behavior change.
+- Enabled `GenerateDocumentationFile` for `Chatter.Rest.Hal`, so the package now ships the XML
+  documentation sidecar (`lib/net8.0/Chatter.Rest.Hal.xml` and
+  `lib/netstandard2.0/Chatter.Rest.Hal.xml`). The doc comments above previously never reached
+  the published package; consumers now get IntelliSense from them.
+- Fixed malformed doc comments surfaced by enabling generation: closed six unclosed
+  `<remarks>` blocks in each of `IEmbeddedLinkObjectPropertiesSelectionStage` and
+  `IResourceLinkObjectPropertiesSelectionStage` (both also gained an interface summary and
+  documentation for their new-hiding `AsArray()` member), and replaced two unresolvable
+  `JsonNode.Deserialize` crefs with resolvable `JsonSerializer.Deserialize` references.
+
 ## [2.1.0] - 2026-08-23
 
 ### Fixed
@@ -91,6 +108,7 @@ rejected.
   ([#120](https://github.com/brenpike/Chatter.Rest.Hal/issues/120), open: empty-string href
   tolerance).
 
-[Unreleased]: https://github.com/brenpike/Chatter.Rest.Hal/compare/hal/v2.1.0...HEAD
+[Unreleased]: https://github.com/brenpike/Chatter.Rest.Hal/compare/hal/v2.1.1...HEAD
+[2.1.1]: https://github.com/brenpike/Chatter.Rest.Hal/compare/hal/v2.1.0...hal/v2.1.1
 [2.1.0]: https://github.com/brenpike/Chatter.Rest.Hal/compare/hal/v2.0.0...hal/v2.1.0
 [2.0.0]: https://github.com/brenpike/Chatter.Rest.Hal/compare/hal/v1.1.0...hal/v2.0.0

@@ -10,7 +10,19 @@ Local setup, build commands, test conventions, and CI/CD parity for Chatter.Rest
 - **Language:** C# 10.0 (set per project via `<LangVersion>10.0</LangVersion>`)
 - No external tools beyond the .NET SDK are required
 
-There is no `global.json` in this repository. The SDK version is pinned only in CI. Use any `8.0.x` SDK locally.
+A `global.json` at the repo root pins the SDK:
+
+```json
+{
+  "sdk": {
+    "version": "8.0.100",
+    "rollForward": "latestMinor",
+    "allowPrerelease": false
+  }
+}
+```
+
+Contributors need a stable (non-prerelease) .NET SDK `8.0.100` or any later `8.x` version — `rollForward: latestMinor` selects the highest installed `8.x` SDK. A 9.x-only install will not satisfy it.
 
 ---
 
@@ -31,7 +43,8 @@ Chatter.Rest.Hal.sln
 
 **Target frameworks:**
 
-- `src/` projects multi-target `net8.0;netstandard2.0`
+- `Chatter.Rest.Hal` and `Chatter.Rest.Hal.Core` multi-target `net8.0;netstandard2.0`
+- `Chatter.Rest.Hal.CodeGenerators` targets `netstandard2.0` only — Roslyn analyzers/source generators must target `netstandard2.0` so the compiler can load them on any host
 - `test/` projects target `net8.0` only
 
 ---

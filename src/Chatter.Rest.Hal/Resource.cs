@@ -72,10 +72,10 @@ public sealed record Resource : IHalPart
 	}
 
 	/// <summary>
-	/// Gets the cached state object, bypassing the Link-guard logic in <see cref="State{T}"/>.
+	/// Gets the cached state object, bypassing the Link-guard logic in <see cref="State{T}(JsonSerializerOptions?)"/>.
 	/// </summary>
 	/// <remarks>
-	/// <see cref="State{T}"/> contains defensive checks that prevent a <see cref="System.Text.Json.JsonElement"/>-typed
+	/// <see cref="State{T}(JsonSerializerOptions?)"/> contains defensive checks that prevent a <see cref="System.Text.Json.JsonElement"/>-typed
 	/// state from being misinterpreted as a <see cref="Link"/> object during deserialization.
 	/// This property skips those checks and is therefore only safe for the serialization (write) path,
 	/// where the state is being written out rather than interpreted as a domain type.
