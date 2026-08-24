@@ -276,11 +276,13 @@ var resource = ResourceBuilder.WithState(new { currentlyProcessing = 14, shipped
         "self": {
             "href": "/orders"
         },
-        "curies": {
-            "href": "http://example.com/docs/rels/{rel}",
-            "templated": true,
-            "name": "ea"
-        },
+        "curies": [
+            {
+                "href": "http://example.com/docs/rels/{rel}",
+                "templated": true,
+                "name": "ea"
+            }
+        ],
         "next": {
             "href": "/orders?page=2"
         },
@@ -288,18 +290,24 @@ var resource = ResourceBuilder.WithState(new { currentlyProcessing = 14, shipped
             "href": "/orders{?id}",
             "templated": true
         },
-        "ea:admin": {
-            "href": "/admins/2",
-            "title": "Fred"
-        }
+        "ea:admin": [
+            {
+                "href": "/admins/2",
+                "title": "Fred"
+            },
+            {
+                "href": "/admins/5",
+                "title": "Kate"
+            }
+        ]
     },
     "_embedded": {
         "ea:order": [
             {
-                "total": 10,
-                "currency": "USD",
-                "status": "shipped",
-                "id": "6d5edc98-8b81-435f-ad7a-a66a60d91bd2",
+                "Id": "6d5edc98-8b81-435f-ad7a-a66a60d91bd2",
+                "Total": 10,
+                "Currency": "USD",
+                "Status": "shipped",
                 "_links": {
                     "self": {
                         "href": "/orders/6d5edc98-8b81-435f-ad7a-a66a60d91bd2"
@@ -315,10 +323,10 @@ var resource = ResourceBuilder.WithState(new { currentlyProcessing = 14, shipped
                 }
             },
             {
-                "total": 20,
-                "currency": "CAD",
-                "status": "processing",
-                "id": "418845a7-ec41-4288-83eb-22a8bb22e472",
+                "Id": "418845a7-ec41-4288-83eb-22a8bb22e472",
+                "Total": 20,
+                "Currency": "CAD",
+                "Status": "processing",
                 "_links": {
                     "self": {
                         "href": "/orders/418845a7-ec41-4288-83eb-22a8bb22e472"
@@ -338,7 +346,7 @@ var resource = ResourceBuilder.WithState(new { currentlyProcessing = 14, shipped
 }
 ```
 
-> The output above shows two of the six orders. Remaining orders follow the same structure.
+> The output above shows two of the six orders. Remaining orders follow the same structure. `Order` property names serialize with their C# casing (`Id`, `Total`, ...) because the example does not configure a JSON naming policy.
 
 ---
 
@@ -468,7 +476,7 @@ var resources = resource!.GetResourceCollection("ea:order");
 
 ### Get a Link by relation
 
-Retrieve a single link by its relation. Returns `null` if not found, or throws an exception if multiple links with the same relation exist:
+Retrieve a single link by its relation. Returns `null` if not found. The lookup uses `SingleOrDefault`, so it throws `InvalidOperationException` if multiple links share the same relation — though since 2.0.0 duplicate relations cannot arise: `LinkCollection.Add` rejects a duplicate relation key, and deserialization normalizes duplicate relations last-wins before they reach the collection.
 
 ```csharp
 var link = resource!.GetLinkOrDefault("self");
@@ -492,7 +500,7 @@ var linkObj = resource!.GetLinkObjectOrDefault("curies", "ea");
 
 ### Get a Link Object of a Link by relation only
 
-For relations with a single link object, retrieve it directly by relation:
+Retrieve the first link object for a relation. If the relation holds several link objects, this returns the **first** one (it uses `FirstOrDefault`) rather than throwing:
 
 ```csharp
 var linkObj = resource!.GetLinkObjectOrDefault("self");
@@ -519,7 +527,6 @@ To force **all** link relations to serialize as JSON arrays regardless of count,
 
 ```csharp
 using Chatter.Rest.Hal;
-using Chatter.Rest.Hal.Extensions;
 
 // ASP.NET Core
 services.AddControllers().AddJsonOptions(o =>
@@ -550,11 +557,10 @@ To force array representation for a **specific relation** only, use `AsArray()` 
 
 ```csharp
 var resource = ResourceBuilder.WithState(new { total = 5 })
-    .AddLinks()
-        .AddLink("orders").AsArray()       // always emit as array
-            .AddLinkObject("/orders/1")
-        .AddSelf()                          // count-based (default behavior)
-            .AddLinkObject("/api/orders")
+    .AddLink("orders").AsArray()       // always emit as array
+        .AddLinkObject("/orders/1")
+    .AddSelf()                         // count-based (default behavior)
+        .AddLinkObject("/api/orders")
     .Build();
 ```
 
