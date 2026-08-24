@@ -1,6 +1,6 @@
 # Performance Improvement TODO
 
-Static-analysis-identified performance improvements for the Chatter.Rest.Hal packages. Each item is self-contained: a planner or coder agent can implement it without re-reading the original analysis.
+Static-analysis-identified performance improvements for the Chatter.Rest.Hal packages. Each item is self-contained: an implementing agent can implement it without re-reading the original analysis.
 
 ## Priority Summary
 

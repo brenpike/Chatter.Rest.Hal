@@ -1,7 +1,57 @@
 {
   "enabledPlugins": {
-    "agent-framework@brenpike": true,
-    "claude-mem@thedotmack": true
+    "claude-mem@thedotmack": true,
+    "hivemind@brenpike": true,
+    "caveman@caveman": true,
+    "codex@openai-codex": true
   },
-  "agent": "agent-framework:orchestrator"
+  "agent": "hivemind:overlord",
+  "pluginConfigs": {
+    "caveman@caveman": {
+      "options": {
+        "defaultLevel": "ultra"
+      }
+    }
+  },
+  "hooks": {
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/caveman-ultra-subagent.sh"
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(echo *)",
+      "Bash(printf *)",
+      "Bash(cat *)",
+      "Bash(grep *)",
+      "Bash(jq *)",
+      "Bash(head *)",
+      "Bash(tail *)",
+      "Bash(ls *)",
+      "Bash(wc *)",
+      "Bash(sort *)",
+      "Bash(uniq *)",
+      "Bash(git ls-files *)",
+      "Bash(git ls-tree *)",
+      "Bash(git grep *)",
+      "Bash(git tag)",
+      "Bash(git tag -l*)",
+      "Bash(git tag --list*)",
+      "Bash(git stash list)",
+      "Bash(git stash show *)",
+      "Edit(.hivemind/review-loop/*)",
+      "Edit(.hivemind/runs/.init-inputs-*.json)",
+      "Edit(.hivemind/runs/.record-inputs-*.json)",
+      "Edit(.hivemind/runs/.markfb-inputs-*.json)",
+      "Edit(.hivemind/spawn-inputs.*.json)",
+      "Edit(.hivemind/seed-inputs-*.json)"
+    ]
+  }
 }

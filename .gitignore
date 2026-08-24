@@ -466,3 +466,5 @@ nupkgs/
 
 .claude/agent-memory/*
 .claude/agent-memory/
+.hivemind/
+.claude/worktrees/
