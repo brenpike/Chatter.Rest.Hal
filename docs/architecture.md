@@ -425,8 +425,8 @@ The package declares a dependency on `Chatter.Rest.Hal`, which supplies the `Lin
 > **Packable libraries need a direct runtime reference.** `PrivateAssets="all"` keeps the generator reference (and everything transitive under it, including `Chatter.Rest.Hal`) out of the nuspec produced by `dotnet pack`. An application project needs nothing more, but a class library that packs and exposes the generated `Links`/`Embedded` members must also add a direct, non-private `<PackageReference Include="Chatter.Rest.Hal" ... />` so its own consumers restore the assembly those members are typed against:
 >
 > ```xml
-> <PackageReference Include="Chatter.Rest.Hal.CodeGenerators" Version="0.4.0" PrivateAssets="all" />
-> <PackageReference Include="Chatter.Rest.Hal" Version="2.1.0" />
+> <PackageReference Include="Chatter.Rest.Hal.CodeGenerators" Version="0.4.1" PrivateAssets="all" />
+> <PackageReference Include="Chatter.Rest.Hal" Version="2.1.1" />
 > ```
 
 ### Known Limitations
@@ -444,7 +444,7 @@ Chatter.Rest.Hal.sln
 │   ├── Chatter.Rest.Hal/            # Core library
 │   │   ├── depends on: System.Text.Json (inbox on net8.0, NuGet on netstandard2.0)
 │   │   ├── depends on: Chatter.Rest.UriTemplates (external NuGet package)
-│   │   └── NuGet: Chatter.Rest.Hal v2.1.0
+│   │   └── NuGet: Chatter.Rest.Hal v2.1.1
 │   │
 │   ├── Chatter.Rest.Hal.Core/       # Shared attribute (unpublished)
 │   │   ├── contains: HalResponseAttribute only
@@ -454,7 +454,7 @@ Chatter.Rest.Hal.sln
 │   └── Chatter.Rest.Hal.CodeGenerators/   # Roslyn source generator
 │       ├── depends on: Chatter.Rest.Hal (types used by generated source)
 │       ├── consumers add: <PackageReference ... PrivateAssets="all" />
-│       └── NuGet: Chatter.Rest.Hal.CodeGenerators v0.4.0
+│       └── NuGet: Chatter.Rest.Hal.CodeGenerators v0.4.1
 │
 └── test/
     ├── Chatter.Rest.Hal.Tests/                   # Tests for core library
