@@ -49,7 +49,7 @@ a{color:inherit}
 .sbox{position:absolute;inset:0;overflow:hidden}
 #box2{z-index:1}#box1{z-index:2}
 #sent{position:absolute;left:0;top:175vh;width:1px;height:1px;pointer-events:none}
-.mcopy{display:none}
+.mcopy{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;border:0}
 [data-mode=static] #story{height:auto}
 [data-mode=static] #pin{position:relative;top:auto;height:auto;overflow:visible;background:none}
 [data-mode=static] #view{position:relative;inset:auto;display:flex;flex-direction:column}
@@ -233,7 +233,7 @@ footer .tblock{position:static}
   #nav .wm{font-size:17px;gap:8px}#nav .mk{width:24px;height:24px;font-size:12px}
   #nav .nl a{font-size:12px;letter-spacing:.1em}
   .stage .inh{display:none}
-  .mcopy{display:block;padding:26px 20px 34px;text-align:left}
+  .mcopy{display:block;position:static;width:auto;height:auto;margin:0;padding:26px 20px 34px;clip:auto;clip-path:none;white-space:normal;text-align:left}
   [data-mode=static] #view{padding-top:var(--nav-h);background:#06040a}
   #mc1{background:#06040a}
   [data-mode=static] #box1{margin-top:0}
@@ -270,6 +270,12 @@ footer .tblock{position:static}
 <main id="top">
 <section id="story" aria-label="Chatter.Rest.Hal introduction">
  <div id="pin"><div id="view">
+
+  <div class="mcopy" id="mc1">
+    <h1><em>Follow</em> links, <s>not hardcoded URLs.</s></h1>
+    <p><b style="color:#fff;font-weight:600">Chatter.Rest.Hal</b> &mdash; HAL for .NET. Fluent builders, System.Text.Json, source generators.</p>
+    <span class="mpill"><span class="pr">$</span> dotnet add package <span class="pk">Chatter.Rest.Hal</span></span>
+  </div>
 
   <!-- ================= ACT 2 stage ================= -->
   <div class="sbox" id="box2"><div class="stage" id="s2" aria-hidden="true">
@@ -339,11 +345,6 @@ footer .tblock{position:static}
     <div id="cap"></div>
     <div id="flash"></div><div id="flash2"></div><div id="fade"></div>
   </div></div>
-  <div class="mcopy" id="mc1">
-    <h1><em>Follow</em> links, <s>not hardcoded URLs.</s></h1>
-    <p><b style="color:#fff;font-weight:600">Chatter.Rest.Hal</b> &mdash; HAL for .NET. Fluent builders, System.Text.Json, source generators.</p>
-    <span class="mpill"><span class="pr">$</span> dotnet add package <span class="pk">Chatter.Rest.Hal</span></span>
-  </div>
 
  </div></div>
  <div id="sent"></div>
