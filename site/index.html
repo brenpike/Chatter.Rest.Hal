@@ -1162,7 +1162,6 @@ function layout(){
   }
   dirty=true;
 }
-addEventListener('resize',()=>{layout();});
 let dirty=true;
 const inCopy=()=>!mqM.matches;
 let state={th:0,s:0,a2:-1};
@@ -1196,9 +1195,11 @@ function scrollAt(t){
   return mx*(1-eio(prog(t,T.BK0,T.DUR)));
 }
 let manual=false,t0=performance.now(),a2start=null;
+let driving=false,rafId=0,held=false;
 window.TL=TL;window.DURATION=TL.DUR;
 window.seek=t=>{
   manual=true;
+  stopDriver();
   t=((t%TL.DUR)+TL.DUR)%TL.DUR;
   if(mode==='pin'){
     window.scrollTo(0,scrollAt(t));
@@ -1224,22 +1225,35 @@ if('IntersectionObserver' in window){
   const io2=new IntersectionObserver(es=>{for(const e of es){if(mode==='static'&&e.isIntersecting)startA2()}},{threshold:.4});
   io2.observe(box2);
 }
-setMode();
-mqM.addEventListener('change',setMode);mqR.addEventListener('change',setMode);
-if(mqR.matches){manual=true;state={th:HE,s:mode==='pin'?0:1,a2:A2_END+9};state.s=0;renderAll();}
-else{
-  state.th=0;renderAll();
-  (function loop(now){
-    if(!manual){
-      state.th=Math.min(HE,(now-t0)/1000);
-      if(mode==='pin')state.s=clamp(window.scrollY/vh()); else state.s=0;
-      state.a2=a2start===null?-1:(now-a2start)/1000;
-      renderAll();
-    }
-    requestAnimationFrame(loop);
-  })(performance.now());
+function tick(now){
+  if(!driving)return;
+  state.th=Math.min(HE,(now-t0)/1000);
+  if(mode==='pin')state.s=clamp(window.scrollY/vh()); else state.s=0;
+  state.a2=a2start===null?-1:(now-a2start)/1000;
+  renderAll();
+  rafId=requestAnimationFrame(tick);
 }
-if(mode==='static'&&mqR.matches){state={th:HE,s:0,a2:A2_END+9};}
+function startDriver(){if(driving)return;driving=true;tick(performance.now());}
+function stopDriver(){if(!driving)return;driving=false;cancelAnimationFrame(rafId);}
+/* INVARIANT: applyPresentation() is the only place environment (width, reduced motion) decides presentation; see site/README.md. */
+function applyPresentation(){
+  lastKey='';
+  setMode();
+  if(manual){renderAll();return;}
+  if(mqR.matches){
+    stopDriver();
+    state={th:HE,s:0,a2:A2_END+9};
+    held=true;
+    renderAll();
+    return;
+  }
+  if(held){const now=performance.now();t0=now-HE*1000;a2start=now-(A2_END+9)*1000;held=false;}
+  else if(!driving){state.th=0;renderAll();}
+  startDriver();
+}
+applyPresentation();
+mqM.addEventListener('change',applyPresentation);mqR.addEventListener('change',applyPresentation);
+addEventListener('resize',applyPresentation);
 window.render=renderAll;
 })();
 </script>

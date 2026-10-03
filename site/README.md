@@ -57,3 +57,15 @@ Font License 1.1. The license texts are in `licenses/OFL-ChakraPetch.txt` and
 The page intentionally keeps the `window.seek(t)` hook and its related globals
 (`__seam`, `__ready`, `render`). They allow deterministic frame-by-frame capture
 of the page animation for screenshots and recordings. Do not remove them.
+
+## Review checklist
+
+- **Accessibility:** the landing copy is in the accessibility tree at every width.
+  `.mcopy` is the text source and is never `display:none`. The animated stages stay `aria-hidden`.
+- **Motion:** every environment input (width, reduced motion, resize) goes through
+  `applyPresentation()`. Never branch on `.matches` elsewhere or decide presentation once at load.
+  Reduced motion shows the end-state frame with no animation. Toggling it at runtime stops or
+  resumes the driver. After `seek()`, environment changes re-layout and re-render but never restart the driver.
+- **HAL fidelity:** the Act-2 JSON pane must equal what Chatter.Rest.Hal serializes for the Act-2
+  builder code: members, values, and object versus array. Verify against real serializer output when either changes.
+- **Render parity:** unrelated edits change no pixels.
