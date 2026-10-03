@@ -1,0 +1,62 @@
+[
+ {
+  "file": "keyframes/01-t1.50.png",
+  "t": 1.5,
+  "label": "01 act1 / islands: problem"
+ },
+ {
+  "file": "keyframes/02-t3.60.png",
+  "t": 3.6,
+  "label": "02 act1 / URL changes: 404"
+ },
+ {
+  "file": "keyframes/03-t5.85.png",
+  "t": 5.85,
+  "label": "03 act1 / _links appear"
+ },
+ {
+  "file": "keyframes/04-t8.30.png",
+  "t": 8.3,
+  "label": "04 act1 / traverse next > ea:order"
+ },
+ {
+  "file": "keyframes/05-t11.00.png",
+  "t": 11,
+  "label": "05 act1 / headline + install + scroll cue"
+ },
+ {
+  "file": "keyframes/06-t14.90.png",
+  "t": 14.9,
+  "label": "06 transition / graph zooms into one card"
+ },
+ {
+  "file": "keyframes/07-t15.80.png",
+  "t": 15.8,
+  "label": "07 transition / card becomes JSON pane"
+ },
+ {
+  "file": "keyframes/08-t19.00.png",
+  "t": 19,
+  "label": "08 act2 / stage 01-02: State > Links"
+ },
+ {
+  "file": "keyframes/09-t21.70.png",
+  "t": 21.7,
+  "label": "09 act2 / stage 02-03: curies, templated, embedded"
+ },
+ {
+  "file": "keyframes/10-t24.50.png",
+  "t": 24.5,
+  "label": "10 act2 / stage 04: spec-compliant stamp"
+ },
+ {
+  "file": "keyframes/11-t27.80.png",
+  "t": 27.8,
+  "label": "11 scroll / features strip arrives"
+ },
+ {
+  "file": "keyframes/12-t31.80.png",
+  "t": 31.8,
+  "label": "12 end / features + footer"
+ }
+]

@@ -1,0 +1,62 @@
+[
+ {
+  "file": "keyframes/01-t1.60.png",
+  "t": 1.6,
+  "label": "act 1 / problem: islands + brittle URLs"
+ },
+ {
+  "file": "keyframes/02-t3.70.png",
+  "t": 3.7,
+  "label": "act 1 / break: 404 on red-black"
+ },
+ {
+  "file": "keyframes/03-t5.70.png",
+  "t": 5.7,
+  "label": "act 1 / _links unfold (still chaos)"
+ },
+ {
+  "file": "keyframes/04-t6.15.png",
+  "t": 6.15,
+  "label": "act 1 / chaos > blueprint wave"
+ },
+ {
+  "file": "keyframes/05-t6.80.png",
+  "t": 6.8,
+  "label": "act 1 / blueprint draws itself"
+ },
+ {
+  "file": "keyframes/06-t8.80.png",
+  "t": 8.8,
+  "label": "act 1 / traverse rels"
+ },
+ {
+  "file": "keyframes/07-t11.60.png",
+  "t": 11.6,
+  "label": "act 1 / headline + install"
+ },
+ {
+  "file": "keyframes/08-t13.60.png",
+  "t": 13.6,
+  "label": "transition / graph pans into JSON pane"
+ },
+ {
+  "file": "keyframes/09-t17.40.png",
+  "t": 17.4,
+  "label": "act 2 / fluent C# types out"
+ },
+ {
+  "file": "keyframes/10-t21.60.png",
+  "t": 21.6,
+  "label": "act 2 / spec-compliant stamp"
+ },
+ {
+  "file": "keyframes/11-t25.30.png",
+  "t": 25.3,
+  "label": "scroll / features"
+ },
+ {
+  "file": "keyframes/12-t27.40.png",
+  "t": 27.4,
+  "label": "features + footer"
+ }
+]
