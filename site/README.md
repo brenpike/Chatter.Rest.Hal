@@ -66,6 +66,6 @@ of the page animation for screenshots and recordings. Do not remove them.
   `applyPresentation()`. Never branch on `.matches` elsewhere or decide presentation once at load.
   Reduced motion shows the end-state frame with no animation. Toggling it at runtime stops or
   resumes the driver. After `seek()`, environment changes re-layout and re-render but never restart the driver.
-- **HAL fidelity:** the Act-2 JSON pane must equal what Chatter.Rest.Hal serializes for the Act-2
-  builder code: members, values, and object versus array. Verify against real serializer output when either changes.
+- **HAL fidelity:** the Act-2 JSON pane must be token-identical to real serializer output (whitespace aside)
+  for the Act-2 builder code. Verify against real Chatter.Rest.Hal output when either changes.
 - **Render parity:** unrelated edits change no pixels.

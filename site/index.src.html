@@ -290,7 +290,7 @@ footer .tblock{position:static}
     <h2>Build it <em>fluently.</em></h2>
     <p>One method per HAL fragment. The JSON assembles as you type.</p>
   </div>
-  <div class="mcopy" id="mc3"><pre>var resource = ResourceBuilder
+  <div class="mcopy" id="mc3"><pre>var hal = ResourceBuilder
   .WithState(new { currentlyProcessing = 14 })
   .AddSelf().AddLinkObject("/orders")
   .AddCuries()
@@ -870,29 +870,16 @@ function renderHero(t,s,seamU,inCopy){
 
 /* ================================================================== ACT 2 (builder) */
 const s2=$('#s2');
-const CODE=[
- 'var hal = ResourceBuilder',
- '  .WithState(new { currentlyProcessing = 14 })',
- '  .AddSelf().AddLinkObject("/orders")',
- '  .AddCuries()',
- '    .AddLinkObject("http://example.com/docs/rels/{rel}", "ea")',
- '  .AddLink("next").AddLinkObject("/orders?page=2")',
- '  .AddLink("ea:find")',
- '    .AddLinkObject("/orders{?id}").Templated()',
- '  .AddEmbedded("ea:order")',
- '    .AddResource(new { total = 30.00F, status = "shipped" })',
- '      .AddSelf().AddLinkObject("/orders/123")',
- '  .Build();'
-];
+const CODE=$('#mc3 pre').textContent.replace(/\n+$/,'').split('\n');
 const JL=[
  ['{',0],
  ['  "currentlyProcessing": 14,',1],
  ['  "_links": {',2],
  ['    "self": {"href": "/orders"},',2],
  ['    "curies": [{',3],
- ['      "name": "ea",',4],
  ['      "href": "http://example.com/docs/rels/{rel}",',4],
- ['      "templated": true}],',4],
+ ['      "templated": true,',4],
+ ['      "name": "ea"}],',4],
  ['    "next": {"href": "/orders?page=2"},',5],
  ['    "ea:find": {',6],
  ['      "href": "/orders{?id}",',7],
@@ -900,7 +887,7 @@ const JL=[
  ['  },',8],
  ['  "_embedded": {',8],
  ['    "ea:order": {',8],
- ['      "total": 30.0, "status": "shipped",',9],
+ ['      "total": 30, "status": "shipped",',9],
  ['      "_links": {"self": {"href": "/orders/123"}}',10],
  ['    }',11],
  ['  }',11],
