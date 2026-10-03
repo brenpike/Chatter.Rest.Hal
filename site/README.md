@@ -34,15 +34,16 @@ The GitHub Pages source for this repository is set to GitHub Actions.
   `pages-build`. It never deploys.
 - A manual workflow dispatch deploys only when run from `main`. From any other
   branch or tag, `pages-deploy` is skipped and the published site does not change.
-- Runs are serialized per ref: at most one run per ref is in progress, and a
-  newly queued run replaces any pending one. Each run publishes the commit it
-  was started for, and the site shows whichever run deployed last. The workflow
-  does not check that this commit is still the tip of `main`.
-- Pushes to `main` run in order, so without manual re-runs the newest push is
-  the last to deploy, provided its run succeeds.
+- Runs are serialized per ref, so at most one run per ref is in progress.
+  GitHub does not guarantee the order in which queued runs start, so an older
+  commit can occasionally deploy after a newer one.
+- Each run publishes the commit it was started for, and the last deploy to
+  finish wins. The workflow does not check that this commit is still the tip
+  of `main`.
 - Re-running an older `main` run redeploys that run's commit. This is the
-  intended rollback path, and a tip-of-`main` check would remove it. To return
-  to the latest version, re-run the newest run or push to `main`.
+  intended rollback path.
+- If the published site looks stale, re-run the newest `main` run or push to
+  `main`.
 - A new push to a pull request cancels that pull request's in-progress run.
 
 ## Fonts
