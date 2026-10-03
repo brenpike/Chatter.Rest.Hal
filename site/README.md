@@ -62,10 +62,19 @@ of the page animation for screenshots and recordings. Do not remove them.
 
 - **Accessibility:** the landing copy is in the accessibility tree at every width.
   `.mcopy` is the text source and is never `display:none`. The animated stages stay `aria-hidden`.
-- **Motion:** every environment input (width, reduced motion, resize) goes through
-  `applyPresentation()`. Never branch on `.matches` elsewhere or decide presentation once at load.
-  Reduced motion shows the end-state frame with no animation. Toggling it at runtime stops or
-  resumes the driver. After `seek()`, environment changes re-layout and re-render but never restart the driver.
+- **Motion:** rendering is demand-driven. `requestRender()` is the only scheduler and the page
+  calls `requestAnimationFrame` nowhere else. A frame requests another frame only while
+  `animating()` is true, and every timeline is clamped to its settle time, so an idle page runs
+  no frames and makes no DOM writes.
+  - `sample()` is the only live writer of render state. Every input it reads (clock, scroll position,
+    viewport height, mode, reduced motion, Act-2 start) must have a subscription that calls `requestRender()`.
+  - Event handlers never write render state. They only update anchors (such as the Act-2 start time)
+    and call `requestRender()`.
+  - Every environment input (width, reduced motion, resize) goes through `applyPresentation()`, the
+    only reader of `.matches`. Never decide presentation once at load.
+  - Reduced motion shows the end-state frame and schedules no animation frames.
+  - After `seek()`, frames never continue on their own. Environment changes re-layout and re-render only.
+  - The capture hooks (`seek()`, `render`) render synchronously and bypass the scheduler.
 - **HAL fidelity:** the Act-2 JSON pane must be token-identical to real serializer output (whitespace aside)
   for the Act-2 builder code. Verify against real Chatter.Rest.Hal output when either changes.
 - **Render parity:** unrelated edits change no pixels.

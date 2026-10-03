@@ -904,6 +904,7 @@ const B0=.7,SLOT=.52,TYPE=.40;
 const sK=k=>B0+SLOT*k;
 const SEAL_T=sK(11)+TYPE+.2;
 const A2_END=SEAL_T+1.2;
+const A2_SETTLE=A2_END+9;
 function charW(px,fam){const c=document.createElement('canvas').getContext('2d');c.font=px+'px '+fam;return c.measureText('MMMMMMMMMM').width/10}
 const MONO='"IBM Plex Mono",monospace';
 const CW=charW(16,MONO);
@@ -1084,7 +1085,7 @@ function renderAct2(a,s){
   if(kcur>=0){
     const s_=sK(kcur);const typing=aa<s_+TYPE;
     const on=typing||(Math.floor(aa*3)%2===0);
-    if(on&&aa<A2_END+9)codeEls[kcur].appendChild(curEl);
+    if(on&&aa<A2_SETTLE)codeEls[kcur].appendChild(curEl);
     activeBar.style.top=codeY(kcur)+'px';
     let al=1;if(kcur===NLINES-1)al=1-prog(aa,sK(kcur)+TYPE+.4,sK(kcur)+TYPE+.9);
     activeBar.style.opacity=al;
@@ -1134,11 +1135,6 @@ function renderAct2(a,s){
 const mqM=matchMedia('(max-width:760px)'),mqR=matchMedia('(prefers-reduced-motion: reduce)');
 let mode='pin';
 const box1=$('#box1'),box2=$('#box2');
-function setMode(){
-  mode=(mqM.matches||mqR.matches)?'static':'pin';
-  root.dataset.mode=mode;
-  layout();
-}
 function layout(){
   for(const [box,st] of [[box1,s1],[box2,s2]]){
     const cw=box.clientWidth,ch=box.clientHeight;
@@ -1150,7 +1146,7 @@ function layout(){
   dirty=true;
 }
 let dirty=true;
-const inCopy=()=>!mqM.matches;
+const inCopy=()=>copy;
 let state={th:0,s:0,a2:-1};
 let lastKey='';
 function renderAll(){
@@ -1182,26 +1178,38 @@ function scrollAt(t){
   return mx*(1-eio(prog(t,T.BK0,T.DUR)));
 }
 let manual=false,t0=performance.now(),a2start=null;
-let driving=false,rafId=0,held=false;
+let held=false;
 window.TL=TL;window.DURATION=TL.DUR;
 window.seek=t=>{
   manual=true;
-  stopDriver();
+  cancelRender();
   t=((t%TL.DUR)+TL.DUR)%TL.DUR;
   if(mode==='pin'){
     window.scrollTo(0,scrollAt(t));
     const s=clamp(window.scrollY/vh());
-    state={th:t,s,a2:t>=TL.A2&&t<TL.BK0?t-TL.A2:(t>=TL.BK0?A2_END+9:-1)};
-  }else state={th:Math.min(t,HE),s:1,a2:A2_END+9};
+    state={th:t,s,a2:t>=TL.A2&&t<TL.BK0?t-TL.A2:(t>=TL.BK0?A2_SETTLE:-1)};
+  }else state={th:Math.min(t,HE),s:1,a2:A2_SETTLE};
   renderAll();
 };
 window.__ready=true;
 
 /* live */
-function onScroll(){if(manual)return;if(mode==='pin')state.s=clamp(window.scrollY/vh())}
-addEventListener('scroll',onScroll,{passive:true});
-function startA2(){if(a2start===null)a2start=performance.now()}
-function resetA2(){a2start=null;state.a2=-1}
+/* INVARIANT M1: a frame is pending only if an input requested one, or the last rendered state has a timeline below settle (and not manual/still). */
+/* INVARIANT M2: sample() is the only live writer of state; window.seek (manual only) is the only other writer. */
+/* INVARIANT M3: each input sample() reads has exactly one invalidation source calling requestRender(): scrollY->scroll; innerHeight/layout->resize->applyPresentation; mode/still/copy->media change->applyPresentation; a2start->startA2/resetA2; clock->frame continuation. */
+let still=false,copy=true,framePending=false,rafId=0;
+function sample(now){
+  if(still){state={th:HE,s:0,a2:A2_SETTLE};return;}
+  state={th:Math.min(HE,(now-t0)/1000),s:mode==='pin'?clamp(window.scrollY/vh()):0,
+         a2:a2start===null?-1:Math.min(A2_SETTLE,(now-a2start)/1000)};
+}
+function animating(){return !manual&&!still&&(state.th<HE||(a2start!==null&&state.a2<A2_SETTLE));}
+function frame(){framePending=false;if(!manual)sample(performance.now());renderAll();if(animating())requestRender();}
+function requestRender(){if(framePending)return;framePending=true;rafId=requestAnimationFrame(frame);}
+function cancelRender(){if(!framePending)return;framePending=false;cancelAnimationFrame(rafId);}
+addEventListener('scroll',requestRender,{passive:true});
+function startA2(){if(a2start===null){a2start=performance.now();requestRender();}}
+function resetA2(){if(a2start!==null){a2start=null;requestRender();}}
 if('IntersectionObserver' in window){
   const io=new IntersectionObserver(es=>{for(const e of es){
     if(mode==='pin'){
@@ -1212,31 +1220,21 @@ if('IntersectionObserver' in window){
   const io2=new IntersectionObserver(es=>{for(const e of es){if(mode==='static'&&e.isIntersecting)startA2()}},{threshold:.4});
   io2.observe(box2);
 }
-function tick(now){
-  if(!driving)return;
-  state.th=Math.min(HE,(now-t0)/1000);
-  if(mode==='pin')state.s=clamp(window.scrollY/vh()); else state.s=0;
-  state.a2=a2start===null?-1:(now-a2start)/1000;
-  renderAll();
-  rafId=requestAnimationFrame(tick);
-}
-function startDriver(){if(driving)return;driving=true;tick(performance.now());}
-function stopDriver(){if(!driving)return;driving=false;cancelAnimationFrame(rafId);}
 /* INVARIANT: applyPresentation() is the only place environment (width, reduced motion) decides presentation; see site/README.md. */
 function applyPresentation(){
   lastKey='';
-  setMode();
-  if(manual){renderAll();return;}
-  if(mqR.matches){
-    stopDriver();
-    state={th:HE,s:0,a2:A2_END+9};
-    held=true;
-    renderAll();
-    return;
+  still=mqR.matches;
+  copy=!mqM.matches;
+  mode=(!copy||still)?'static':'pin';
+  root.dataset.mode=mode;
+  layout();
+  if(!manual){
+    if(still)held=true;
+    else if(held){const now=performance.now();t0=now-HE*1000;a2start=now-A2_SETTLE*1000;held=false;}
+    sample(performance.now());
   }
-  if(held){const now=performance.now();t0=now-HE*1000;a2start=now-(A2_END+9)*1000;held=false;}
-  else if(!driving){state.th=0;renderAll();}
-  startDriver();
+  renderAll();
+  if(animating())requestRender();
 }
 applyPresentation();
 mqM.addEventListener('change',applyPresentation);mqR.addEventListener('change',applyPresentation);
