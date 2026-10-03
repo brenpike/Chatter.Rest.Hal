@@ -24,8 +24,9 @@ Commit the changed source and the regenerated `index.html` together.
 
 The GitHub Pages source for this repository is set to GitHub Actions.
 `.github/workflows/pages.yml` publishes the committed `index.html` and the
-`licenses/` texts. It does not run `build.js`, so rebuild and commit `index.html`
-before merging.
+`licenses/` texts. Before publishing it reinstalls the pinned font packages
+(`npm ci`), runs `build.js`, and fails if the output differs from the committed
+`index.html`, so rebuild and commit `index.html` before merging.
 
 - A push to `main` that touches `site/**` or the workflow file runs `pages-build`
   and then `pages-deploy`.
@@ -33,6 +34,8 @@ before merging.
   `pages-build`. It never deploys.
 - A manual workflow dispatch deploys only when run from `main`. From any other
   branch or tag, `pages-deploy` is skipped and the published site does not change.
+- Runs are serialized per ref. On `main`, only the newest queued run deploys. A
+  new push to a pull request cancels that pull request's in-progress run.
 
 ## Fonts
 
