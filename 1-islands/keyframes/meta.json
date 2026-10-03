@@ -1,0 +1,47 @@
+[
+ {
+  "file": "keyframes/01-t1.50.png",
+  "t": 1.5,
+  "label": "01 problem  /  islands appear"
+ },
+ {
+  "file": "keyframes/02-t2.50.png",
+  "t": 2.5,
+  "label": "01 problem  /  brittle URLs"
+ },
+ {
+  "file": "keyframes/03-t3.60.png",
+  "t": 3.6,
+  "label": "02 break  /  URL changes"
+ },
+ {
+  "file": "keyframes/04-t4.15.png",
+  "t": 4.15,
+  "label": "02 break  /  404"
+ },
+ {
+  "file": "keyframes/05-t5.85.png",
+  "t": 5.85,
+  "label": "03 hal  /  links appear"
+ },
+ {
+  "file": "keyframes/06-t6.90.png",
+  "t": 6.9,
+  "label": "03 hal  /  graph"
+ },
+ {
+  "file": "keyframes/07-t8.30.png",
+  "t": 8.3,
+  "label": "04 traverse  /  next > ea:order"
+ },
+ {
+  "file": "keyframes/08-t9.20.png",
+  "t": 9.2,
+  "label": "04 traverse  /  ea:customer"
+ },
+ {
+  "file": "keyframes/09-t12.30.png",
+  "t": 12.3,
+  "label": "05 how  /  fluent API"
+ }
+]
