@@ -589,6 +589,7 @@ link.LinkObjects.Add(new LinkObject("/orders/1"));
 
 ## Additional Resources
 
+- **Project Site:** [brenpike.github.io/Chatter.Rest.Hal](https://brenpike.github.io/Chatter.Rest.Hal/)
 - **Source Code:** [GitHub Repository](https://github.com/brenpike/Chatter.Rest.Hal)
 - **Core Library:** [Resource.cs](https://github.com/brenpike/Chatter.Rest.Hal/blob/main/src/Chatter.Rest.Hal/Resource.cs)
 - **Code Generators:** [Source Generator Project](https://github.com/brenpike/Chatter.Rest.Hal/tree/main/src/Chatter.Rest.Hal.CodeGenerators)
