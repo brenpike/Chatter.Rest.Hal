@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <title>Chatter.Rest.Hal — HAL for .NET</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Brennan Pike">
 <meta name="description" content="Chatter.Rest.Hal: a fluent, spec-compliant HAL (Hypertext Application Language) library for .NET. Follow links, not hardcoded URLs.">
 <style>
 /*FONTS*/
@@ -161,6 +162,9 @@ svg.layer{position:absolute;left:0;top:0;width:1280px;height:720px;pointer-event
 #h1 .l2 u{position:absolute;left:-1%;top:52%;height:5px;width:102%;background:#ff3b5c;box-shadow:0 0 14px rgba(255,59,92,.7);transform-origin:0 50%;transform:scaleX(0)}
 #hsub{position:absolute;left:0;right:0;top:322px;text-align:center;font:400 22px/1.4 var(--disp);color:#b7cde6;letter-spacing:.01em}
 #hsub b{font-weight:600;color:#fff}
+#hby{position:absolute;left:0;right:0;top:364px;text-align:center;font:400 15px/1 var(--disp);color:var(--dim);letter-spacing:.04em}
+#hby a,.mby a{color:inherit;text-decoration:underline;text-decoration-color:rgba(125,164,207,.45);text-underline-offset:3px}
+#hby a:hover,.mby a:hover{color:#fff;text-decoration-color:var(--cy)}
 #inst{position:absolute;left:0;right:0;top:402px;display:flex;justify-content:center}
 #inst div{display:flex;align-items:center;gap:14px;padding:14px 28px;border:1.5px solid var(--cy);border-radius:4px;background:rgba(4,15,36,.88);font:500 23px/1 var(--mono);color:var(--wh);
   box-shadow:0 0 34px rgba(95,227,255,.28),inset 0 0 22px rgba(95,227,255,.07)}
@@ -235,6 +239,7 @@ footer .tblock{position:static}
   #mc1 h1 em{font-style:normal;color:var(--cy)}
   #mc1 h1 s{color:#ff8b9b;text-decoration-color:#ff3b5c;text-decoration-thickness:3px}
   #mc1 p,#mc2 p{margin:14px 0 0;font:400 17px/1.5 var(--disp);color:#b7cde6}
+  #mc1 p.mby{margin:10px 0 0;font:400 14px/1.4 var(--disp);color:var(--dim);letter-spacing:.02em}
   .mpill{display:block;margin-top:22px;padding:13px 14px;border:1.5px solid var(--cy);border-radius:4px;background:rgba(4,15,36,.88);font:500 13.5px/1.2 var(--mono);color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .mpill .pr,.mpill .pk{color:var(--cy)}
   #mc2{background:#082049;padding:30px 20px 18px}
@@ -268,6 +273,7 @@ footer .tblock{position:static}
   <div class="mcopy" id="mc1">
     <h1><em>Follow</em> links, <s>not hardcoded URLs.</s></h1>
     <p><b style="color:#fff;font-weight:600">Chatter.Rest.Hal</b> &mdash; HAL for .NET. Fluent builders, System.Text.Json, source generators.</p>
+    <p class="mby">by <a id="mby" href="https://github.com/brenpike" target="_blank" rel="noopener noreferrer">Brennan Pike</a></p>
     <span class="mpill"><span class="pr">$</span> dotnet add package <span class="pk">Chatter.Rest.Hal</span></span>
   </div>
 
@@ -331,6 +337,7 @@ footer .tblock{position:static}
       <div id="scrim"></div>
       <div id="h1"><span class="l1"><em>Follow</em> links,</span><span class="l2">not hardcoded URLs.<u></u></span></div>
       <div id="hsub"><b>Chatter.Rest.Hal</b> &mdash; HAL for .NET. Fluent builders, System.Text.Json, source generators.</div>
+      <div id="hby">by <a href="https://github.com/brenpike" target="_blank" rel="noopener noreferrer" tabindex="-1">Brennan Pike</a></div>
       <div id="inst"><div><span class="pr">$</span><span>dotnet add package <span class="pk">Chatter.Rest.Hal</span></span></div></div>
       <div id="cue">SCROLL TO BUILD<svg width="22" height="14" viewBox="0 0 22 14" fill="none" stroke="#5fe3ff" stroke-width="2"><path d="M2 2l9 9 9-9"/></svg></div>
     </div>
@@ -851,7 +858,8 @@ function renderHero(t,s,seamU,inCopy){
   {
     const ec=forward?1:seamU;
     const sc_=eo(prog(t,10.3,10.9));
-    endcopy.style.opacity=(t>10.3?1:0)*ec*(1-prog(s,0,.18));
+    const ecOp=(t>10.3?1:0)*ec*(1-prog(s,0,.18));
+    endcopy.style.opacity=ecOp;
     $('#scrim').style.opacity=sc_;
     const l1=eo(prog(t,10.45,10.95));
     $('#h1 .l1').style.opacity=l1;$('#h1 .l1').style.transform=`translateY(${((1-l1)*14).toFixed(1)}px)`;
@@ -859,6 +867,8 @@ function renderHero(t,s,seamU,inCopy){
     const l2e=$('#h1 .l2');l2e.style.clipPath=`inset(-10% ${((1-l2)*100).toFixed(1)}% -10% 0)`;l2e.style.opacity=l2>0?1:0;
     $('#h1 u').style.transform=`scaleX(${eo(prog(t,11.2,11.55)).toFixed(3)})`;
     const sb=eo(prog(t,11.0,11.45));$('#hsub').style.opacity=sb;$('#hsub').style.transform=`translateY(${((1-sb)*10).toFixed(1)}px)`;
+    const by=eo(prog(t,11.15,11.6));$('#hby').style.opacity=by;$('#hby').style.transform=`translateY(${((1-by)*8).toFixed(1)}px)`;
+    $('#hby a').style.pointerEvents=ecOp*by>.5?'auto':'none';
     const ip=eo(prog(t,11.3,11.75));$('#inst').style.opacity=ip;$('#inst').style.transform=`translateY(${((1-ip)*12).toFixed(1)}px)`;
     $('#inst div').style.boxShadow=`0 0 ${34+10*Math.sin(t*3)}px rgba(95,227,255,${.28+.08*Math.sin(t*3)}),inset 0 0 22px rgba(95,227,255,.07)`;
     const cu=eo(prog(t,11.7,12.1));$('#cue').style.opacity=cu;$('#cue svg').style.transform=`translateY(${(3*Math.sin(t*4)).toFixed(2)}px)`;
@@ -1221,6 +1231,7 @@ function applyPresentation(){
   copy=!mqM.matches;
   mode=(!copy||still)?'static':'pin';
   root.dataset.mode=mode;
+  $('#mby').tabIndex=copy?-1:0;
   layout();
   if(!manual){
     if(still)held=true;
