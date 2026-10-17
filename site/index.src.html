@@ -165,6 +165,8 @@ svg.layer{position:absolute;left:0;top:0;width:1280px;height:720px;pointer-event
 #hby{position:absolute;left:0;right:0;top:364px;text-align:center;font:400 15px/1 var(--disp);color:var(--dim);letter-spacing:.04em}
 #hby a,.mby a{color:inherit;text-decoration:underline;text-decoration-color:rgba(125,164,207,.45);text-underline-offset:3px}
 #hby a:hover,.mby a:hover{color:#fff;text-decoration-color:var(--cy)}
+/* #mby is the focusable link; on desktop it is visually hidden, so mirror its focus ring onto the visible stage twin */
+:root:has(#mby:focus-visible) #hby a{color:#fff;outline:2px solid var(--cy);outline-offset:3px}
 #inst{position:absolute;left:0;right:0;top:402px;display:flex;justify-content:center}
 #inst div{display:flex;align-items:center;gap:14px;padding:14px 28px;border:1.5px solid var(--cy);border-radius:4px;background:rgba(4,15,36,.88);font:500 23px/1 var(--mono);color:var(--wh);
   box-shadow:0 0 34px rgba(95,227,255,.28),inset 0 0 22px rgba(95,227,255,.07)}
@@ -1231,7 +1233,6 @@ function applyPresentation(){
   copy=!mqM.matches;
   mode=(!copy||still)?'static':'pin';
   root.dataset.mode=mode;
-  $('#mby').tabIndex=copy?-1:0;
   layout();
   if(!manual){
     if(still)held=true;
