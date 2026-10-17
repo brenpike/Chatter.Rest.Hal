@@ -1208,7 +1208,7 @@ window.__ready=true;
 /* live */
 /* INVARIANT M1: a frame is pending only if an input requested one, or the last rendered state has a timeline below settle (and not manual/still). */
 /* INVARIANT M2: sample() is the only live writer of state; window.seek (manual only) is the only other writer. */
-/* INVARIANT M3: each input sample() reads has exactly one invalidation source calling requestRender(): scrollY->scroll; innerHeight/layout->resize->applyPresentation; mode/still/copy->media change->applyPresentation; a2start->startA2/resetA2; clock->frame continuation. */
+/* INVARIANT M3: each input sample() reads has exactly one invalidation source calling requestRender(): scrollY->scroll; innerHeight/layout->resize->applyPresentation; mode/still/copy->media change->applyPresentation; a2start->startA2/resetA2; clock->frame continuation; t0->#mby focus. */
 let still=false,copy=true,framePending=false,rafId=0;
 function sample(now){
   if(still){state={th:HE,s:0,a2:A2_SETTLE};return;}
@@ -1220,6 +1220,13 @@ function frame(){framePending=false;if(!manual)sample(performance.now());renderA
 function requestRender(){if(framePending)return;framePending=true;rafId=requestAnimationFrame(frame);}
 function cancelRender(){if(!framePending)return;framePending=false;cancelAnimationFrame(rafId);}
 addEventListener('scroll',requestRender,{passive:true});
+/* #mby's focus ring is mirrored onto the stage's #hby, so bring the settled hero on screen when it gains focus. Anchors only. */
+$('#mby').addEventListener('focus',()=>{
+  if(manual||still||!copy)return;
+  if(mode==='pin'&&window.scrollY>0)window.scrollTo(0,0);
+  const end=performance.now()-HE*1000;
+  if(t0>end){t0=end;requestRender();}
+});
 function startA2(){if(a2start===null){a2start=performance.now();requestRender();}}
 function resetA2(){if(a2start!==null){a2start=null;requestRender();}}
 if('IntersectionObserver' in window){
